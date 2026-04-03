@@ -11,7 +11,43 @@
   --user-bubble: #1e4d3a;
   --bot-bubble: #243044;
   --warn: #c9a227;
+  --theme-toggle-bg: rgba(255, 255, 255, 0.08);
+  --theme-toggle-border: rgba(255, 255, 255, 0.15);
   font-family: "DM Sans", system-ui, sans-serif;
+}
+
+[data-theme="light"] {
+  --bg: #f4f7f5;
+  --surface: #ffffff;
+  --surface-2: #eaf2ee;
+  --border: #c8dbd1;
+  --text: #1a2e24;
+  --muted: #5a7a69;
+  --accent: #2e8055;
+  --accent-dim: #236644;
+  --danger: #c0392b;
+  --user-bubble: #d4eddf;
+  --bot-bubble: #ffffff;
+  --warn: #b07d10;
+  --theme-toggle-bg: rgba(0, 0, 0, 0.05);
+  --theme-toggle-border: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] a {
+  color: #1a6fa8;
+}
+
+[data-theme="light"] .badge.admin {
+  color: #8a5f00;
+  background: rgba(201, 162, 39, 0.15);
+}
+
+[data-theme="light"] .msg-error {
+  background: rgba(192, 57, 43, 0.09);
+}
+
+[data-theme="light"] .btn-secondary:hover {
+  background: rgba(46, 128, 85, 0.12);
 }
 
 *,
@@ -483,8 +519,42 @@ table.data th {
   font-style: italic;
 }
 
+/* ── Theme toggle button ───────────────────────────────────────────────── */
+
+.theme-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--theme-toggle-border);
+  background: var(--theme-toggle-bg);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.theme-toggle .theme-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
 @media (max-width: 520px) {
   .form-grid .nick-pair {
     grid-template-columns: 1fr;
+  }
+
+  .theme-toggle .theme-label {
+    display: none;
   }
 }

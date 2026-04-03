@@ -390,6 +390,10 @@
       "<br />Chat API: <code>" +
       escapeHtml(chatApiBase()) +
       "</code></div>" +
+      '<button id="theme-toggle-btn" class="theme-toggle" aria-label="Toggle light/dark mode">' +
+      '<span class="theme-icon"></span>' +
+      '<span class="theme-label"></span>' +
+      "</button>" +
       "</header>" +
       renderIntentHelper(isAdmin) +
       '<main class="chat-main">' +
@@ -406,9 +410,36 @@
     );
   }
 
+  function initTheme() {
+    var stored = localStorage.getItem("tlchat-theme");
+    var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var theme = stored || (prefersDark ? "dark" : "light");
+    applyTheme(theme);
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("tlchat-theme", theme);
+    var btn = document.getElementById("theme-toggle-btn");
+    if (!btn) return;
+    var isLight = theme === "light";
+    btn.querySelector(".theme-icon").textContent = isLight ? "☀️" : "🌙";
+    btn.querySelector(".theme-label").textContent = isLight ? "Light" : "Dark";
+  }
+
   function mountChat(route) {
     var root = document.getElementById("app-root");
     root.innerHTML = renderChatShell(route);
+
+    applyTheme(localStorage.getItem("tlchat-theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+
+    var themeBtn = document.getElementById("theme-toggle-btn");
+    if (themeBtn) {
+      themeBtn.addEventListener("click", function () {
+        var current = document.documentElement.getAttribute("data-theme") || "dark";
+        applyTheme(current === "light" ? "dark" : "light");
+      });
+    }
 
     var messagesEl = document.getElementById("messages");
     var form = document.getElementById("chat-form");
@@ -648,6 +679,7 @@
   }
 
   function boot() {
+    initTheme();
     var route = parseRoute(window.location.pathname);
     var root = document.getElementById("app-root");
     if (!route) {
