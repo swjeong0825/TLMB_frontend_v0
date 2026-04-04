@@ -261,7 +261,7 @@
     {
       name: "SUBMIT_MATCH_RESULT",
       desc: "Record a doubles match result. New players are registered automatically.",
-      examples: ["Jae+Jazz 6:4 DK+Casper", "Alice and Bob beat Charlie and Diana 6 to 3", "record a match: John and Sarah vs Mike and Emma, 7-5"],
+      examples: ["Jae + Jazz 6:4 DK + Casper", "Alice and Bob beat Charlie and Diana 6 to 3", "record a match: John and Sarah vs Mike and Emma, 7-5"],
     },
   ];
 
@@ -605,12 +605,6 @@
         parts.push(warn);
         parts.push(
           "<div class=\"action-card\">" +
-            "<div class=\"row\"><label>Method</label><span class=\"method-url\">" +
-            escapeHtml(method) +
-            "</span></div>" +
-            "<div class=\"row\"><label>URL</label><span class=\"method-url\">" +
-            escapeHtml(bUrl) +
-            "</span></div>" +
             renderWriteForm(bodySpec) +
             "<button type=\"button\" class=\"btn-secondary\" data-submit-write>Submit to league API</button>" +
             "</div>"
