@@ -21,17 +21,6 @@
     return d.innerHTML;
   }
 
-  var DEMO_LEAGUE_ID = "d909cf3b-96b5-4ee2-b706-828b22dcbacf";
-
-  function parseRoute(pathname) {
-    var p = pathname.replace(/\/+$/, "") || "/";
-    if (p === "/index.html") p = "/";
-    if (p === "/demo") return { leagueId: DEMO_LEAGUE_ID, hostToken: null };
-    var m = p.match(/^\/league_id\/([^/]+)(?:\/(?:Admin|admin)\/([^/]+))?\/?$/);
-    if (!m) return null;
-    return { leagueId: decodeURIComponent(m[1]), hostToken: m[2] ? decodeURIComponent(m[2]) : null };
-  }
-
   function normalizeChatApiBaseUrl(raw) {
     var s = String(raw == null ? "" : raw)
       .trim()
@@ -46,9 +35,9 @@
     return normalizeChatApiBaseUrl(fromConfig || "http://127.0.0.1:8080");
   }
 
-  function responseLooksLikeSpaHtml(text) {
+  function responseLooksLikeStaticHtml(text) {
     var t = (text || "").slice(0, 500);
-    return /^\s*</.test(t) && (/<!DOCTYPE/i.test(t) || /<html[\s>]/i.test(t)) && /app-root/i.test(t);
+    return /^\s*</.test(t) && (/<!DOCTYPE/i.test(t) || /<html[\s>]/i.test(t));
   }
 
   function isFieldSpec(o) {
@@ -247,43 +236,10 @@
         return;
       }
       if (Array.isArray(v)) {
-        if (v.some(function (x) {
-          return !x;
-        }))
-          missing.push(key);
+        if (v.some(function (x) { return !x; })) missing.push(key);
       }
     });
     return missing;
-  }
-
-  function appBaseForExamples() {
-    var path = window.location.pathname || "/";
-    path = path.replace(/\/index\.html?$/i, "");
-    path = path.replace(/\/league_id\/[^/]+(?:\/(?:Admin|admin)\/[^/]+)?\/?$/, "");
-    if (!path || path === "/") return window.location.origin;
-    return window.location.origin + path.replace(/\/+$/, "");
-  }
-
-  function renderLanding() {
-    var base = appBaseForExamples();
-    return (
-      "<main class=\"landing\">" +
-      "<h1>Tennis League Chatbot</h1>" +
-      "<p>Vanilla client for the chat-to-intent server. Open a league-specific URL to start chatting.</p>" +
-      "<p>Chat API base URL is set in <code>js/config.js</code> or override with <code>?chatApi=http://localhost:8000</code>.</p>" +
-      "<div class=\"examples\">" +
-      "<h2>URL patterns</h2>" +
-      "<ul>" +
-      "<li><strong>Player</strong><br /><code>" +
-      escapeHtml(base + "/league_id/{league_id}") +
-      "</code></li>" +
-      "<li><strong>Admin</strong><br /><code>" +
-      escapeHtml(base + "/league_id/{league_id}/Admin/{host_token}") +
-      "</code></li>" +
-      "</ul>" +
-      "<p class=\"hint\">Use an SPA-friendly static server (e.g. <code>npx serve -s .</code> from this folder) so deep links load <code>index.html</code>.</p>" +
-      "</div></main>"
-    );
   }
 
   var USER_INTENTS = [
@@ -377,7 +333,7 @@
     var isAdmin = !!route.hostToken;
     return (
       "<header class=\"app-header\">" +
-      "<div><h1>Tennis League Chatbot</h1>" +
+      "<div><h1>Tennis League Management Bot</h1>" +
       '<span class="badge ' +
       (isAdmin ? "admin" : "") +
       '">' +
@@ -387,9 +343,7 @@
       escapeHtml(route.leagueId) +
       "</code>" +
       (isAdmin ? " · host token in URL" : "") +
-      "<br />Chat API: <code>" +
-      escapeHtml(chatApiBase()) +
-      "</code></div>" +
+      "</div>" +
       '<button id="theme-toggle-btn" class="theme-toggle" aria-label="Toggle light/dark mode">' +
       '<span class="theme-icon"></span>' +
       '<span class="theme-label"></span>' +
@@ -406,15 +360,13 @@
       '<button type="submit" id="send-btn">Send</button>' +
       "</form>" +
       '<p class="hint">Multi-turn: the last bot message is sent back as <code>last_server_message</code> automatically.</p>' +
-      "</div></main>"
+      "</div></main>" +
+      '<footer class="chat-footer">' +
+      '<span>Backend source:</span>' +
+      '<a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>' +
+      '<a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>' +
+      "</footer>"
     );
-  }
-
-  function initTheme() {
-    var stored = localStorage.getItem("tlchat-theme");
-    var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var theme = stored || (prefersDark ? "dark" : "light");
-    applyTheme(theme);
   }
 
   function applyTheme(theme) {
@@ -518,13 +470,13 @@
           console.error("[TLCHAT] Raw response body (first 8000 chars):\n", text.slice(0, 8000));
         }
         var hint = "";
-        if (responseLooksLikeSpaHtml(text)) {
+        if (responseLooksLikeStaticHtml(text)) {
           hint =
-            " The response looks like your frontend index.html. Usually chatApiBaseUrl is missing https:// " +
-            "(so the browser treats it as a relative URL and hits the static app) or it points at the wrong host. " +
+            " The response looks like a static HTML page from your frontend. Usually chatApiBaseUrl is missing https:// " +
+            "(so the browser treats it as a relative URL and hits the static site) or it points at the wrong host. " +
             "Request URL was: " +
             url +
-            ". Set chatApiBaseUrl to the full chat API origin, e.g. https://your-service.up.railway.app";
+            ". Set chatApiBaseUrl in js/config.js to the full chat API origin, e.g. https://your-service.up.railway.app";
         }
         throw new Error(
           "Invalid JSON from chat server (" +
@@ -679,11 +631,14 @@
   }
 
   function boot() {
-    initTheme();
-    var route = parseRoute(window.location.pathname);
-    var root = document.getElementById("app-root");
-    if (!route) {
-      root.innerHTML = renderLanding();
+    var stored = localStorage.getItem("tlchat-theme");
+    var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(stored || (prefersDark ? "dark" : "light"));
+
+    var route = window.TLCHAT_ROUTE;
+    if (!route || !route.leagueId) {
+      document.getElementById("app-root").innerHTML =
+        '<main class="landing"><p class="hint">No league specified. <a href="/">Go to home</a>.</p></main>';
       return;
     }
     mountChat(route);

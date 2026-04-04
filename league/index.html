@@ -20,27 +20,16 @@
     </script>
   </head>
   <body>
-    <main class="landing">
-      <h1>Tennis League Management Bot</h1>
-      <p>Vanilla client for the chat-to-intent server. Open a league-specific URL to start chatting.</p>
-      <p>Chat API base URL is configured in <code>js/config.js</code>.</p>
-      <div class="examples">
-        <h2>Pages</h2>
-        <ul>
-          <li>
-            <strong>Demo</strong><br />
-            <a href="/demo">/demo</a>
-          </li>
-          <li>
-            <strong>Player</strong><br />
-            <code>/league?league_id={league_id}</code>
-          </li>
-          <li>
-            <strong>Admin</strong><br />
-            <code>/league?league_id={league_id}&amp;host_token={host_token}</code>
-          </li>
-        </ul>
-      </div>
-    </main>
+    <div id="app-root"></div>
+    <script>
+      (function () {
+        var p = new URLSearchParams(window.location.search);
+        var leagueId = p.get("league_id");
+        var hostToken = p.get("host_token") || null;
+        window.TLCHAT_ROUTE = leagueId ? { leagueId: leagueId, hostToken: hostToken } : null;
+      })();
+    </script>
+    <script src="/js/config.js"></script>
+    <script src="/js/chat.js"></script>
   </body>
 </html>
