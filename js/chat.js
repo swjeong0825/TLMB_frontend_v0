@@ -331,6 +331,10 @@
 
   function renderChatShell(route) {
     var isAdmin = !!route.hostToken;
+    var isMobile = window.innerWidth <= 520;
+    var inputPlaceholder = isMobile
+      ? "Report Match Result, or Ask about standings, match history, or the roster."
+      : "Report Match Result, or Ask about standings, match history, or the roster.\nCheck &quot;Supported Commands&quot; for more details.";
     return (
       "<header class=\"app-header\">" +
       "<div><h1>Tennis League Management Bot</h1>" +
@@ -355,8 +359,12 @@
       "</div>" +
       '<div class="composer">' +
       '<form id="chat-form">' +
-      '<textarea id="chat-input" rows="2" placeholder="Report Match Result, or Ask about standings, match history, or the roster.\nCheck &quot;Supported Commands&quot; for more details." autocomplete="off"></textarea>' +
-      '<button type="submit" id="send-btn">Send</button>' +
+      '<div class="composer-input-wrap">' +
+      '<textarea id="chat-input" rows="2" placeholder="' + inputPlaceholder + '" autocomplete="off"></textarea>' +
+      '<button type="submit" id="send-btn" aria-label="Send">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>' +
+      "</button>" +
+      "</div>" +
       "</form>" +
       '<p class="hint">Multi-turn: the last bot message is sent back as <code>last_server_message</code> automatically.</p>' +
       "</div></main>" +
@@ -399,6 +407,20 @@
 
     var lastServerMessage = "";
     var emptyRemoved = false;
+
+    function autoResizeInput() {
+      input.style.height = "auto";
+      input.style.height = input.scrollHeight + "px";
+    }
+
+    input.addEventListener("input", autoResizeInput);
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+      }
+    });
 
     function clearEmpty() {
       if (!emptyRemoved) {
@@ -615,6 +637,7 @@
       var text = (input.value || "").trim();
       if (!text) return;
       input.value = "";
+      input.style.height = "auto";
       appendUser(text);
       sendBtn.disabled = true;
       try {

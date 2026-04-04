@@ -345,29 +345,42 @@ table.data th {
   align-items: flex-end;
 }
 
-.composer textarea {
+.composer-input-wrap {
+  position: relative;
   flex: 1;
-  min-height: 2.75rem;
-  max-height: 8rem;
-  resize: vertical;
-  padding: 0.55rem 0.65rem;
-  border-radius: 8px;
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: none;
+  overflow-y: hidden;
+  padding: 0.55rem 3rem 0.55rem 0.65rem;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font: inherit;
   line-height: 1.4;
+  box-sizing: border-box;
 }
 
 .composer button[type="submit"] {
-  padding: 0.55rem 1rem;
-  border-radius: 8px;
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.65rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
   border: none;
   background: var(--accent);
   color: #fff;
-  font-weight: 600;
   cursor: pointer;
-  font: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
 }
 
 .composer button[type="submit"]:hover {
@@ -375,7 +388,7 @@ table.data th {
 }
 
 .composer button[type="submit"]:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -584,5 +597,9 @@ table.data th {
 
   .theme-toggle .theme-label {
     display: none;
+  }
+
+  .composer textarea {
+    min-height: 7rem;
   }
 }
