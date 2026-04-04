@@ -602,6 +602,6 @@ table.data th {
   }
 
   .composer textarea {
-    min-height: 7rem;
+    min-height: 3.5rem;
   }
 }

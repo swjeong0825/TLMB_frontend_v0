@@ -366,7 +366,6 @@
       "</button>" +
       "</div>" +
       "</form>" +
-      '<p class="hint">Multi-turn: the last bot message is sent back as <code>last_server_message</code> automatically.</p>' +
       "</div></main>" +
       '<footer class="chat-footer">' +
       '<span>Backend source:</span>' +
