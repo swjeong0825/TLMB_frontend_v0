@@ -350,13 +350,12 @@
       "</button>" +
       "</header>" +
       renderIntentHelper(isAdmin) +
-      '<main class="chat-main">' +
+      '<main class="chat-main is-empty">' +
       '<div id="messages" class="messages">' +
-      '<div class="empty-state">Ask about standings, match history, or the roster. Admins can record results and manage the league.</div>' +
       "</div>" +
       '<div class="composer">' +
       '<form id="chat-form">' +
-      '<textarea id="chat-input" rows="2" placeholder="Message the league assistant…" autocomplete="off"></textarea>' +
+      '<textarea id="chat-input" rows="2" placeholder="Report Match Result, or Ask about standings, match history, or the roster.\nCheck &quot;Supported Commands&quot; for more details." autocomplete="off"></textarea>' +
       '<button type="submit" id="send-btn">Send</button>' +
       "</form>" +
       '<p class="hint">Multi-turn: the last bot message is sent back as <code>last_server_message</code> automatically.</p>' +
@@ -405,6 +404,8 @@
       if (!emptyRemoved) {
         messagesEl.innerHTML = "";
         emptyRemoved = true;
+        var chatMain = messagesEl.closest(".chat-main");
+        if (chatMain) chatMain.classList.remove("is-empty");
       }
     }
 
