@@ -593,6 +593,7 @@
       }
 
       if (WRITE_TYPES[resp.data_type]) {
+        parts = [];
         var d = resp.data || {};
         var method = d.method || "POST";
         var bUrl = d.url || "";
