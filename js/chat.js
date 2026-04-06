@@ -54,9 +54,10 @@
     return typeof url === "string" && url.indexOf("/admin/") !== -1;
   }
 
-  function lastServerMessageFromResponse(resp) {
+  function assistantContentFromResponse(resp) {
     if (resp.data_type === "CLARIFICATION_QUESTION") return resp.data.question || "";
-    return resp.server_message || "";
+    if (resp.data_type === "ERROR") return "";
+    return resp.server_message || ("[" + resp.data_type + "]");
   }
 
   function renderStandings(data) {
@@ -404,7 +405,7 @@
     var input = document.getElementById("chat-input");
     var sendBtn = document.getElementById("send-btn");
 
-    var lastServerMessage = "";
+    var conversationHistory = [];
     var emptyRemoved = false;
 
     function autoResizeInput() {
@@ -462,7 +463,7 @@
         headers: headers,
         body: JSON.stringify({
           client_message: clientMessage,
-          last_server_message: lastServerMessage,
+          conversation_history: conversationHistory,
         }),
       });
       var text = await res.text();
@@ -554,7 +555,7 @@
           (txt ? ": " + (txt.length > 280 ? txt.slice(0, 280) + "…" : txt) : "");
         if (ok) {
           appendAssistant("<div><strong>Done.</strong> " + escapeHtml(summary) + "</div>");
-          lastServerMessage = summary;
+          conversationHistory.push({ role: "assistant", content: "Action completed: " + summary });
         } else {
           appendError("Backend rejected the request. " + summary);
         }
@@ -566,7 +567,6 @@
     }
 
     function renderResponse(resp) {
-      lastServerMessage = lastServerMessageFromResponse(resp);
 
       if (resp.data_type === "ERROR") {
         var em = (resp.data && resp.data.error_message) || "Error";
@@ -637,6 +637,11 @@
       try {
         var resp = await postChat(text);
         renderResponse(resp);
+        conversationHistory.push({ role: "user", content: text });
+        var assistantContent = assistantContentFromResponse(resp);
+        if (assistantContent) {
+          conversationHistory.push({ role: "assistant", content: assistantContent });
+        }
       } catch (err) {
         appendError(err.message || String(err));
       } finally {
