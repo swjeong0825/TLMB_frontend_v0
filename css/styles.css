@@ -91,9 +91,11 @@ a:hover {
 }
 
 .landing {
+  flex: 1;
   max-width: 40rem;
   margin: 3rem auto;
   padding: 0 1.25rem;
+  width: 100%;
 }
 
 .landing h1 {
@@ -709,7 +711,7 @@ table.data th {
     display: none;
   }
 
-  .chat-footer {
+  #app-root .chat-footer {
     display: none;
   }
 
