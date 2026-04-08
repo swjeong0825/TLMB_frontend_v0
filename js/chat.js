@@ -21,6 +21,165 @@
     return d.innerHTML;
   }
 
+  var PANEL_TITLES = {
+    GET_STANDINGS: "Standings",
+    GET_MATCH_HISTORY: "Match history",
+    GET_ROSTER: "Roster",
+  };
+
+  function panelTitleForDataType(dataType) {
+    if (PANEL_TITLES[dataType]) return PANEL_TITLES[dataType];
+    return String(dataType || "")
+      .replace(/^GET_/, "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, function (c) {
+        return c.toUpperCase();
+      })
+      .trim() || "Details";
+  }
+
+  var FIELD_LABELS = {
+    team_id: "Team reference",
+    match_id: "Match reference",
+    player_id: "Player reference",
+    current_nickname: "Current name",
+    new_nickname: "New name",
+    team1_player_nicknames: "Team 1 players",
+    team2_player_nicknames: "Team 2 players",
+    team1_score: "Team 1 score",
+    team2_score: "Team 2 score",
+    method: "Method",
+    url: "URL",
+  };
+
+  function labelForFormField(key) {
+    if (FIELD_LABELS[key]) return FIELD_LABELS[key];
+    return key
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, function (c) {
+        return c.toUpperCase();
+      });
+  }
+
+  function formatWhen(iso) {
+    if (iso == null || iso === "") return "—";
+    var t = Date.parse(String(iso));
+    if (isNaN(t)) return escapeHtml(String(iso));
+    try {
+      return escapeHtml(
+        new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+      );
+    } catch (e) {
+      return escapeHtml(String(iso));
+    }
+  }
+
+  function tryParseJson(text) {
+    if (text == null || String(text).trim() === "") return null;
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function humanDetailFromHttpBody(text) {
+    var o = tryParseJson(text);
+    if (!o || typeof o !== "object") {
+      var s = (text || "").trim();
+      if (!s) return "";
+      return s.length > 400 ? s.slice(0, 400) + "…" : s;
+    }
+    if (typeof o.detail === "string") return o.detail;
+    if (Array.isArray(o.detail)) {
+      return o.detail
+        .map(function (d) {
+          if (d == null) return "";
+          if (typeof d === "string") return d;
+          if (typeof d.msg === "string") return d.msg;
+          if (typeof d.message === "string") return d.message;
+          return JSON.stringify(d);
+        })
+        .filter(Boolean)
+        .join(" ");
+    }
+    if (o.detail && typeof o.detail === "object") {
+      if (typeof o.detail.msg === "string") return o.detail.msg;
+      if (typeof o.detail.message === "string") return o.detail.message;
+    }
+    if (typeof o.message === "string") return o.message;
+    if (typeof o.error_message === "string") return o.error_message;
+    return "";
+  }
+
+  function humanSuccessFromHttpBody(text) {
+    var o = tryParseJson(text);
+    if (o && typeof o === "object") {
+      if (typeof o.message === "string" && o.message.trim()) return o.message.trim();
+      var d = humanDetailFromHttpBody(text);
+      if (d) return d;
+    }
+    var plain = (text || "").trim();
+    if (!plain) return "Changes were saved.";
+    if (plain.length > 280) return plain.slice(0, 280) + "…";
+    return plain;
+  }
+
+  var INTERNAL_DISPLAY_KEYS = {
+    team_id: true,
+    match_id: true,
+    player_id: true,
+    league_id: true,
+    status_code: true,
+    error_code: true,
+  };
+
+  function isInternalDisplayKey(k) {
+    if (INTERNAL_DISPLAY_KEYS[k]) return true;
+    if (/_id$/i.test(k) && k !== "created_at") return true;
+    return false;
+  }
+
+  function sanitizeForDisplay(value, depth) {
+    depth = depth || 0;
+    if (depth > 6) return value;
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) {
+      return value.map(function (item) {
+        return sanitizeForDisplay(item, depth + 1);
+      });
+    }
+    if (typeof value === "object") {
+      var out = {};
+      Object.keys(value).forEach(function (k) {
+        if (isInternalDisplayKey(k)) return;
+        out[k] = sanitizeForDisplay(value[k], depth + 1);
+      });
+      return out;
+    }
+    return value;
+  }
+
+  function renderFallbackData(data) {
+    var cleaned = sanitizeForDisplay(data);
+    var keys = cleaned && typeof cleaned === "object" ? Object.keys(cleaned) : [];
+    if (!keys.length) {
+      return "<p class=\"hint\">No additional details to show.</p>";
+    }
+    return "<pre class=\"hint response-json\">" + escapeHtml(JSON.stringify(cleaned, null, 2)) + "</pre>";
+  }
+
+  function friendlyMessageFromTechnicalError(technical) {
+    var api = window.TLCHAT_USER_FACING_ERRORS;
+    if (api && typeof api.fromTechnical === "function") {
+      return api.fromTechnical(technical);
+    }
+    return (
+      (api && api.GENERIC_MESSAGE) ||
+      "Something went wrong. Please try again in a moment, or rephrase your question."
+    );
+  }
+
   function normalizeChatApiBaseUrl(raw) {
     var s = String(raw == null ? "" : raw)
       .trim()
@@ -90,7 +249,7 @@
     rows.forEach(function (m) {
       var t1 = escapeHtml(m.team1_player1_nickname) + " & " + escapeHtml(m.team1_player2_nickname);
       var t2 = escapeHtml(m.team2_player1_nickname) + " & " + escapeHtml(m.team2_player2_nickname);
-      var when = m.created_at ? escapeHtml(String(m.created_at)) : "—";
+      var when = m.created_at ? formatWhen(m.created_at) : "—";
       h +=
         "<tr><td>" +
         t1 +
@@ -112,30 +271,23 @@
     var teams = data.teams || [];
     var h = "";
     if (teams.length) {
-      h += "<h3>Teams</h3><table class=\"data\"><thead><tr><th>Players</th><th>team_id</th></tr></thead><tbody>";
+      h += '<div class="roster-block"><h4 class="roster-heading">Teams</h4><ul class="roster-list">';
       teams.forEach(function (t) {
         h +=
-          "<tr><td>" +
+          "<li class=\"roster-item\"><span class=\"roster-pair\">" +
           escapeHtml(t.player1_nickname) +
-          " &amp; " +
+          " <span class=\"roster-amp\">&amp;</span> " +
           escapeHtml(t.player2_nickname) +
-          "</td><td><code>" +
-          escapeHtml(t.team_id) +
-          "</code></td></tr>";
+          "</span></li>";
       });
-      h += "</tbody></table>";
+      h += "</ul></div>";
     }
     if (players.length) {
-      h += "<h3>Players</h3><table class=\"data\"><thead><tr><th>Nickname</th><th>player_id</th></tr></thead><tbody>";
+      h += '<div class="roster-block"><h4 class="roster-heading">Players</h4><ul class="roster-list roster-list-players">';
       players.forEach(function (p) {
-        h +=
-          "<tr><td>" +
-          escapeHtml(p.nickname) +
-          "</td><td><code>" +
-          escapeHtml(p.player_id) +
-          "</code></td></tr>";
+        h += "<li class=\"roster-item\">" + escapeHtml(p.nickname) + "</li>";
       });
-      h += "</tbody></table>";
+      h += "</ul></div>";
     }
     if (!h) return "<p class=\"hint\">Roster is empty.</p>";
     return h;
@@ -146,9 +298,9 @@
     if (dataType === "GET_STANDINGS") inner = renderStandings(data);
     else if (dataType === "GET_MATCH_HISTORY") inner = renderMatches(data);
     else if (dataType === "GET_ROSTER") inner = renderRoster(data);
-    else inner = "<pre class=\"hint\">" + escapeHtml(JSON.stringify(data, null, 2)) + "</pre>";
+    else inner = renderFallbackData(data);
     return (
-      "<div class=\"data-panel\"><h3>" + escapeHtml(dataType.replace(/_/g, " ")) + "</h3>" + inner + "</div>"
+      '<div class="data-panel"><h3>' + escapeHtml(panelTitleForDataType(dataType)) + "</h3>" + inner + "</div>"
     );
   }
 
@@ -178,14 +330,16 @@
       if (!isFieldSpec(spec)) return;
       var req = spec.required ? " *" : "";
       if (spec.type && spec.type.indexOf("array") === 0) {
-        parts.push("<label><span>" + escapeHtml(key) + req + "</span>");
+        parts.push(
+          "<label><span>" + escapeHtml(labelForFormField(key)) + req + "</span>"
+        );
         parts.push(arrayToInputs(key, spec.value));
         parts.push("</label>");
       } else {
         var val = spec.value == null ? "" : String(spec.value);
         parts.push(
           "<label><span>" +
-            escapeHtml(key) +
+            escapeHtml(labelForFormField(key)) +
             req +
             "</span><input type=\"text\" data-field=\"" +
             escapeHtml(key) +
@@ -450,8 +604,28 @@
       return div;
     }
 
-    function appendError(message) {
-      appendAssistant("<div>" + escapeHtml(message) + "</div>", "msg-error");
+    /** Already user-oriented copy (validation, permissions). No technical log. */
+    function appendErrorPlain(message) {
+      appendAssistant(
+        "<div class=\"error-user-facing\">" + escapeHtml(message) + "</div>",
+        "msg-error"
+      );
+    }
+
+    /** Log full technical detail for developers; show a short message in the thread. */
+    function appendErrorTechnical(technicalMessage, logContext) {
+      var tech = technicalMessage == null ? "" : String(technicalMessage);
+      if (logContext) {
+        console.error("[TLCHAT]", logContext, tech);
+      } else {
+        console.error("[TLCHAT]", tech);
+      }
+      appendAssistant(
+        "<div class=\"error-user-facing\">" +
+          escapeHtml(friendlyMessageFromTechnicalError(tech)) +
+          "</div>",
+        "msg-error"
+      );
     }
 
     async function postChat(clientMessage) {
@@ -502,17 +676,19 @@
             ". Set chatApiBaseUrl in js/config.js to the full chat API origin, e.g. https://your-service.up.railway.app";
         }
         throw new Error(
-          "Invalid JSON from chat server (" +
-            res.status +
-            "). Content-Type: " +
-            (contentType || "(none)") +
-            ". " +
-            oneLine +
-            hint
+          "The chat server returned an unexpected response. Check that chatApiBaseUrl in js/config.js points at the chat API." +
+            hint +
+            (oneLine && !hint ? " Details: " + oneLine.slice(0, 200) : "")
         );
       }
       if (!res.ok) {
-        throw new Error(data.detail ? JSON.stringify(data.detail) : text || res.statusText);
+        var httpMsg = humanDetailFromHttpBody(text);
+        if (!httpMsg) httpMsg = res.statusText || "Request failed.";
+        var techBody = text && text.length ? text : "";
+        if (techBody.length > 1200) techBody = techBody.slice(0, 1200) + "…";
+        throw new Error(
+          "[Chat HTTP " + res.status + "] " + httpMsg + (techBody ? " | body: " + techBody : "")
+        );
       }
       return data;
     }
@@ -521,12 +697,19 @@
       var payload = collectWriteForm(cardEl, bodySpec);
       var miss = validateWriteBody(bodySpec, payload);
       if (miss.length) {
-        appendError("Please fill required fields: " + miss.join(", "));
+        appendErrorPlain(
+          "Please fill required fields: " +
+            miss
+              .map(function (k) {
+                return labelForFormField(k);
+              })
+              .join(", ")
+        );
         return;
       }
       var needsToken = needsHostTokenForUrl(url);
       if (needsToken && !route.hostToken) {
-        appendError("This action calls an admin endpoint. Open the Admin URL with your host token.");
+        appendErrorPlain("This action calls an admin endpoint. Open the Admin URL with your host token.");
         return;
       }
       var headers = {};
@@ -548,19 +731,26 @@
         var res = await fetch(url, opts);
         var txt = await res.text();
         var ok = res.ok;
-        var summary =
-          method +
-          " " +
-          res.status +
-          (txt ? ": " + (txt.length > 280 ? txt.slice(0, 280) + "…" : txt) : "");
         if (ok) {
-          appendAssistant("<div><strong>Done.</strong> " + escapeHtml(summary) + "</div>");
-          conversationHistory.push({ role: "assistant", content: "Action completed: " + summary });
+          var successLine = humanSuccessFromHttpBody(txt);
+          appendAssistant(
+            '<div class="response-callout response-callout-success"><strong>Done.</strong> ' +
+              escapeHtml(successLine) +
+              "</div>"
+          );
+          conversationHistory.push({ role: "assistant", content: "Action completed: " + successLine });
         } else {
-          appendError("Backend rejected the request. " + summary);
+          var errLine = humanDetailFromHttpBody(txt);
+          var technical =
+            "[League API " +
+            res.status +
+            "] " +
+            (errLine || "(no detail in body)") +
+            (txt && txt.length ? " | body: " + (txt.length > 800 ? txt.slice(0, 800) + "…" : txt) : "");
+          appendErrorTechnical(technical, "League API error");
         }
       } catch (e) {
-        appendError(e.message || String(e));
+        appendErrorTechnical(e.message || String(e), "League API request failed");
       } finally {
         if (btn) btn.disabled = false;
       }
@@ -569,21 +759,27 @@
     function renderResponse(resp) {
 
       if (resp.data_type === "ERROR") {
-        var em = (resp.data && resp.data.error_message) || "Error";
+        var em = (resp.data && resp.data.error_message) || "";
         var sc = resp.data && resp.data.status_code;
-        appendError((sc ? "[" + sc + "] " : "") + em);
+        var technical =
+          (sc != null ? "[Chat error status_code=" + sc + "] " : "[Chat error] ") + (em || "(no message)");
+        appendErrorTechnical(technical, "Chat server ERROR response");
         return;
       }
 
       if (resp.data_type === "CLARIFICATION_QUESTION") {
         var q = (resp.data && resp.data.question) || "Could you clarify?";
-        appendAssistant("<div>" + escapeHtml(q) + "</div>");
+        appendAssistant(
+          '<div class="response-callout response-callout-clarify">' + escapeHtml(q) + "</div>"
+        );
         return;
       }
 
       var parts = [];
       if (resp.server_message && resp.server_message.trim()) {
-        parts.push("<div>" + escapeHtml(resp.server_message.trim()) + "</div>");
+        parts.push(
+          '<div class="server-message">' + escapeHtml(resp.server_message.trim()) + "</div>"
+        );
       }
 
       if (READ_TYPES[resp.data_type]) {
@@ -621,9 +817,23 @@
         return;
       }
 
-      appendAssistant(
-        "<pre class=\"hint\">" + escapeHtml(JSON.stringify(resp, null, 2)) + "</pre>"
-      );
+      var unkParts = [];
+      if (resp.server_message && resp.server_message.trim()) {
+        unkParts.push(
+          '<div class="server-message">' + escapeHtml(resp.server_message.trim()) + "</div>"
+        );
+      }
+      var rawData = resp.data != null ? resp.data : {};
+      var cleaned = sanitizeForDisplay(rawData);
+      var hasKeys = cleaned && typeof cleaned === "object" && Object.keys(cleaned).length > 0;
+      if (hasKeys) {
+        unkParts.push(renderFallbackData(rawData));
+      } else if (!unkParts.length) {
+        unkParts.push(
+          "<p class=\"hint\">No details available for this response. Try asking in another way.</p>"
+        );
+      }
+      appendAssistant('<div class="data-panel unknown-response">' + unkParts.join("") + "</div>");
     }
 
     form.addEventListener("submit", async function (e) {
@@ -643,7 +853,7 @@
           conversationHistory.push({ role: "assistant", content: assistantContent });
         }
       } catch (err) {
-        appendError(err.message || String(err));
+        appendErrorTechnical(err.message || String(err), "Chat request failed");
       } finally {
         sendBtn.disabled = false;
         input.focus();

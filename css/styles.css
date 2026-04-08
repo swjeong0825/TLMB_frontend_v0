@@ -46,6 +46,10 @@
   background: rgba(192, 57, 43, 0.09);
 }
 
+[data-theme="light"] .response-callout-success {
+  background: rgba(46, 128, 85, 0.1);
+}
+
 [data-theme="light"] .btn-secondary:hover {
   background: rgba(46, 128, 85, 0.12);
 }
@@ -248,6 +252,11 @@ a:hover {
   background: rgba(201, 76, 76, 0.12);
 }
 
+.msg-error .error-user-facing {
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .data-panel {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
@@ -259,6 +268,92 @@ a:hover {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
+}
+
+.server-message {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-bottom: 0.35rem;
+}
+
+.response-callout {
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.response-callout-clarify {
+  background: var(--surface-2);
+  border-color: var(--accent);
+  border-left-width: 3px;
+  border-left-color: var(--accent);
+}
+
+.response-callout-success {
+  background: rgba(61, 154, 106, 0.12);
+  border-color: var(--accent);
+}
+
+.response-json {
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.roster-block {
+  margin-top: 0.65rem;
+}
+
+.roster-block:first-child {
+  margin-top: 0;
+}
+
+.roster-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.roster-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.roster-item {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.roster-pair {
+  font-weight: 500;
+}
+
+.roster-amp {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.roster-list-players .roster-item {
+  padding: 0.4rem 0.65rem;
 }
 
 table.data {
