@@ -599,11 +599,20 @@
 
     input.addEventListener("input", autoResizeInput);
 
+    var imeCompositionActive = false;
+    input.addEventListener("compositionstart", function () {
+      imeCompositionActive = true;
+    });
+    input.addEventListener("compositionend", function () {
+      imeCompositionActive = false;
+    });
+
     input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-      }
+      if (e.key !== "Enter" || e.shiftKey) return;
+      // Let IME (Korean, Japanese, etc.) consume Enter to finish composition; do not preventDefault.
+      if (e.isComposing || imeCompositionActive) return;
+      e.preventDefault();
+      form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
     });
 
     function clearEmpty() {
