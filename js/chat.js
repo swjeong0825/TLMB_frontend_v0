@@ -3,7 +3,9 @@
 
   var READ_TYPES = {
     GET_STANDINGS: true,
+    GET_STANDINGS_BY_PLAYER: true,
     GET_MATCH_HISTORY: true,
+    GET_MATCH_HISTORY_BY_PLAYER: true,
     GET_ROSTER: true,
   };
 
@@ -23,7 +25,9 @@
 
   var PANEL_TITLES = {
     GET_STANDINGS: "Standings",
+    GET_STANDINGS_BY_PLAYER: "Standings",
     GET_MATCH_HISTORY: "Match history",
+    GET_MATCH_HISTORY_BY_PLAYER: "Match history",
     GET_ROSTER: "Roster",
   };
 
@@ -216,7 +220,15 @@
   function assistantContentFromResponse(resp) {
     if (resp.data_type === "CLARIFICATION_QUESTION") return resp.data.question || "";
     if (resp.data_type === "ERROR") return "";
-    return resp.server_message || ("[" + resp.data_type + "]");
+    var sm = (resp.server_message || "").trim();
+    if (sm) return sm;
+    if (READ_TYPES[resp.data_type]) {
+      var t = panelTitleForDataType(resp.data_type);
+      var pn = resp.data && resp.data.player_name;
+      if (pn) return t + " for " + String(pn).trim();
+      return t;
+    }
+    return "[" + resp.data_type + "]";
   }
 
   function renderStandings(data) {
@@ -247,8 +259,8 @@
     var h =
       "<table class=\"data\"><thead><tr><th>Teams</th><th>Score</th><th>When</th></tr></thead><tbody>";
     rows.forEach(function (m) {
-      var t1 = escapeHtml(m.team1_player1_nickname) + " & " + escapeHtml(m.team1_player2_nickname);
-      var t2 = escapeHtml(m.team2_player1_nickname) + " & " + escapeHtml(m.team2_player2_nickname);
+      var t1 = escapeHtml(m.team1_player1_nickname) + " &amp; " + escapeHtml(m.team1_player2_nickname);
+      var t2 = escapeHtml(m.team2_player1_nickname) + " &amp; " + escapeHtml(m.team2_player2_nickname);
       var when = m.created_at ? formatWhen(m.created_at) : "—";
       h +=
         "<tr><td>" +
@@ -293,14 +305,32 @@
     return h;
   }
 
+  function renderReadPanelFilterNote(data) {
+    var name = data && data.player_name;
+    if (name == null || String(name).trim() === "") return "";
+    return (
+      '<p class="read-panel-filter hint">Showing results for ' + escapeHtml(String(name).trim()) + ".</p>"
+    );
+  }
+
   function renderReadPanel(dataType, data) {
     var inner = "";
-    if (dataType === "GET_STANDINGS") inner = renderStandings(data);
-    else if (dataType === "GET_MATCH_HISTORY") inner = renderMatches(data);
-    else if (dataType === "GET_ROSTER") inner = renderRoster(data);
+    var filterNote = "";
+    if (dataType === "GET_STANDINGS" || dataType === "GET_STANDINGS_BY_PLAYER") {
+      filterNote = dataType === "GET_STANDINGS_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
+      inner = renderStandings(data);
+    } else if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
+      filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
+      inner = renderMatches(data);
+    } else if (dataType === "GET_ROSTER") inner = renderRoster(data);
     else inner = renderFallbackData(data);
     return (
-      '<div class="data-panel"><h3>' + escapeHtml(panelTitleForDataType(dataType)) + "</h3>" + inner + "</div>"
+      '<div class="data-panel"><h3>' +
+      escapeHtml(panelTitleForDataType(dataType)) +
+      "</h3>" +
+      filterNote +
+      inner +
+      "</div>"
     );
   }
 
