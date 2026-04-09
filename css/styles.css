@@ -170,7 +170,7 @@ a:hover {
   min-width: min(14rem, 72vw);
   max-width: 100%;
   min-height: 1.35em;
-  text-align: center;
+  text-align: left;
 }
 
 .chat-header-title.chat-header-title--loading {
