@@ -198,6 +198,42 @@
     return normalizeChatApiBaseUrl(fromConfig || "http://127.0.0.1:8080");
   }
 
+  function backendMainBase() {
+    var c = window.TLCHAT_CONFIG || {};
+    var u = c.backendMainBaseUrl;
+    if (!u || typeof u !== "string") {
+      console.error("TLCHAT_CONFIG.backendMainBaseUrl missing; set in js/config.js");
+      return "";
+    }
+    return u.replace(/\/$/, "");
+  }
+
+  /**
+   * GET /leagues/{id}/roster — used on chat open; result cached in mountChat for future UI (e.g. new-player hints).
+   */
+  async function fetchLeagueRoster(leagueId) {
+    var base = backendMainBase();
+    if (!base || !leagueId) {
+      return { ok: false, error: "missing_config_or_league" };
+    }
+    var url = base + "/leagues/" + encodeURIComponent(leagueId) + "/roster";
+    var res = await fetch(url);
+    var text = await res.text();
+    if (!res.ok) {
+      return { ok: false, error: "http", status: res.status, body: text };
+    }
+    try {
+      var data = JSON.parse(text);
+      return {
+        ok: true,
+        players: Array.isArray(data.players) ? data.players : [],
+        teams: Array.isArray(data.teams) ? data.teams : [],
+      };
+    } catch (e) {
+      return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };
+    }
+  }
+
   function responseLooksLikeStaticHtml(text) {
     var t = (text || "").slice(0, 500);
     return /^\s*</.test(t) && (/<!DOCTYPE/i.test(t) || /<html[\s>]/i.test(t));
@@ -591,6 +627,36 @@
 
     var conversationHistory = [];
     var emptyRemoved = false;
+
+    /** Latest roster from main API; refreshed when this chat view mounts. */
+    var leagueRoster = {
+      status: "loading",
+      players: [],
+      teams: [],
+      fetchedAt: null,
+    };
+
+    function refreshLeagueRoster() {
+      leagueRoster.status = "loading";
+      fetchLeagueRoster(route.leagueId)
+        .then(function (result) {
+          if (result.ok) {
+            leagueRoster.players = result.players;
+            leagueRoster.teams = result.teams;
+            leagueRoster.status = "ok";
+            leagueRoster.fetchedAt = Date.now();
+          } else {
+            leagueRoster.status = "error";
+            console.warn("[TLCHAT] League roster fetch failed:", result);
+          }
+        })
+        .catch(function (err) {
+          leagueRoster.status = "error";
+          console.warn("[TLCHAT] League roster fetch failed:", err);
+        });
+    }
+
+    refreshLeagueRoster();
 
     function autoResizeInput() {
       input.style.height = "auto";
