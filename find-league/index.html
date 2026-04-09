@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Find a league — Tennis League Management Bot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script>
+      (function () {
+        var t = localStorage.getItem("tlchat-theme");
+        if (!t) t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", t);
+      })();
+    </script>
+  </head>
+  <body>
+    <main class="landing create-league-page find-league-page">
+      <p class="create-league-back">
+        <a href="/">← Home</a>
+      </p>
+      <h1>Find a league</h1>
+      <p class="create-league-intro">
+        Search by the <strong>start of the league title</strong> (case-insensitive). Open the player chat for a league you recognise. Admin access still requires the host token from the organiser.
+      </p>
+
+      <form id="find-league-form" class="create-league-form find-league-form" novalidate>
+        <div class="form-grid">
+          <label>
+            Title prefix <span class="req">*</span>
+            <input
+              type="text"
+              name="title_prefix"
+              required
+              autocomplete="off"
+              maxlength="500"
+              placeholder="e.g. Summer"
+            />
+          </label>
+          <label>
+            Max results <span class="optional-label">(1–100, default 50)</span>
+            <input type="number" name="limit" min="1" max="100" value="50" />
+          </label>
+        </div>
+        <div class="create-league-actions">
+          <button type="submit" class="btn-primary" id="find-league-submit">Search</button>
+        </div>
+      </form>
+
+      <div id="find-league-error" class="create-league-alert create-league-alert-error" hidden></div>
+
+      <section id="find-league-results-wrap" class="find-league-results-wrap" hidden>
+        <h2 class="find-league-results-heading">Results</h2>
+        <p id="find-league-results-summary" class="find-league-results-summary hint"></p>
+        <div id="find-league-results" class="find-league-results" role="list"></div>
+      </section>
+
+      <p class="hint create-league-config-hint">
+        API base URL is set in <code>js/config.js</code> or override with <code>?backendApi=https://your-host</code>.
+      </p>
+    </main>
+    <footer class="chat-footer">
+      <span>Backend source:</span>
+      <a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>
+      <a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>
+    </footer>
+    <script src="/js/config.js"></script>
+    <script src="/js/user-facing-errors.js"></script>
+    <script src="/js/find-league.js"></script>
+  </body>
+</html>
