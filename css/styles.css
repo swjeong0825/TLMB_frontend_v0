@@ -870,10 +870,10 @@ table.data th {
 
 .theme-toggle {
   flex-shrink: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
+  justify-content: center;
+  padding: 0.35rem 0.45rem;
   border-radius: 6px;
   border: 1px solid var(--theme-toggle-border);
   background: var(--theme-toggle-bg);

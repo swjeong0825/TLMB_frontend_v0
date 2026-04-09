@@ -855,19 +855,61 @@
       .replace(/</g, "&lt;");
   }
 
-  function applyChatHeaderTitle(titleEl, rawTitle) {
+  var LEAGUE_TITLE_CACHE_KEY = "tlchat-league-titles";
+
+  function getCachedLeagueTitle(leagueId) {
+    if (!leagueId) return "";
+    try {
+      var raw = localStorage.getItem(LEAGUE_TITLE_CACHE_KEY);
+      if (!raw) return "";
+      var map = JSON.parse(raw);
+      if (!map || typeof map !== "object" || Array.isArray(map)) return "";
+      var t = map[String(leagueId)];
+      return typeof t === "string" && t.trim() !== "" ? t.trim() : "";
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function rememberLeagueTitle(leagueId, title) {
+    if (!leagueId) return;
+    var s = title != null ? String(title).trim() : "";
+    if (!s) return;
+    try {
+      var raw = localStorage.getItem(LEAGUE_TITLE_CACHE_KEY);
+      var map = {};
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          map = parsed;
+        }
+      }
+      map[String(leagueId)] = s;
+      localStorage.setItem(LEAGUE_TITLE_CACHE_KEY, JSON.stringify(map));
+    } catch (_e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function applyChatHeaderTitle(titleEl, rawTitle, leagueId) {
     if (!titleEl) return;
+    var fromApi = rawTitle != null ? String(rawTitle).trim() : "";
     var text =
-      rawTitle != null && String(rawTitle).trim() !== ""
-        ? String(rawTitle).trim()
-        : tr("h1") || "Tennis League Management Bot";
+      fromApi !== ""
+        ? fromApi
+        : leagueId
+          ? getCachedLeagueTitle(leagueId)
+          : "";
+    if (!text) {
+      text = tr("h1") || "Tennis League Management Bot";
+    }
     titleEl.classList.remove("chat-header-title--loading");
     titleEl.removeAttribute("aria-busy");
     titleEl.removeAttribute("aria-label");
     titleEl.textContent = text;
   }
 
-  function renderChatShell(route) {
+  function renderChatShell(route, cachedHeaderTitle) {
     var isAdmin = !!route.hostToken;
     var isMobile = window.innerWidth <= 520;
     var rawPlaceholder = isMobile
@@ -885,21 +927,35 @@
         escapeHtml(tr("metaHostToken") || "Host token in URL") +
         "</div>"
       : "";
-    var loadingLabel =
-      escapeAttr(tr("headerTitleLoading") || "Loading league title…");
+    var cached =
+      cachedHeaderTitle != null && String(cachedHeaderTitle).trim() !== ""
+        ? String(cachedHeaderTitle).trim()
+        : "";
+    var titleH1Html;
+    if (cached) {
+      titleH1Html =
+        '<h1 id="chat-header-title" class="chat-header-title">' +
+        escapeHtml(cached) +
+        "</h1>";
+    } else {
+      var loadingLabel =
+        escapeAttr(tr("headerTitleLoading") || "Loading league title…");
+      titleH1Html =
+        '<h1 id="chat-header-title" class="chat-header-title chat-header-title--loading" aria-busy="true" aria-label="' +
+        loadingLabel +
+        '">' +
+        '<span class="chat-header-title-loader" aria-hidden="true">' +
+        '<span class="chat-header-title-dot"></span>' +
+        '<span class="chat-header-title-dot"></span>' +
+        '<span class="chat-header-title-dot"></span>' +
+        "</span>" +
+        "</h1>";
+    }
     return (
       "<header class=\"app-header\">" +
       '<div class="chat-header-title-row">' +
       '<div class="chat-header-title-block">' +
-      '<h1 id="chat-header-title" class="chat-header-title chat-header-title--loading" aria-busy="true" aria-label="' +
-      loadingLabel +
-      '">' +
-      '<span class="chat-header-title-loader" aria-hidden="true">' +
-      '<span class="chat-header-title-dot"></span>' +
-      '<span class="chat-header-title-dot"></span>' +
-      '<span class="chat-header-title-dot"></span>' +
-      "</span>" +
-      "</h1>" +
+      titleH1Html +
       "</div>" +
       '<span class="badge ' +
       (isAdmin ? "admin" : "") +
@@ -912,8 +968,7 @@
       '<button id="theme-toggle-btn" class="theme-toggle" aria-label="' +
       escapeAttr(tr("themeToggle") || "Toggle light/dark mode") +
       '">' +
-      '<span class="theme-icon"></span>' +
-      '<span class="theme-label"></span>' +
+      '<span class="theme-icon" aria-hidden="true"></span>' +
       "</button>" +
       "</div>" +
       "</header>" +
@@ -952,15 +1007,13 @@
     var btn = document.getElementById("theme-toggle-btn");
     if (!btn) return;
     var isLight = theme === "light";
-    btn.querySelector(".theme-icon").textContent = isLight ? "☀️" : "🌙";
-    btn.querySelector(".theme-label").textContent = isLight
-      ? tr("themeLight") || "Light"
-      : tr("themeDark") || "Dark";
+    var icon = btn.querySelector(".theme-icon");
+    if (icon) icon.textContent = isLight ? "☀️" : "🌙";
   }
 
   function mountChat(route) {
     var root = document.getElementById("app-root");
-    root.innerHTML = renderChatShell(route);
+    root.innerHTML = renderChatShell(route, getCachedLeagueTitle(route.leagueId));
     if (window.TLCHAT_I18N && typeof window.TLCHAT_I18N.applyDom === "function") {
       window.TLCHAT_I18N.applyDom(root);
     }
@@ -1007,19 +1060,34 @@
             leagueRoster.teams = result.teams;
             leagueRoster.status = "ok";
             leagueRoster.fetchedAt = Date.now();
-            applyChatHeaderTitle(document.getElementById("chat-header-title"), result.title);
+            if (result.title != null && String(result.title).trim() !== "") {
+              rememberLeagueTitle(route.leagueId, result.title);
+            }
+            applyChatHeaderTitle(
+              document.getElementById("chat-header-title"),
+              result.title,
+              route.leagueId
+            );
             updateMentionUI();
           } else {
             leagueRoster.status = "error";
             console.warn("[TLCHAT] League roster fetch failed:", result);
-            applyChatHeaderTitle(document.getElementById("chat-header-title"), null);
+            applyChatHeaderTitle(
+              document.getElementById("chat-header-title"),
+              null,
+              route.leagueId
+            );
             updateMentionUI();
           }
         })
         .catch(function (err) {
           leagueRoster.status = "error";
           console.warn("[TLCHAT] League roster fetch failed:", err);
-          applyChatHeaderTitle(document.getElementById("chat-header-title"), null);
+          applyChatHeaderTitle(
+            document.getElementById("chat-header-title"),
+            null,
+            route.leagueId
+          );
           updateMentionUI();
         });
     }
