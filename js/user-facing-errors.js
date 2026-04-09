@@ -110,6 +110,13 @@
       return MSG_NOT_FOUND_FALLBACK;
     }
     if (
+      t.indexOf("leaguetitlealreadyexistserror") !== -1 ||
+      t.indexOf("league title already exists") !== -1
+    ) {
+      return "A league with this title already exists. Try a different name.";
+    }
+
+    if (
       /\b401\b/.test(t) ||
       /\b403\b/.test(t) ||
       t.indexOf("forbidden") !== -1 ||

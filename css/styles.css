@@ -702,6 +702,211 @@ table.data th {
   line-height: 1;
 }
 
+/* ── Create league page ─────────────────────────────────────────────────── */
+
+.create-league-page .create-league-back {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.create-league-intro {
+  color: var(--muted);
+  margin-bottom: 1.25rem;
+}
+
+.create-league-form {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.create-league-form .form-grid textarea,
+.create-league-form .form-grid select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+}
+
+.create-league-form .form-grid textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.req {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.optional-label {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.checkbox-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-row input {
+  width: auto !important;
+  margin: 0;
+}
+
+.create-league-advanced {
+  margin-top: 1rem;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.create-league-advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+  user-select: none;
+}
+
+.create-league-advanced summary:hover {
+  color: var(--accent);
+}
+
+.create-league-advanced[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.create-league-actions {
+  margin-top: 1.25rem;
+}
+
+.btn-primary {
+  padding: 0.55rem 1.35rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-dim);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.create-league-alert {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.create-league-alert-error {
+  border: 1px solid var(--danger);
+  background: rgba(201, 76, 76, 0.12);
+  color: var(--text);
+}
+
+.create-league-success {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.create-league-success h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.create-league-credentials {
+  margin: 1rem 0 0;
+}
+
+.create-league-credentials > div {
+  margin-bottom: 0.85rem;
+}
+
+.create-league-credentials dt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.create-league-credentials dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.create-league-credentials code {
+  font-size: 0.78rem;
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.create-league-links {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.create-league-links ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.create-league-links li {
+  margin: 0.35rem 0;
+}
+
+.create-league-config-hint {
+  margin-top: 1.5rem;
+}
+
 @media (max-width: 520px) {
   .form-grid .nick-pair {
     grid-template-columns: 1fr;

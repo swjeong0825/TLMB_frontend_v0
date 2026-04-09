@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create league — Tennis League Management Bot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script>
+      (function () {
+        var t = localStorage.getItem("tlchat-theme");
+        if (!t) t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", t);
+      })();
+    </script>
+  </head>
+  <body>
+    <main class="landing create-league-page">
+      <p class="create-league-back">
+        <a href="/">← Home</a>
+      </p>
+      <h1>Create a league</h1>
+      <p class="create-league-intro">
+        Creates a new league on the main API and returns your <strong>league ID</strong> and <strong>host token</strong>.
+        Save the host token privately; it is required for admin actions.
+      </p>
+
+      <form id="create-league-form" class="create-league-form" novalidate>
+        <div class="form-grid">
+          <label>
+            League title <span class="req">*</span>
+            <input type="text" name="title" required autocomplete="organization" maxlength="500" placeholder="e.g. Summer Doubles 2026" />
+          </label>
+          <label>
+            Description <span class="optional-label">(optional)</span>
+            <textarea name="description" rows="3" maxlength="2000" placeholder="Shown to organisers; optional."></textarea>
+          </label>
+        </div>
+
+        <details class="create-league-advanced">
+          <summary>Advanced: custom rules</summary>
+          <p class="hint">
+            If you leave this closed, the server uses product defaults (one match per team pair, one team per player). Open
+            only if you need different behaviour.
+          </p>
+          <div class="form-grid">
+            <label>
+              Match pair idempotency
+              <select name="match_pair_idempotency">
+                <option value="once_per_league" selected>Once per league (recommended)</option>
+                <option value="none">Allow multiple matches between the same two teams</option>
+              </select>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" name="one_team_per_player" checked />
+              <span>One team per player</span>
+            </label>
+          </div>
+        </details>
+
+        <div class="create-league-actions">
+          <button type="submit" class="btn-primary" id="create-league-submit">Create league</button>
+        </div>
+      </form>
+
+      <div id="create-league-error" class="create-league-alert create-league-alert-error" hidden></div>
+
+      <section id="create-league-success" class="create-league-success" hidden>
+        <h2>League created</h2>
+        <p>Copy these values somewhere safe. The host token is not shown again.</p>
+        <dl class="create-league-credentials">
+          <div>
+            <dt>League ID</dt>
+            <dd>
+              <code id="out-league-id"></code>
+              <button type="button" class="btn-ghost" data-copy-target="out-league-id">Copy</button>
+            </dd>
+          </div>
+          <div>
+            <dt>Host token</dt>
+            <dd>
+              <code id="out-host-token"></code>
+              <button type="button" class="btn-ghost" data-copy-target="out-host-token">Copy</button>
+            </dd>
+          </div>
+        </dl>
+        <div class="create-league-links">
+          <p><strong>Open chat</strong></p>
+          <ul>
+            <li><a id="link-player" href="#">Player (league ID only)</a></li>
+            <li><a id="link-admin" href="#">Admin (includes host token)</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <p class="hint create-league-config-hint">
+        API base URL is set in <code>js/config.js</code> or override with <code>?backendApi=https://your-host</code>.
+      </p>
+    </main>
+    <footer class="chat-footer">
+      <span>Backend source:</span>
+      <a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>
+      <a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>
+    </footer>
+    <script src="/js/config.js"></script>
+    <script src="/js/user-facing-errors.js"></script>
+    <script src="/js/create-league.js"></script>
+  </body>
+</html>
