@@ -89,6 +89,18 @@
       return MSG_LEAGUE_NOT_FOUND;
     }
 
+    // POST /matches when league rules use match_pair_idempotency once_per_league:
+    // DuplicateTeamPairMatchError → 409 (body includes error + detail).
+    if (
+      t.indexOf("duplicateteampairmatcherror") !== -1 ||
+      t.indexOf("a match between these two teams already exists") !== -1
+    ) {
+      return (
+        "This league only allows one match per pair of teams, and those two teams already have a match. " +
+        "Edit the existing result if you meant to change the score, or use different players if it was a new matchup."
+      );
+    }
+
     if (
       /\b404\b/.test(t) ||
       t.indexOf("not found") !== -1 ||
