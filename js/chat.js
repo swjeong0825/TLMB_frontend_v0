@@ -865,6 +865,11 @@
       window.TLCHAT_I18N && typeof window.TLCHAT_I18N.renderLocaleDropdown === "function"
         ? window.TLCHAT_I18N.renderLocaleDropdown({ compact: true })
         : "";
+    var metaHtml = isAdmin
+      ? '<div class="meta">' +
+        escapeHtml(tr("metaHostToken") || "Host token in URL") +
+        "</div>"
+      : "";
     return (
       "<header class=\"app-header\">" +
       "<div><h1>" +
@@ -875,13 +880,7 @@
       '">' +
       escapeHtml((isAdmin ? tr("badgeAdmin") : tr("badgePlayer")) || (isAdmin ? "Admin" : "Player")) +
       "</span></div>" +
-      '<div class="meta">' +
-      escapeHtml(tr("metaLeague") || "League") +
-      " <code>" +
-      escapeHtml(route.leagueId) +
-      "</code>" +
-      (isAdmin ? escapeHtml(tr("metaHostToken") || " · host token in URL") : "") +
-      "</div>" +
+      metaHtml +
       '<div class="app-header-actions">' +
       headerLang +
       '<button id="theme-toggle-btn" class="theme-toggle" aria-label="' +
