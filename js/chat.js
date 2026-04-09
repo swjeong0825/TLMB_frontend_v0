@@ -50,6 +50,8 @@
     new_nickname: "New name",
     team1_player_nicknames: "Team 1 players",
     team2_player_nicknames: "Team 2 players",
+    team1_nicknames: "Team 1 nicknames",
+    team2_nicknames: "Team 2 nicknames",
     team1_score: "Team 1 score",
     team2_score: "Team 2 score",
     method: "Method",
@@ -251,6 +253,191 @@
 
   function needsHostTokenForUrl(url) {
     return typeof url === "string" && url.indexOf("/admin/") !== -1;
+  }
+
+  /** Aligns with backend PlayerNickname: trim + lowercase. */
+  function normalizeMatchNickname(s) {
+    return String(s == null ? "" : s).trim().toLowerCase();
+  }
+
+  function nickPairFromBodySpec(bodySpec, key) {
+    var spec = bodySpec[key];
+    if (!spec || !isFieldSpec(spec) || !spec.type || spec.type.indexOf("array") !== 0) {
+      return { raw: ["", ""], norm: ["", ""] };
+    }
+    var v = Array.isArray(spec.value) ? spec.value : [];
+    var r0 = v[0] == null ? "" : String(v[0]).trim();
+    var r1 = v[1] == null ? "" : String(v[1]).trim();
+    return {
+      raw: [r0, r1],
+      norm: [normalizeMatchNickname(r0), normalizeMatchNickname(r1)],
+    };
+  }
+
+  function rosterPlayerNormSet(players) {
+    var set = Object.create(null);
+    (players || []).forEach(function (p) {
+      var n = normalizeMatchNickname(p && p.nickname);
+      if (n) set[n] = true;
+    });
+    return set;
+  }
+
+  function rosterTeamPairKey(a, b) {
+    if (!a || !b) return "";
+    return a < b ? a + "\0" + b : b + "\0" + a;
+  }
+
+  function rosterPairKeysFromTeams(teams) {
+    var keys = Object.create(null);
+    (teams || []).forEach(function (t) {
+      var a = normalizeMatchNickname(t.player1_nickname);
+      var b = normalizeMatchNickname(t.player2_nickname);
+      if (a && b) keys[rosterTeamPairKey(a, b)] = true;
+    });
+    return keys;
+  }
+
+  function findRosterTeamForPlayer(playerNorm, teams) {
+    if (!playerNorm) return null;
+    for (var i = 0; i < (teams || []).length; i++) {
+      var tm = teams[i];
+      var a = normalizeMatchNickname(tm.player1_nickname);
+      var b = normalizeMatchNickname(tm.player2_nickname);
+      if (a === playerNorm) {
+        return {
+          player1_nickname: tm.player1_nickname,
+          player2_nickname: tm.player2_nickname,
+          partnerNorm: b,
+        };
+      }
+      if (b === playerNorm) {
+        return {
+          player1_nickname: tm.player1_nickname,
+          player2_nickname: tm.player2_nickname,
+          partnerNorm: a,
+        };
+      }
+    }
+    return null;
+  }
+
+  function escapeTeamPairLabel(p1, p2) {
+    return escapeHtml(p1) + " &amp; " + escapeHtml(p2);
+  }
+
+  /**
+   * Compares prefilled match form nicknames to cached GET /roster (same normalization as backend).
+   * Assumes default one-team-per-player when flagging partner conflicts (matches typical league rules).
+   */
+  function renderMatchSubmitRosterNotes(bodySpec, leagueRoster) {
+    if (!leagueRoster || leagueRoster.status !== "ok") {
+      return (
+        '<div class="match-form-roster-notes">' +
+        '<p class="hint">League roster is still loading or could not be loaded; registration previews are unavailable.</p>' +
+        "</div>"
+      );
+    }
+
+    var players = leagueRoster.players || [];
+    var teams = leagueRoster.teams || [];
+    var known = rosterPlayerNormSet(players);
+    var pairKeys = rosterPairKeysFromTeams(teams);
+
+    var t1 = nickPairFromBodySpec(bodySpec, "team1_nicknames");
+    var t2 = nickPairFromBodySpec(bodySpec, "team2_nicknames");
+
+    var normToDisplay = Object.create(null);
+    function rememberDisplay(norm, raw) {
+      if (!norm || !raw) return;
+      if (!(norm in normToDisplay)) normToDisplay[norm] = raw;
+    }
+    rememberDisplay(t1.norm[0], t1.raw[0]);
+    rememberDisplay(t1.norm[1], t1.raw[1]);
+    rememberDisplay(t2.norm[0], t2.raw[0]);
+    rememberDisplay(t2.norm[1], t2.raw[1]);
+
+    var newPlayerNormsOrder = [];
+    function addNewPlayerNorm(n) {
+      if (!n || known[n]) return;
+      if (newPlayerNormsOrder.indexOf(n) === -1) newPlayerNormsOrder.push(n);
+    }
+    addNewPlayerNorm(t1.norm[0]);
+    addNewPlayerNorm(t1.norm[1]);
+    addNewPlayerNorm(t2.norm[0]);
+    addNewPlayerNorm(t2.norm[1]);
+
+    var warnings = [];
+    var newTeams = [];
+
+    function analyzeSide(raw, norm) {
+      var n0 = norm[0];
+      var n1 = norm[1];
+      var r0 = raw[0];
+      var r1 = raw[1];
+      if (!n0 || !n1 || n0 === n1) return;
+      if (pairKeys[rosterTeamPairKey(n0, n1)]) return;
+
+      var sideConflict = false;
+      var teamA = findRosterTeamForPlayer(n0, teams);
+      if (teamA && teamA.partnerNorm !== n1) {
+        warnings.push(
+          "Player " +
+            escapeHtml(r0 || n0) +
+            " is already in the following team: <strong>" +
+            escapeTeamPairLabel(teamA.player1_nickname, teamA.player2_nickname) +
+            "</strong>"
+        );
+        sideConflict = true;
+      }
+      var teamB = findRosterTeamForPlayer(n1, teams);
+      if (teamB && teamB.partnerNorm !== n0) {
+        warnings.push(
+          "Player " +
+            escapeHtml(r1 || n1) +
+            " is already in the following team: <strong>" +
+            escapeTeamPairLabel(teamB.player1_nickname, teamB.player2_nickname) +
+            "</strong>"
+        );
+        sideConflict = true;
+      }
+      if (!sideConflict) {
+        newTeams.push(escapeTeamPairLabel(r0, r1));
+      }
+    }
+
+    analyzeSide(t1.raw, t1.norm);
+    analyzeSide(t2.raw, t2.norm);
+
+    var chunks = [];
+    if (newPlayerNormsOrder.length) {
+      var labels = newPlayerNormsOrder.map(function (n) {
+        return "<strong>" + escapeHtml(normToDisplay[n] || n) + "</strong>";
+      });
+      chunks.push(
+        "<p class=\"hint roster-note-info\"><strong>New player registration:</strong> Following players will be registered: " +
+          labels.join(", ") +
+          "</p>"
+      );
+    }
+    if (newTeams.length) {
+      var boldTeams = newTeams.map(function (t) {
+        return "<strong>" + t + "</strong>";
+      });
+      var teamPhrase =
+        newTeams.length === 1
+          ? "Following team will be created: " + boldTeams[0]
+          : "Following teams will be created: " + boldTeams.join("; ");
+      chunks.push(
+        "<p class=\"hint roster-note-info\"><strong>New team registration:</strong> " + teamPhrase + "</p>"
+      );
+    }
+    warnings.forEach(function (w) {
+      chunks.push('<p class="hint roster-note-warn"><strong>Warning:</strong> ' + w + "</p>");
+    });
+
+    if (!chunks.length) return "";
+    return '<div class="match-form-roster-notes">' + chunks.join("") + "</div>";
   }
 
   function assistantContentFromResponse(resp) {
@@ -844,6 +1031,9 @@
               "</div>"
           );
           conversationHistory.push({ role: "assistant", content: "Action completed: " + successLine });
+          if (method === "POST" && typeof url === "string" && url.indexOf("/matches") !== -1) {
+            refreshLeagueRoster();
+          }
         } else {
           var errLine = humanDetailFromHttpBody(txt);
           var technical =
@@ -905,6 +1095,9 @@
             "<p class=\"hint\" style=\"color:var(--warn)\">This write targets an admin endpoint. Use the Admin URL with <code>X-Host-Token</code>.</p>";
         }
         parts.push(warn);
+        if (resp.data_type === "SUBMIT_MATCH_RESULT") {
+          parts.push(renderMatchSubmitRosterNotes(bodySpec, leagueRoster));
+        }
         parts.push(
           "<div class=\"action-card\">" +
             renderWriteForm(bodySpec) +

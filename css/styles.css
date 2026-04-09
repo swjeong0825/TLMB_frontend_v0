@@ -376,6 +376,23 @@ table.data th {
   font-weight: 500;
 }
 
+.match-form-roster-notes {
+  margin-top: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.match-form-roster-notes p {
+  margin: 0.4em 0;
+}
+
+.match-form-roster-notes p:first-child {
+  margin-top: 0;
+}
+
+.match-form-roster-notes .roster-note-warn {
+  color: var(--warn);
+}
+
 .action-card {
   margin-top: 0.75rem;
   padding: 1rem;
