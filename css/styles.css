@@ -158,10 +158,62 @@ a:hover {
   min-width: 0;
 }
 
-.app-header h1 {
+.app-header h1,
+.app-header .chat-header-title {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.chat-header-title-block {
+  flex: 1 1 auto;
+  min-width: min(14rem, 72vw);
+  max-width: 100%;
+  min-height: 1.35em;
+  text-align: center;
+}
+
+.chat-header-title.chat-header-title--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.35em;
+}
+
+.chat-header-title-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chat-header-title-dot {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.45;
+  animation: chat-header-title-dot 1.05s ease-in-out infinite;
+}
+
+.chat-header-title-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.chat-header-title-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes chat-header-title-dot {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  35% {
+    transform: translateY(-0.22rem);
+    opacity: 1;
+  }
 }
 
 .app-header .meta {

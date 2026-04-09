@@ -215,7 +215,7 @@
   }
 
   /**
-   * GET /leagues/{id}/roster — used on chat open; result cached in mountChat for future UI (e.g. new-player hints).
+   * GET /leagues/{id}/roster — used on chat open; includes league title for header + roster cache for mentions.
    */
   async function fetchLeagueRoster(leagueId) {
     var base = backendMainBase();
@@ -230,8 +230,11 @@
     }
     try {
       var data = JSON.parse(text);
+      var leagueTitle =
+        data && typeof data.title === "string" ? data.title.trim() : "";
       return {
         ok: true,
+        title: leagueTitle,
         players: Array.isArray(data.players) ? data.players : [],
         teams: Array.isArray(data.teams) ? data.teams : [],
       };
@@ -852,6 +855,18 @@
       .replace(/</g, "&lt;");
   }
 
+  function applyChatHeaderTitle(titleEl, rawTitle) {
+    if (!titleEl) return;
+    var text =
+      rawTitle != null && String(rawTitle).trim() !== ""
+        ? String(rawTitle).trim()
+        : tr("h1") || "Tennis League Management Bot";
+    titleEl.classList.remove("chat-header-title--loading");
+    titleEl.removeAttribute("aria-busy");
+    titleEl.removeAttribute("aria-label");
+    titleEl.textContent = text;
+  }
+
   function renderChatShell(route) {
     var isAdmin = !!route.hostToken;
     var isMobile = window.innerWidth <= 520;
@@ -870,11 +885,22 @@
         escapeHtml(tr("metaHostToken") || "Host token in URL") +
         "</div>"
       : "";
+    var loadingLabel =
+      escapeAttr(tr("headerTitleLoading") || "Loading league title…");
     return (
       "<header class=\"app-header\">" +
-      "<div><h1>" +
-      escapeHtml(tr("h1") || "Tennis League Management Bot") +
+      '<div class="chat-header-title-row">' +
+      '<div class="chat-header-title-block">' +
+      '<h1 id="chat-header-title" class="chat-header-title chat-header-title--loading" aria-busy="true" aria-label="' +
+      loadingLabel +
+      '">' +
+      '<span class="chat-header-title-loader" aria-hidden="true">' +
+      '<span class="chat-header-title-dot"></span>' +
+      '<span class="chat-header-title-dot"></span>' +
+      '<span class="chat-header-title-dot"></span>' +
+      "</span>" +
       "</h1>" +
+      "</div>" +
       '<span class="badge ' +
       (isAdmin ? "admin" : "") +
       '">' +
@@ -981,16 +1007,19 @@
             leagueRoster.teams = result.teams;
             leagueRoster.status = "ok";
             leagueRoster.fetchedAt = Date.now();
+            applyChatHeaderTitle(document.getElementById("chat-header-title"), result.title);
             updateMentionUI();
           } else {
             leagueRoster.status = "error";
             console.warn("[TLCHAT] League roster fetch failed:", result);
+            applyChatHeaderTitle(document.getElementById("chat-header-title"), null);
             updateMentionUI();
           }
         })
         .catch(function (err) {
           leagueRoster.status = "error";
           console.warn("[TLCHAT] League roster fetch failed:", err);
+          applyChatHeaderTitle(document.getElementById("chat-header-title"), null);
           updateMentionUI();
         });
     }

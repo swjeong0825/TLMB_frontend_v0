@@ -253,6 +253,7 @@
           "No details available for this response. Try asking in another way.",
         noLeagueHtml: 'No league specified. <a href="/">Go to home</a>.',
         requestFailed: "Request failed.",
+        headerTitleLoading: "Loading league title…",
       },
     },
     ko: {
@@ -488,6 +489,7 @@
           "이 응답에 대한 세부 정보가 없습니다. 다른 방식으로 질문해 보세요.",
         noLeagueHtml: '리그가 지정되지 않았습니다. <a href="/">홈으로</a>.',
         requestFailed: "요청이 실패했습니다.",
+        headerTitleLoading: "리그 제목 불러오는 중…",
       },
     },
   };
