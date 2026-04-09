@@ -861,9 +861,9 @@
       : tr("placeholderDesktop") ||
         "Report Match Result, or Ask about standings, match history, or the roster.\nCheck \"Supported Commands\" for more details.";
     var inputPlaceholder = escapeAttr(rawPlaceholder);
-    var footerLang =
-      window.TLCHAT_I18N && typeof window.TLCHAT_I18N.renderFooterLangSwitch === "function"
-        ? window.TLCHAT_I18N.renderFooterLangSwitch()
+    var headerLang =
+      window.TLCHAT_I18N && typeof window.TLCHAT_I18N.renderLocaleDropdown === "function"
+        ? window.TLCHAT_I18N.renderLocaleDropdown({ compact: true })
         : "";
     return (
       "<header class=\"app-header\">" +
@@ -882,12 +882,15 @@
       "</code>" +
       (isAdmin ? escapeHtml(tr("metaHostToken") || " · host token in URL") : "") +
       "</div>" +
+      '<div class="app-header-actions">' +
+      headerLang +
       '<button id="theme-toggle-btn" class="theme-toggle" aria-label="' +
       escapeAttr(tr("themeToggle") || "Toggle light/dark mode") +
       '">' +
       '<span class="theme-icon"></span>' +
       '<span class="theme-label"></span>' +
       "</button>" +
+      "</div>" +
       "</header>" +
       renderIntentHelper(isAdmin) +
       '<main class="chat-main is-empty">' +
@@ -911,7 +914,6 @@
       "</form>" +
       "</div></main>" +
       '<footer class="chat-footer">' +
-      footerLang +
       '<span data-i18n="footer.backendSource"></span>' +
       '<a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>' +
       '<a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>' +
@@ -936,6 +938,9 @@
     root.innerHTML = renderChatShell(route);
     if (window.TLCHAT_I18N && typeof window.TLCHAT_I18N.applyDom === "function") {
       window.TLCHAT_I18N.applyDom(root);
+    }
+    if (window.TLCHAT_I18N && typeof window.TLCHAT_I18N.syncLocaleDropdown === "function") {
+      window.TLCHAT_I18N.syncLocaleDropdown(root);
     }
 
     applyTheme(localStorage.getItem("tlchat-theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));

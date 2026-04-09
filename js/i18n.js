@@ -1,8 +1,10 @@
 /**
  * Vanilla i18n: shared dictionary + t() helper.
  * Locale: ?lang=en|ko (persisted), then localStorage tlchat-locale, then navigator.
+ * Optional: load site-header.js before initPage() to inject the shared static header from #tlchat-site-header-root.
  *
- * Exposes window.TLCHAT_I18N { t, getLocale, setLocale, applyDom, initPage, wireLocaleSwitchers }
+ * Exposes window.TLCHAT_I18N { t, getLocale, setLocale, applyDom, initPage, wireLocaleSwitchers,
+ *   renderLocaleDropdown, syncLocaleDropdown }
  */
 (function (global) {
   "use strict";
@@ -627,12 +629,11 @@
       return;
     }
     global.document.documentElement.dataset.localeSwitchWired = "1";
-    global.document.addEventListener("click", function (ev) {
-      var btn = ev.target && ev.target.closest && ev.target.closest("[data-locale-switch]");
-      if (!btn) return;
-      var next = normalizeLocale(btn.getAttribute("data-locale-switch"));
+    global.document.addEventListener("change", function (ev) {
+      var el = ev.target;
+      if (!el || !el.matches || !el.matches("select.locale-dropdown")) return;
+      var next = normalizeLocale(el.value);
       if (!SUPPORTED[next]) return;
-      ev.preventDefault();
       var cur = getLocale();
       if (cur === next) return;
       setLocale(next);
@@ -645,16 +646,6 @@
     setLocale(loc);
   }
 
-  function renderFooterLangSwitch() {
-    return (
-      '<span class="footer-lang-group">' +
-      escapeAttr(t("footer.language")) +
-      ': <button type="button" class="lang-switch" data-locale-switch="en">English</button>' +
-      ' · ' +
-      '<button type="button" class="lang-switch" data-locale-switch="ko">한국어</button></span>'
-    );
-  }
-
   function escapeAttr(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -663,14 +654,66 @@
   }
 
   /**
+   * Native select: flag emoji + two-letter language code per option.
+   * Chat: { compact: true } — tighter padding; aria-label from footer.language.
+   * Static: optional visible label via data-i18n on sibling (see HTML).
+   */
+  function renderLocaleDropdown(options) {
+    var compact = options && options.compact;
+    var cur = getLocale();
+    var optEn = cur === "en" ? " selected" : "";
+    var optKo = cur === "ko" ? " selected" : "";
+    var optionsHtml =
+      '<option value="en"' +
+      optEn +
+      ">🇺🇸 EN</option>" +
+      '<option value="ko"' +
+      optKo +
+      ">🇰🇷 KO</option>";
+    var aria = escapeAttr(t("footer.language"));
+    var cls = "locale-dropdown" + (compact ? " locale-dropdown--compact" : "");
+    var sel =
+      '<select class="' +
+      cls +
+      '"' +
+      (compact
+        ? ' aria-label="' + aria + '"'
+        : ' id="tlchat-locale-select" data-i18n-aria-label="footer.language"') +
+      ">" +
+      optionsHtml +
+      "</select>";
+    return (
+      '<div class="locale-dropdown-wrap' +
+      (compact ? " locale-dropdown-wrap--compact" : "") +
+      '">' +
+      sel +
+      "</div>"
+    );
+  }
+
+  function syncLocaleDropdown(root) {
+    var r = root || global.document;
+    if (!r || !r.querySelectorAll) return;
+    var cur = getLocale();
+    if (!SUPPORTED[cur]) return;
+    r.querySelectorAll("select.locale-dropdown").forEach(function (sel) {
+      sel.value = cur;
+    });
+  }
+
+  /**
    * Call from static pages after scripts: set title from body[data-i18n-title-key], translate DOM, wire switchers.
    */
   function initPage() {
+    if (global.TLCHAT_SITE_HEADER && typeof global.TLCHAT_SITE_HEADER.mount === "function") {
+      global.TLCHAT_SITE_HEADER.mount();
+    }
     syncHtmlLang();
     var body = global.document && global.document.body;
     var titleKey = body && body.getAttribute("data-i18n-title-key");
     if (titleKey) applyDocumentTitle(titleKey);
     applyDom(global.document);
+    syncLocaleDropdown(global.document);
     wireLocaleSwitchers();
   }
 
@@ -684,6 +727,7 @@
     applyDocumentTitle: applyDocumentTitle,
     initPage: initPage,
     wireLocaleSwitchers: wireLocaleSwitchers,
-    renderFooterLangSwitch: renderFooterLangSwitch,
+    renderLocaleDropdown: renderLocaleDropdown,
+    syncLocaleDropdown: syncLocaleDropdown,
   };
 })(typeof window !== "undefined" ? window : this);

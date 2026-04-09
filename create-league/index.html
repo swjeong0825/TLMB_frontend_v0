@@ -20,6 +20,7 @@
     </script>
   </head>
   <body data-i18n-title-key="meta.titleCreateLeague">
+    <div id="tlchat-site-header-root"></div>
     <main class="landing create-league-page">
       <p class="create-league-back">
         <a href="/" data-i18n="common.homeLink"></a>
@@ -108,17 +109,12 @@
       <p class="hint create-league-config-hint" data-i18n-html="common.configHint"></p>
     </main>
     <footer class="chat-footer">
-      <span class="footer-lang-group"
-        ><span data-i18n="footer.language"></span>:
-        <button type="button" class="lang-switch" data-locale-switch="en">English</button>
-        ·
-        <button type="button" class="lang-switch" data-locale-switch="ko">한국어</button></span
-      >
       <span data-i18n="footer.backendSource"></span>
       <a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>
       <a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>
     </footer>
     <script src="/js/i18n.js"></script>
+    <script src="/js/site-header.js"></script>
     <script src="/js/config.js"></script>
     <script src="/js/user-facing-errors.js"></script>
     <script src="/js/create-league.js"></script>
