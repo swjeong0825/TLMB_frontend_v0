@@ -951,17 +951,19 @@
         "</span>" +
         "</h1>";
     }
+    var roleBadgeHtml = isAdmin
+      ? '<span class="badge admin">' +
+        escapeHtml(tr("badgeAdmin") || "Admin") +
+        "</span>"
+      : "";
     return (
       "<header class=\"app-header\">" +
       '<div class="chat-header-title-row">' +
       '<div class="chat-header-title-block">' +
       titleH1Html +
       "</div>" +
-      '<span class="badge ' +
-      (isAdmin ? "admin" : "") +
-      '">' +
-      escapeHtml((isAdmin ? tr("badgeAdmin") : tr("badgePlayer")) || (isAdmin ? "Admin" : "Player")) +
-      "</span></div>" +
+      roleBadgeHtml +
+      "</div>" +
       metaHtml +
       '<div class="app-header-actions">' +
       headerLang +
