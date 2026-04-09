@@ -768,6 +768,7 @@
       '<div class="composer">' +
       '<form id="chat-form">' +
       '<div class="composer-input-wrap">' +
+      '<div id="chat-mention-popover" class="chat-mention-popover" hidden role="listbox" aria-label="Mention a player"></div>' +
       '<textarea id="chat-input" rows="2" placeholder="' + inputPlaceholder + '" autocomplete="off"></textarea>' +
       '<button type="submit" id="send-btn" aria-label="Send">' +
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>' +
@@ -809,8 +810,12 @@
 
     var messagesEl = document.getElementById("messages");
     var form = document.getElementById("chat-form");
+    var mentionPopover = document.getElementById("chat-mention-popover");
     var input = document.getElementById("chat-input");
     var sendBtn = document.getElementById("send-btn");
+    if (input && mentionPopover) {
+      input.setAttribute("aria-controls", "chat-mention-popover");
+    }
 
     var conversationHistory = [];
     var emptyRemoved = false;
@@ -832,25 +837,191 @@
             leagueRoster.teams = result.teams;
             leagueRoster.status = "ok";
             leagueRoster.fetchedAt = Date.now();
+            updateMentionUI();
           } else {
             leagueRoster.status = "error";
             console.warn("[TLCHAT] League roster fetch failed:", result);
+            updateMentionUI();
           }
         })
         .catch(function (err) {
           leagueRoster.status = "error";
           console.warn("[TLCHAT] League roster fetch failed:", err);
+          updateMentionUI();
         });
     }
 
     refreshLeagueRoster();
+
+    var mentionList = [];
+    var mentionSelectedIndex = 0;
+
+    /**
+     * Active @-mention: @ at line/start or after whitespace; query is text after @ up to caret (no spaces).
+     * Avoids triggering on email-like "x@y" when x is non-whitespace.
+     */
+    function getMentionState(text, caretPos) {
+      if (caretPos == null || caretPos < 0) return null;
+      var before = String(text || "").slice(0, caretPos);
+      var at = before.lastIndexOf("@");
+      if (at === -1) return null;
+      if (at > 0 && !/\s/.test(before.charAt(at - 1))) return null;
+      var afterAt = before.slice(at + 1);
+      if (/[\s\u00a0\n\r]/.test(afterAt)) return null;
+      return { atIndex: at, query: afterAt };
+    }
+
+    function filterPlayersForMention(query) {
+      var q = normalizeMatchNickname(query);
+      var players = leagueRoster.players || [];
+      if (!q) {
+        return players.slice().sort(function (a, b) {
+          var na = String((a && a.nickname) || "");
+          var nb = String((b && b.nickname) || "");
+          return na.localeCompare(nb, undefined, { sensitivity: "base" });
+        });
+      }
+      return players
+        .filter(function (p) {
+          var n = String((p && p.nickname) || "");
+          return normalizeMatchNickname(n).indexOf(q) !== -1;
+        })
+        .sort(function (a, b) {
+          var na = String((a && a.nickname) || "");
+          var nb = String((b && b.nickname) || "");
+          return na.localeCompare(nb, undefined, { sensitivity: "base" });
+        });
+    }
+
+    function hideMentionPopover() {
+      if (!mentionPopover) return;
+      mentionPopover.hidden = true;
+      mentionPopover.innerHTML = "";
+      mentionList = [];
+      mentionSelectedIndex = 0;
+      input.removeAttribute("aria-activedescendant");
+    }
+
+    function showMentionPopover(matches) {
+      if (!mentionPopover) return;
+      mentionPopover.innerHTML = "";
+      mentionList = [];
+      mentionSelectedIndex = 0;
+      if (leagueRoster.status === "loading") {
+        mentionPopover.innerHTML =
+          '<div class="chat-mention-item chat-mention-status" role="presentation">Loading players…</div>';
+        mentionPopover.hidden = false;
+        return;
+      }
+      if (leagueRoster.status === "error") {
+        mentionPopover.innerHTML =
+          '<div class="chat-mention-item chat-mention-status" role="presentation">Could not load roster.</div>';
+        mentionPopover.hidden = false;
+        return;
+      }
+      if (!matches.length) {
+        mentionPopover.innerHTML =
+          '<div class="chat-mention-item chat-mention-status" role="presentation">No matching players.</div>';
+        mentionPopover.hidden = false;
+        return;
+      }
+      var cap = 80;
+      var slice = matches.length > cap ? matches.slice(0, cap) : matches;
+      mentionList = slice;
+      slice.forEach(function (p, i) {
+        var nick = String((p && p.nickname) || "");
+        var id = "chat-mention-opt-" + i;
+        var div = document.createElement("div");
+        div.id = id;
+        div.className = "chat-mention-item" + (i === 0 ? " is-active" : "");
+        div.setAttribute("role", "option");
+        div.setAttribute("aria-selected", i === 0 ? "true" : "false");
+        div.textContent = nick;
+        div.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          applyMentionPick(nick);
+        });
+        mentionPopover.appendChild(div);
+      });
+      if (matches.length > cap) {
+        var more = document.createElement("div");
+        more.className = "chat-mention-item chat-mention-status";
+        more.setAttribute("role", "presentation");
+        more.textContent = "Showing " + cap + " of " + matches.length + ". Type to narrow down.";
+        mentionPopover.appendChild(more);
+      }
+      mentionPopover.hidden = false;
+      input.setAttribute("aria-activedescendant", "chat-mention-opt-0");
+    }
+
+    function syncMentionSelectionHighlight() {
+      if (!mentionPopover || mentionPopover.hidden) return;
+      var opts = mentionPopover.querySelectorAll(".chat-mention-item[role=\"option\"]");
+      if (!opts.length) {
+        input.removeAttribute("aria-activedescendant");
+        return;
+      }
+      if (mentionSelectedIndex >= opts.length) mentionSelectedIndex = 0;
+      for (var i = 0; i < opts.length; i++) {
+        var sel = i === mentionSelectedIndex;
+        opts[i].setAttribute("aria-selected", sel ? "true" : "false");
+        opts[i].classList.toggle("is-active", sel);
+      }
+      var active = mentionPopover.querySelector("#chat-mention-opt-" + mentionSelectedIndex);
+      if (active) {
+        input.setAttribute("aria-activedescendant", active.id);
+        active.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    function applyMentionPick(nickname) {
+      var v = input.value;
+      var caret = input.selectionStart;
+      var st = getMentionState(v, caret);
+      if (!st) {
+        hideMentionPopover();
+        return;
+      }
+      var before = v.slice(0, st.atIndex);
+      var after = v.slice(caret);
+      var insert = nickname + (after.length && !/^\s/.test(after.charAt(0)) ? " " : "");
+      input.value = before + insert + after;
+      var newPos = before.length + insert.length;
+      input.setSelectionRange(newPos, newPos);
+      hideMentionPopover();
+      autoResizeInput();
+    }
+
+    function updateMentionUI() {
+      if (imeCompositionActive) return;
+      var v = input.value;
+      var caret = input.selectionStart;
+      var st = getMentionState(v, caret);
+      if (!st) {
+        hideMentionPopover();
+        return;
+      }
+      var matches = filterPlayersForMention(st.query);
+      showMentionPopover(matches);
+      syncMentionSelectionHighlight();
+    }
+
+    function mentionPopoverOpen() {
+      if (!mentionPopover || mentionPopover.hidden) return false;
+      return mentionPopover.querySelector(".chat-mention-item[role=\"option\"]") != null;
+    }
 
     function autoResizeInput() {
       input.style.height = "auto";
       input.style.height = input.scrollHeight + "px";
     }
 
-    input.addEventListener("input", autoResizeInput);
+    function onInputResizeAndMention() {
+      autoResizeInput();
+      updateMentionUI();
+    }
+
+    input.addEventListener("input", onInputResizeAndMention);
 
     var imeCompositionActive = false;
     input.addEventListener("compositionstart", function () {
@@ -858,14 +1029,64 @@
     });
     input.addEventListener("compositionend", function () {
       imeCompositionActive = false;
+      updateMentionUI();
     });
 
     input.addEventListener("keydown", function (e) {
+      if (mentionPopoverOpen()) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          mentionSelectedIndex = (mentionSelectedIndex + 1) % mentionList.length;
+          syncMentionSelectionHighlight();
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          mentionSelectedIndex =
+            (mentionSelectedIndex - 1 + mentionList.length) % mentionList.length;
+          syncMentionSelectionHighlight();
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          hideMentionPopover();
+          return;
+        }
+        if (e.key === "Enter") {
+          if (e.shiftKey) return;
+          e.preventDefault();
+          var pickE = mentionList[mentionSelectedIndex];
+          var nickE = pickE && pickE.nickname != null ? String(pickE.nickname) : "";
+          if (nickE) applyMentionPick(nickE);
+          return;
+        }
+        if (e.key === "Tab") {
+          if (e.shiftKey) return;
+          e.preventDefault();
+          var pickT = mentionList[mentionSelectedIndex];
+          var nickT = pickT && pickT.nickname != null ? String(pickT.nickname) : "";
+          if (nickT) applyMentionPick(nickT);
+          return;
+        }
+      }
       if (e.key !== "Enter" || e.shiftKey) return;
       // Let IME (Korean, Japanese, etc.) consume Enter to finish composition; do not preventDefault.
       if (e.isComposing || imeCompositionActive) return;
       e.preventDefault();
       form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+    });
+
+    input.addEventListener("click", updateMentionUI);
+    input.addEventListener("keyup", function (e) {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End") {
+        updateMentionUI();
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!mentionPopover || mentionPopover.hidden) return;
+      if (e.target === input || mentionPopover.contains(e.target)) return;
+      hideMentionPopover();
     });
 
     function clearEmpty() {
