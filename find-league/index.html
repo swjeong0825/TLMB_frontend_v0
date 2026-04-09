@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Noto+Sans+KR:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -19,58 +19,65 @@
       })();
     </script>
   </head>
-  <body>
+  <body data-i18n-title-key="meta.titleFindLeague">
     <main class="landing create-league-page find-league-page">
       <p class="create-league-back">
-        <a href="/">← Home</a>
+        <a href="/" data-i18n="common.homeLink"></a>
       </p>
-      <h1>Find a league</h1>
-      <p class="create-league-intro">
-        Search by the <strong>start of the league title</strong> (case-insensitive). Open the player chat for a league you recognise. Admin access still requires the host token from the organiser.
-      </p>
+      <h1 data-i18n="findLeague.h1"></h1>
+      <p class="create-league-intro" data-i18n-html="findLeague.introHtml"></p>
 
       <form id="find-league-form" class="create-league-form find-league-form" novalidate>
         <div class="form-grid">
           <label>
-            Title prefix <span class="req">*</span>
+            <span data-i18n="findLeague.labelTitlePrefix"></span> <span class="req">*</span>
             <input
               type="text"
               name="title_prefix"
               required
               autocomplete="off"
               maxlength="500"
-              placeholder="e.g. Summer"
+              data-i18n-placeholder="findLeague.placeholderPrefix"
             />
           </label>
           <label>
-            Max results <span class="optional-label">(1–100, default 50)</span>
+            <span data-i18n="findLeague.labelMaxResults"></span>
+            <span class="optional-label" data-i18n="findLeague.labelMaxResultsHint"></span>
             <input type="number" name="limit" min="1" max="100" value="50" />
           </label>
         </div>
         <div class="create-league-actions">
-          <button type="submit" class="btn-primary" id="find-league-submit">Search</button>
+          <button type="submit" class="btn-primary" id="find-league-submit" data-i18n="findLeague.submit"></button>
         </div>
       </form>
 
       <div id="find-league-error" class="create-league-alert create-league-alert-error" hidden></div>
 
       <section id="find-league-results-wrap" class="find-league-results-wrap" hidden>
-        <h2 class="find-league-results-heading">Results</h2>
+        <h2 class="find-league-results-heading" data-i18n="findLeague.resultsHeading"></h2>
         <p id="find-league-results-summary" class="find-league-results-summary hint"></p>
         <div id="find-league-results" class="find-league-results" role="list"></div>
       </section>
 
-      <p class="hint create-league-config-hint">
-        API base URL is set in <code>js/config.js</code> or override with <code>?backendApi=https://your-host</code>.
-      </p>
+      <p class="hint create-league-config-hint" data-i18n-html="common.configHint"></p>
     </main>
     <footer class="chat-footer">
-      <span>Backend source:</span>
+      <span class="footer-lang-group"
+        ><span data-i18n="footer.language"></span>:
+        <button type="button" class="lang-switch" data-locale-switch="en">English</button>
+        ·
+        <button type="button" class="lang-switch" data-locale-switch="ko">한국어</button></span
+      >
+      <span data-i18n="footer.backendSource"></span>
       <a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>
       <a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>
     </footer>
+    <script src="/js/i18n.js"></script>
     <script src="/js/config.js"></script>
     <script src="/js/user-facing-errors.js"></script>
     <script src="/js/find-league.js"></script>
+    <script>
+      TLCHAT_I18N.initPage();
+    </script>
   </body>
 </html>

@@ -23,43 +23,45 @@
     return d.innerHTML;
   }
 
-  var PANEL_TITLES = {
-    GET_STANDINGS: "Standings",
-    GET_STANDINGS_BY_PLAYER: "Standings",
-    GET_MATCH_HISTORY: "Match history",
-    GET_MATCH_HISTORY_BY_PLAYER: "Match history",
-    GET_ROSTER: "Roster",
-  };
+  function tr(key, params) {
+    var I = window.TLCHAT_I18N;
+    if (!I || typeof I.t !== "function") return "";
+    return I.t("chat." + key, params);
+  }
 
   function panelTitleForDataType(dataType) {
-    if (PANEL_TITLES[dataType]) return PANEL_TITLES[dataType];
-    return String(dataType || "")
+    if (dataType === "GET_STANDINGS" || dataType === "GET_STANDINGS_BY_PLAYER") return tr("panelStandings");
+    if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
+      return tr("panelMatchHistory");
+    }
+    if (dataType === "GET_ROSTER") return tr("panelRoster");
+    var human = String(dataType || "")
       .replace(/^GET_/, "")
       .replace(/_/g, " ")
       .replace(/\b\w/g, function (c) {
         return c.toUpperCase();
       })
-      .trim() || "Details";
+      .trim();
+    return human || tr("panelDetails");
   }
 
-  var FIELD_LABELS = {
-    team_id: "Team reference",
-    match_id: "Match reference",
-    player_id: "Player reference",
-    current_nickname: "Current name",
-    new_nickname: "New name",
-    team1_player_nicknames: "Team 1 players",
-    team2_player_nicknames: "Team 2 players",
-    team1_nicknames: "Team 1 nicknames",
-    team2_nicknames: "Team 2 nicknames",
-    team1_score: "Team 1 score",
-    team2_score: "Team 2 score",
-    method: "Method",
-    url: "URL",
-  };
-
   function labelForFormField(key) {
-    if (FIELD_LABELS[key]) return FIELD_LABELS[key];
+    var byKey = {
+      team_id: tr("fieldTeamId"),
+      match_id: tr("fieldMatchId"),
+      player_id: tr("fieldPlayerId"),
+      current_nickname: tr("fieldCurrentNickname"),
+      new_nickname: tr("fieldNewNickname"),
+      team1_player_nicknames: tr("fieldTeam1Players"),
+      team2_player_nicknames: tr("fieldTeam2Players"),
+      team1_nicknames: tr("fieldTeam1Nicknames"),
+      team2_nicknames: tr("fieldTeam2Nicknames"),
+      team1_score: tr("fieldTeam1Score"),
+      team2_score: tr("fieldTeam2Score"),
+      method: tr("fieldMethod"),
+      url: tr("fieldUrl"),
+    };
+    if (byKey[key]) return byKey[key];
     return key
       .replace(/_/g, " ")
       .replace(/\b\w/g, function (c) {
@@ -68,7 +70,7 @@
   }
 
   function formatWhen(iso) {
-    if (iso == null || iso === "") return "—";
+    if (iso == null || iso === "") return tr("emDash") || "—";
     var t = Date.parse(String(iso));
     if (isNaN(t)) return escapeHtml(String(iso));
     try {
@@ -126,7 +128,7 @@
       if (d) return d;
     }
     var plain = (text || "").trim();
-    if (!plain) return "Changes were saved.";
+    if (!plain) return tr("changesSaved") || "Changes were saved.";
     if (plain.length > 280) return plain.slice(0, 280) + "…";
     return plain;
   }
@@ -170,7 +172,7 @@
     var cleaned = sanitizeForDisplay(data);
     var keys = cleaned && typeof cleaned === "object" ? Object.keys(cleaned) : [];
     if (!keys.length) {
-      return "<p class=\"hint\">No additional details to show.</p>";
+      return "<p class=\"hint\">" + escapeHtml(tr("noDetails") || "No additional details to show.") + "</p>";
     }
     return "<pre class=\"hint response-json\">" + escapeHtml(JSON.stringify(cleaned, null, 2)) + "</pre>";
   }
@@ -180,8 +182,10 @@
     if (api && typeof api.fromTechnical === "function") {
       return api.fromTechnical(technical);
     }
+    var I = window.TLCHAT_I18N;
     return (
       (api && api.GENERIC_MESSAGE) ||
+      (I && I.t ? I.t("errors.generic") : "") ||
       "Something went wrong. Please try again in a moment, or rephrase your question."
     );
   }
@@ -334,7 +338,9 @@
     if (!leagueRoster || leagueRoster.status !== "ok") {
       return (
         '<div class="match-form-roster-notes">' +
-        '<p class="hint">League roster is still loading or could not be loaded; registration previews are unavailable.</p>' +
+        '<p class="hint">' +
+        escapeHtml(tr("rosterLoadingNotes") || "League roster is still loading or could not be loaded; registration previews are unavailable.") +
+        "</p>" +
         "</div>"
       );
     }
@@ -382,22 +388,30 @@
       var teamA = findRosterTeamForPlayer(n0, teams);
       if (teamA && teamA.partnerNorm !== n1) {
         warnings.push(
-          "Player " +
-            escapeHtml(r0 || n0) +
-            " is already in the following team: <strong>" +
-            escapeTeamPairLabel(teamA.player1_nickname, teamA.player2_nickname) +
-            "</strong>"
+          tr("rosterWarnPlayerTeam", {
+            player: escapeHtml(r0 || n0),
+            team: escapeTeamPairLabel(teamA.player1_nickname, teamA.player2_nickname),
+          }) ||
+            "Player " +
+              escapeHtml(r0 || n0) +
+              " is already in the following team: <strong>" +
+              escapeTeamPairLabel(teamA.player1_nickname, teamA.player2_nickname) +
+              "</strong>"
         );
         sideConflict = true;
       }
       var teamB = findRosterTeamForPlayer(n1, teams);
       if (teamB && teamB.partnerNorm !== n0) {
         warnings.push(
-          "Player " +
-            escapeHtml(r1 || n1) +
-            " is already in the following team: <strong>" +
-            escapeTeamPairLabel(teamB.player1_nickname, teamB.player2_nickname) +
-            "</strong>"
+          tr("rosterWarnPlayerTeam", {
+            player: escapeHtml(r1 || n1),
+            team: escapeTeamPairLabel(teamB.player1_nickname, teamB.player2_nickname),
+          }) ||
+            "Player " +
+              escapeHtml(r1 || n1) +
+              " is already in the following team: <strong>" +
+              escapeTeamPairLabel(teamB.player1_nickname, teamB.player2_nickname) +
+              "</strong>"
         );
         sideConflict = true;
       }
@@ -415,25 +429,37 @@
         return "<strong>" + escapeHtml(normToDisplay[n] || n) + "</strong>";
       });
       chunks.push(
-        "<p class=\"hint roster-note-info\"><strong>New player registration:</strong> Following players will be registered: " +
-          labels.join(", ") +
-          "</p>"
+        tr("newPlayerRegLine", { list: labels.join(", ") }) ||
+          "<p class=\"hint roster-note-info\"><strong>New player registration:</strong> Following players will be registered: " +
+            labels.join(", ") +
+            "</p>"
       );
     }
     if (newTeams.length) {
-      var boldTeams = newTeams.map(function (t) {
-        return "<strong>" + t + "</strong>";
+      var boldTeams = newTeams.map(function (tm) {
+        return "<strong>" + tm + "</strong>";
       });
-      var teamPhrase =
+      var teamLine =
         newTeams.length === 1
-          ? "Following team will be created: " + boldTeams[0]
-          : "Following teams will be created: " + boldTeams.join("; ");
+          ? tr("newTeamLineOne", { team: boldTeams[0] })
+          : tr("newTeamLineMany", { teams: boldTeams.join("; ") });
       chunks.push(
-        "<p class=\"hint roster-note-info\"><strong>New team registration:</strong> " + teamPhrase + "</p>"
+        teamLine ||
+          "<p class=\"hint roster-note-info\"><strong>New team registration:</strong> " +
+            (newTeams.length === 1
+              ? "Following team will be created: " + boldTeams[0]
+              : "Following teams will be created: " + boldTeams.join("; ")) +
+            "</p>"
       );
     }
     warnings.forEach(function (w) {
-      chunks.push('<p class="hint roster-note-warn"><strong>Warning:</strong> ' + w + "</p>");
+      chunks.push(
+        '<p class="hint roster-note-warn"><strong>' +
+          escapeHtml(tr("warning") || "Warning:") +
+          "</strong> " +
+          w +
+          "</p>"
+      );
     });
 
     if (!chunks.length) return "";
@@ -446,19 +472,34 @@
     var sm = (resp.server_message || "").trim();
     if (sm) return sm;
     if (READ_TYPES[resp.data_type]) {
-      var t = panelTitleForDataType(resp.data_type);
+      var title = panelTitleForDataType(resp.data_type);
       var pn = resp.data && resp.data.player_name;
-      if (pn) return t + " for " + String(pn).trim();
-      return t;
+      if (pn) {
+        return (
+          tr("assistantForPlayer", { title: title, name: String(pn).trim() }) ||
+          title + " for " + String(pn).trim()
+        );
+      }
+      return title;
     }
     return "[" + resp.data_type + "]";
   }
 
   function renderStandings(data) {
     var rows = data.standings || [];
-    if (!rows.length) return "<p class=\"hint\">No standings yet.</p>";
+    if (!rows.length) {
+      return "<p class=\"hint\">" + escapeHtml(tr("standingsEmpty") || "No standings yet.") + "</p>";
+    }
     var h =
-      "<table class=\"data\"><thead><tr><th>Rank</th><th>Team</th><th>W</th><th>L</th></tr></thead><tbody>";
+      "<table class=\"data\"><thead><tr><th>" +
+      escapeHtml(tr("tableRank") || "Rank") +
+      "</th><th>" +
+      escapeHtml(tr("tableTeam") || "Team") +
+      "</th><th>" +
+      escapeHtml(tr("tableW") || "W") +
+      "</th><th>" +
+      escapeHtml(tr("tableL") || "L") +
+      "</th></tr></thead><tbody>";
     rows.forEach(function (r) {
       h +=
         "<tr><td>" +
@@ -478,17 +519,27 @@
 
   function renderMatches(data) {
     var rows = data.matches || [];
-    if (!rows.length) return "<p class=\"hint\">No matches recorded.</p>";
+    if (!rows.length) {
+      return "<p class=\"hint\">" + escapeHtml(tr("matchesEmpty") || "No matches recorded.") + "</p>";
+    }
     var h =
-      "<table class=\"data\"><thead><tr><th>Teams</th><th>Score</th><th>When</th></tr></thead><tbody>";
+      "<table class=\"data\"><thead><tr><th>" +
+      escapeHtml(tr("tableTeams") || "Teams") +
+      "</th><th>" +
+      escapeHtml(tr("tableScore") || "Score") +
+      "</th><th>" +
+      escapeHtml(tr("tableWhen") || "When") +
+      "</th></tr></thead><tbody>";
     rows.forEach(function (m) {
       var t1 = escapeHtml(m.team1_player1_nickname) + " &amp; " + escapeHtml(m.team1_player2_nickname);
       var t2 = escapeHtml(m.team2_player1_nickname) + " &amp; " + escapeHtml(m.team2_player2_nickname);
-      var when = m.created_at ? formatWhen(m.created_at) : "—";
+      var when = m.created_at ? formatWhen(m.created_at) : escapeHtml(tr("emDash") || "—");
       h +=
         "<tr><td>" +
         t1 +
-        " vs " +
+        " " +
+        escapeHtml(tr("vs") || "vs") +
+        " " +
         t2 +
         "</td><td>" +
         escapeHtml(m.team1_score) +
@@ -506,7 +557,10 @@
     var teams = data.teams || [];
     var h = "";
     if (teams.length) {
-      h += '<div class="roster-block"><h4 class="roster-heading">Teams</h4><ul class="roster-list">';
+      h +=
+        '<div class="roster-block"><h4 class="roster-heading">' +
+        escapeHtml(tr("rosterHeadingTeams") || "Teams") +
+        "</h4><ul class=\"roster-list\">";
       teams.forEach(function (t) {
         h +=
           "<li class=\"roster-item\"><span class=\"roster-pair\">" +
@@ -518,13 +572,16 @@
       h += "</ul></div>";
     }
     if (players.length) {
-      h += '<div class="roster-block"><h4 class="roster-heading">Players</h4><ul class="roster-list roster-list-players">';
+      h +=
+        '<div class="roster-block"><h4 class="roster-heading">' +
+        escapeHtml(tr("rosterHeadingPlayers") || "Players") +
+        "</h4><ul class=\"roster-list roster-list-players\">";
       players.forEach(function (p) {
         h += "<li class=\"roster-item\">" + escapeHtml(p.nickname) + "</li>";
       });
       h += "</ul></div>";
     }
-    if (!h) return "<p class=\"hint\">Roster is empty.</p>";
+    if (!h) return "<p class=\"hint\">" + escapeHtml(tr("rosterEmpty") || "Roster is empty.") + "</p>";
     return h;
   }
 
@@ -532,7 +589,9 @@
     var name = data && data.player_name;
     if (name == null || String(name).trim() === "") return "";
     return (
-      '<p class="read-panel-filter hint">Showing results for ' + escapeHtml(String(name).trim()) + ".</p>"
+      '<p class="read-panel-filter hint">' +
+      escapeHtml(tr("filterFor", { name: String(name).trim() }) || "Showing results for " + String(name).trim() + ".") +
+      "</p>"
     );
   }
 
@@ -563,10 +622,14 @@
       "<div class=\"nick-pair\" data-array-field=\"" +
       escapeHtml(name) +
       "\">" +
-      "<label>P1 <input type=\"text\" data-array-index=\"0\" value=\"" +
+      "<label>" +
+      escapeHtml(tr("formP1") || "P1") +
+      " <input type=\"text\" data-array-index=\"0\" value=\"" +
       escapeHtml(a[0] || "") +
       "\" /></label>" +
-      "<label>P2 <input type=\"text\" data-array-index=\"1\" value=\"" +
+      "<label>" +
+      escapeHtml(tr("formP2") || "P2") +
+      " <input type=\"text\" data-array-index=\"1\" value=\"" +
       escapeHtml(a[1] || "") +
       "\" /></label>" +
       "</div>"
@@ -575,7 +638,9 @@
 
   function renderWriteForm(bodySpec) {
     if (!bodySpec || typeof bodySpec !== "object" || !Object.keys(bodySpec).length) {
-      return "<p class=\"hint\">No body. Confirm to send the request.</p>";
+      return (
+        "<p class=\"hint\">" + escapeHtml(tr("noBodyHint") || "No request body. Confirm to send.") + "</p>"
+      );
     }
     var parts = ['<div class="form-grid">'];
     Object.keys(bodySpec).forEach(function (key) {
@@ -650,51 +715,80 @@
     return missing;
   }
 
-  var USER_INTENTS = [
-    {
-      name: "GET_STANDINGS",
-      desc: "View current win/loss standings for all teams.",
-      examples: ["show me the standings", "who's winning the league?", "what's the current leaderboard?"],
-    },
-    {
-      name: "GET_MATCH_HISTORY",
-      desc: "View all recorded match results, most recent first.",
-      examples: ["show me all the matches", "what matches have been played?", "what were the recent results?"],
-    },
-    {
-      name: "GET_ROSTER",
-      desc: "View all registered players and teams.",
-      examples: ["show me all the players", "who's in the league?", "list all teams"],
-    },
-    {
-      name: "SUBMIT_MATCH_RESULT",
-      desc: "Record a doubles match result. New players are registered automatically.",
-      examples: ["Jae + Jazz 6:4 DK + Casper", "Alice and Bob beat Charlie and Diana 6 to 3", "record a match: John and Sarah vs Mike and Emma, 7-5"],
-    },
-  ];
+  function getUserIntents() {
+    return [
+      {
+        name: "GET_STANDINGS",
+        desc: tr("intentGetStandingsDesc") || "View current win/loss standings for all teams.",
+        examples: [
+          tr("intentGetStandingsEx1") || "show me the standings",
+          tr("intentGetStandingsEx2") || "who's winning the league?",
+          tr("intentGetStandingsEx3") || "what's the current leaderboard?",
+        ],
+      },
+      {
+        name: "GET_MATCH_HISTORY",
+        desc: tr("intentGetMatchHistoryDesc") || "View all recorded match results, most recent first.",
+        examples: [
+          tr("intentGetMatchHistoryEx1") || "show me all the matches",
+          tr("intentGetMatchHistoryEx2") || "what matches have been played?",
+          tr("intentGetMatchHistoryEx3") || "what were the recent results?",
+        ],
+      },
+      {
+        name: "GET_ROSTER",
+        desc: tr("intentGetRosterDesc") || "View all registered players and teams.",
+        examples: [
+          tr("intentGetRosterEx1") || "show me all the players",
+          tr("intentGetRosterEx2") || "who's in the league?",
+          tr("intentGetRosterEx3") || "list all teams",
+        ],
+      },
+      {
+        name: "SUBMIT_MATCH_RESULT",
+        desc:
+          tr("intentSubmitMatchDesc") ||
+          "Record a doubles match result. New players are registered automatically.",
+        examples: [
+          tr("intentSubmitMatchEx1") || "Jae + Jazz 6:4 DK + Casper",
+          tr("intentSubmitMatchEx2") || "Alice and Bob beat Charlie and Diana 6 to 3",
+          tr("intentSubmitMatchEx3") ||
+            "record a match: John and Sarah vs Mike and Emma, 7-5",
+        ],
+      },
+    ];
+  }
 
-  var ADMIN_INTENTS = [
-    {
-      name: "EDIT_PLAYER_NICKNAME",
-      desc: "Correct or update a player's nickname.",
-      examples: ["rename Alice to Alicia", "change John's nickname to Johnny"],
-    },
-    {
-      name: "EDIT_MATCH_SCORE",
-      desc: "Correct the score of a previously recorded match.",
-      examples: ["fix the score for Alice and Bob vs Charlie and Diana — it should be 6-2 not 6-3"],
-    },
-    {
-      name: "DELETE_MATCH",
-      desc: "Permanently delete a match record.",
-      examples: ["delete the match between Alice/Bob and Charlie/Diana"],
-    },
-    {
-      name: "DELETE_TEAM",
-      desc: "Permanently delete a team from the roster.",
-      examples: ["delete the team Alice and Bob"],
-    },
-  ];
+  function getAdminIntents() {
+    return [
+      {
+        name: "EDIT_PLAYER_NICKNAME",
+        desc: tr("intentEditNickDesc") || "Correct or update a player's nickname.",
+        examples: [
+          tr("intentEditNickEx1") || "rename Alice to Alicia",
+          tr("intentEditNickEx2") || "change John's nickname to Johnny",
+        ],
+      },
+      {
+        name: "EDIT_MATCH_SCORE",
+        desc: tr("intentEditScoreDesc") || "Correct the score of a previously recorded match.",
+        examples: [
+          tr("intentEditScoreEx1") ||
+            "fix the score for Alice and Bob vs Charlie and Diana — it should be 6-2 not 6-3",
+        ],
+      },
+      {
+        name: "DELETE_MATCH",
+        desc: tr("intentDeleteMatchDesc") || "Permanently delete a match record.",
+        examples: [tr("intentDeleteMatchEx1") || "delete the match between Alice/Bob and Charlie/Diana"],
+      },
+      {
+        name: "DELETE_TEAM",
+        desc: tr("intentDeleteTeamDesc") || "Permanently delete a team from the roster.",
+        examples: [tr("intentDeleteTeamEx1") || "delete the team Alice and Bob"],
+      },
+    ];
+  }
 
   function renderIntentGroup(title, intents, groupClass) {
     var h = '<div class="intent-group ' + escapeHtml(groupClass) + '">';
@@ -717,18 +811,32 @@
   }
 
   function renderIntentHelper(isAdmin) {
-    var totalCount = isAdmin ? USER_INTENTS.length + ADMIN_INTENTS.length : USER_INTENTS.length;
-    var body = renderIntentGroup(isAdmin ? "Player commands" : "", USER_INTENTS, "user-intents");
+    var userIntents = getUserIntents();
+    var adminIntents = getAdminIntents();
+    var totalCount = isAdmin ? userIntents.length + adminIntents.length : userIntents.length;
+    var countLabel =
+      totalCount === 1
+        ? tr("intentCountOne", { n: totalCount }) || String(totalCount) + " intent"
+        : tr("intentCountMany", { n: totalCount }) || String(totalCount) + " intents";
+    var body = renderIntentGroup(
+      isAdmin ? tr("groupPlayerCommands") || "Player commands" : "",
+      userIntents,
+      "user-intents"
+    );
     if (isAdmin) {
-      body += renderIntentGroup("Admin commands", ADMIN_INTENTS, "admin-intents");
+      body += renderIntentGroup(
+        tr("groupAdminCommands") || "Admin commands",
+        adminIntents,
+        "admin-intents"
+      );
     }
     return (
       '<details class="intent-helper">' +
-      '<summary class="intent-helper-summary"><span class="intent-helper-title">Supported commands</span>' +
+      '<summary class="intent-helper-summary"><span class="intent-helper-title">' +
+      escapeHtml(tr("supportedCommands") || "Supported commands") +
+      "</span>" +
       '<span class="intent-helper-count">' +
-      escapeHtml(String(totalCount)) +
-      " intent" +
-      (totalCount !== 1 ? "s" : "") +
+      escapeHtml(countLabel) +
       "</span></summary>" +
       '<div class="intent-helper-body">' +
       body +
@@ -737,26 +845,46 @@
     );
   }
 
+  function escapeAttr(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
+  }
+
   function renderChatShell(route) {
     var isAdmin = !!route.hostToken;
     var isMobile = window.innerWidth <= 520;
-    var inputPlaceholder = isMobile
-      ? "Report Match Result, or Ask about standings, match history, or the roster."
-      : "Report Match Result, or Ask about standings, match history, or the roster.\nCheck &quot;Supported Commands&quot; for more details.";
+    var rawPlaceholder = isMobile
+      ? tr("placeholderMobile") ||
+        "Report Match Result, or Ask about standings, match history, or the roster."
+      : tr("placeholderDesktop") ||
+        "Report Match Result, or Ask about standings, match history, or the roster.\nCheck \"Supported Commands\" for more details.";
+    var inputPlaceholder = escapeAttr(rawPlaceholder);
+    var footerLang =
+      window.TLCHAT_I18N && typeof window.TLCHAT_I18N.renderFooterLangSwitch === "function"
+        ? window.TLCHAT_I18N.renderFooterLangSwitch()
+        : "";
     return (
       "<header class=\"app-header\">" +
-      "<div><h1>Tennis League Management Bot</h1>" +
+      "<div><h1>" +
+      escapeHtml(tr("h1") || "Tennis League Management Bot") +
+      "</h1>" +
       '<span class="badge ' +
       (isAdmin ? "admin" : "") +
       '">' +
-      (isAdmin ? "Admin" : "Player") +
+      escapeHtml((isAdmin ? tr("badgeAdmin") : tr("badgePlayer")) || (isAdmin ? "Admin" : "Player")) +
       "</span></div>" +
-      '<div class="meta">League <code>' +
+      '<div class="meta">' +
+      escapeHtml(tr("metaLeague") || "League") +
+      " <code>" +
       escapeHtml(route.leagueId) +
       "</code>" +
-      (isAdmin ? " · host token in URL" : "") +
+      (isAdmin ? escapeHtml(tr("metaHostToken") || " · host token in URL") : "") +
       "</div>" +
-      '<button id="theme-toggle-btn" class="theme-toggle" aria-label="Toggle light/dark mode">' +
+      '<button id="theme-toggle-btn" class="theme-toggle" aria-label="' +
+      escapeAttr(tr("themeToggle") || "Toggle light/dark mode") +
+      '">' +
       '<span class="theme-icon"></span>' +
       '<span class="theme-label"></span>' +
       "</button>" +
@@ -768,16 +896,23 @@
       '<div class="composer">' +
       '<form id="chat-form">' +
       '<div class="composer-input-wrap">' +
-      '<div id="chat-mention-popover" class="chat-mention-popover" hidden role="listbox" aria-label="Mention a player"></div>' +
-      '<textarea id="chat-input" rows="2" placeholder="' + inputPlaceholder + '" autocomplete="off"></textarea>' +
-      '<button type="submit" id="send-btn" aria-label="Send">' +
+      '<div id="chat-mention-popover" class="chat-mention-popover" hidden role="listbox" aria-label="' +
+      escapeAttr(tr("mentionPopoverLabel") || "Mention a player") +
+      '"></div>' +
+      '<textarea id="chat-input" rows="2" placeholder="' +
+      inputPlaceholder +
+      '" autocomplete="off"></textarea>' +
+      '<button type="submit" id="send-btn" aria-label="' +
+      escapeAttr(tr("send") || "Send") +
+      '">' +
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>' +
       "</button>" +
       "</div>" +
       "</form>" +
       "</div></main>" +
       '<footer class="chat-footer">' +
-      '<span>Backend source:</span>' +
+      footerLang +
+      '<span data-i18n="footer.backendSource"></span>' +
       '<a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>' +
       '<a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>' +
       "</footer>"
@@ -791,12 +926,17 @@
     if (!btn) return;
     var isLight = theme === "light";
     btn.querySelector(".theme-icon").textContent = isLight ? "☀️" : "🌙";
-    btn.querySelector(".theme-label").textContent = isLight ? "Light" : "Dark";
+    btn.querySelector(".theme-label").textContent = isLight
+      ? tr("themeLight") || "Light"
+      : tr("themeDark") || "Dark";
   }
 
   function mountChat(route) {
     var root = document.getElementById("app-root");
     root.innerHTML = renderChatShell(route);
+    if (window.TLCHAT_I18N && typeof window.TLCHAT_I18N.applyDom === "function") {
+      window.TLCHAT_I18N.applyDom(root);
+    }
 
     applyTheme(localStorage.getItem("tlchat-theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
 
@@ -909,19 +1049,25 @@
       mentionSelectedIndex = 0;
       if (leagueRoster.status === "loading") {
         mentionPopover.innerHTML =
-          '<div class="chat-mention-item chat-mention-status" role="presentation">Loading players…</div>';
+          '<div class="chat-mention-item chat-mention-status" role="presentation">' +
+          escapeHtml(tr("mentionLoading") || "Loading players…") +
+          "</div>";
         mentionPopover.hidden = false;
         return;
       }
       if (leagueRoster.status === "error") {
         mentionPopover.innerHTML =
-          '<div class="chat-mention-item chat-mention-status" role="presentation">Could not load roster.</div>';
+          '<div class="chat-mention-item chat-mention-status" role="presentation">' +
+          escapeHtml(tr("mentionRosterError") || "Could not load roster.") +
+          "</div>";
         mentionPopover.hidden = false;
         return;
       }
       if (!matches.length) {
         mentionPopover.innerHTML =
-          '<div class="chat-mention-item chat-mention-status" role="presentation">No matching players.</div>';
+          '<div class="chat-mention-item chat-mention-status" role="presentation">' +
+          escapeHtml(tr("mentionNoMatch") || "No matching players.") +
+          "</div>";
         mentionPopover.hidden = false;
         return;
       }
@@ -947,7 +1093,9 @@
         var more = document.createElement("div");
         more.className = "chat-mention-item chat-mention-status";
         more.setAttribute("role", "presentation");
-        more.textContent = "Showing " + cap + " of " + matches.length + ". Type to narrow down.";
+        more.textContent =
+          tr("mentionMore", { cap: cap, total: matches.length }) ||
+          "Showing " + cap + " of " + matches.length + ". Type to narrow down.";
         mentionPopover.appendChild(more);
       }
       mentionPopover.hidden = false;
@@ -1102,7 +1250,12 @@
       clearEmpty();
       var div = document.createElement("div");
       div.className = "msg user";
-      div.innerHTML = "<div class=\"label\">You</div><div>" + escapeHtml(text) + "</div>";
+      div.innerHTML =
+        "<div class=\"label\">" +
+        escapeHtml(tr("labelYou") || "You") +
+        "</div><div>" +
+        escapeHtml(text) +
+        "</div>";
       messagesEl.appendChild(div);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -1111,7 +1264,8 @@
       clearEmpty();
       var div = document.createElement("div");
       div.className = "msg assistant" + (extraClass ? " " + extraClass : "");
-      div.innerHTML = "<div class=\"label\">Assistant</div>" + html;
+      div.innerHTML =
+        "<div class=\"label\">" + escapeHtml(tr("labelAssistant") || "Assistant") + "</div>" + html;
       messagesEl.appendChild(div);
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return div;
@@ -1196,7 +1350,7 @@
       }
       if (!res.ok) {
         var httpMsg = humanDetailFromHttpBody(text);
-        if (!httpMsg) httpMsg = res.statusText || "Request failed.";
+        if (!httpMsg) httpMsg = res.statusText || tr("requestFailed") || "Request failed.";
         var techBody = text && text.length ? text : "";
         if (techBody.length > 1200) techBody = techBody.slice(0, 1200) + "…";
         throw new Error(
@@ -1211,7 +1365,7 @@
       var miss = validateWriteBody(bodySpec, payload);
       if (miss.length) {
         appendErrorPlain(
-          "Please fill required fields: " +
+          (tr("fillRequired") || "Please fill required fields: ") +
             miss
               .map(function (k) {
                 return labelForFormField(k);
@@ -1222,7 +1376,10 @@
       }
       var needsToken = needsHostTokenForUrl(url);
       if (needsToken && !route.hostToken) {
-        appendErrorPlain("This action calls an admin endpoint. Open the Admin URL with your host token.");
+        appendErrorPlain(
+          tr("adminEndpointHint") ||
+            "This action calls an admin endpoint. Open the Admin URL with your host token."
+        );
         return;
       }
       var headers = {};
@@ -1247,11 +1404,16 @@
         if (ok) {
           var successLine = humanSuccessFromHttpBody(txt);
           appendAssistant(
-            '<div class="response-callout response-callout-success"><strong>Done.</strong> ' +
+            '<div class="response-callout response-callout-success"><strong>' +
+              escapeHtml(tr("done") || "Done.") +
+              "</strong> " +
               escapeHtml(successLine) +
               "</div>"
           );
-          conversationHistory.push({ role: "assistant", content: "Action completed: " + successLine });
+          conversationHistory.push({
+            role: "assistant",
+            content: (tr("actionCompleted") || "Action completed: ") + successLine,
+          });
           if (method === "POST" && typeof url === "string" && url.indexOf("/matches") !== -1) {
             refreshLeagueRoster();
           }
@@ -1284,7 +1446,7 @@
       }
 
       if (resp.data_type === "CLARIFICATION_QUESTION") {
-        var q = (resp.data && resp.data.question) || "Could you clarify?";
+        var q = (resp.data && resp.data.question) || tr("clarifyFallback") || "Could you clarify?";
         appendAssistant(
           '<div class="response-callout response-callout-clarify">' + escapeHtml(q) + "</div>"
         );
@@ -1313,16 +1475,21 @@
         var warn = "";
         if (needsHostTokenForUrl(bUrl) && !route.hostToken) {
           warn =
-            "<p class=\"hint\" style=\"color:var(--warn)\">This write targets an admin endpoint. Use the Admin URL with <code>X-Host-Token</code>.</p>";
+            "<p class=\"hint\" style=\"color:var(--warn)\">" +
+            (tr("adminUrlWarn") ||
+              "This write targets an admin endpoint. Use the Admin URL with <code>X-Host-Token</code>.") +
+            "</p>";
         }
         parts.push(warn);
         if (resp.data_type === "SUBMIT_MATCH_RESULT") {
           parts.push(renderMatchSubmitRosterNotes(bodySpec, leagueRoster));
         }
         parts.push(
-          "<div class=\"action-card\">" +
+            "<div class=\"action-card\">" +
             renderWriteForm(bodySpec) +
-            "<button type=\"button\" class=\"btn-secondary\" data-submit-write>Submit to league API</button>" +
+            "<button type=\"button\" class=\"btn-secondary\" data-submit-write>" +
+            escapeHtml(tr("submitToLeague") || "Submit to league API") +
+            "</button>" +
             "</div>"
         );
         var wrap = appendAssistant(parts.join(""));
@@ -1349,7 +1516,12 @@
         unkParts.push(renderFallbackData(rawData));
       } else if (!unkParts.length) {
         unkParts.push(
-          "<p class=\"hint\">No details available for this response. Try asking in another way.</p>"
+          "<p class=\"hint\">" +
+            escapeHtml(
+              tr("unknownResponseHint") ||
+                "No details available for this response. Try asking in another way."
+            ) +
+            "</p>"
         );
       }
       appendAssistant('<div class="data-panel unknown-response">' + unkParts.join("") + "</div>");
@@ -1389,8 +1561,13 @@
 
     var route = window.TLCHAT_ROUTE;
     if (!route || !route.leagueId) {
+      var I = window.TLCHAT_I18N;
+      var noLeague =
+        I && I.t
+          ? I.t("chat.noLeagueHtml")
+          : 'No league specified. <a href="/">Go to home</a>.';
       document.getElementById("app-root").innerHTML =
-        '<main class="landing"><p class="hint">No league specified. <a href="/">Go to home</a>.</p></main>';
+        '<main class="landing"><p class="hint">' + noLeague + "</p></main>";
       return;
     }
     mountChat(route);

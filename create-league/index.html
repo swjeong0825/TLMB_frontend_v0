@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Noto+Sans+KR:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -19,96 +19,111 @@
       })();
     </script>
   </head>
-  <body>
+  <body data-i18n-title-key="meta.titleCreateLeague">
     <main class="landing create-league-page">
       <p class="create-league-back">
-        <a href="/">← Home</a>
+        <a href="/" data-i18n="common.homeLink"></a>
       </p>
-      <h1>Create a league</h1>
-      <p class="create-league-intro">
-        Creates a new league on the main API and returns your <strong>league ID</strong> and <strong>host token</strong>.
-        Save the host token privately; it is required for admin actions.
-      </p>
+      <h1 data-i18n="createLeague.h1"></h1>
+      <p class="create-league-intro" data-i18n-html="createLeague.introHtml"></p>
 
       <form id="create-league-form" class="create-league-form" novalidate>
         <div class="form-grid">
           <label>
-            League title <span class="req">*</span>
-            <input type="text" name="title" required autocomplete="organization" maxlength="500" placeholder="e.g. Summer Doubles 2026" />
+            <span data-i18n="createLeague.labelTitle"></span> <span class="req">*</span>
+            <input
+              type="text"
+              name="title"
+              required
+              autocomplete="organization"
+              maxlength="500"
+              data-i18n-placeholder="createLeague.placeholderTitle"
+            />
           </label>
           <label>
-            Description <span class="optional-label">(optional)</span>
-            <textarea name="description" rows="3" maxlength="2000" placeholder="Shown to organisers; optional."></textarea>
+            <span data-i18n="createLeague.labelDescription"></span>
+            <span class="optional-label" data-i18n="createLeague.optional"></span>
+            <textarea
+              name="description"
+              rows="3"
+              maxlength="2000"
+              data-i18n-placeholder="createLeague.placeholderDescription"
+            ></textarea>
           </label>
         </div>
 
         <details class="create-league-advanced">
-          <summary>Advanced: custom rules</summary>
-          <p class="hint">
-            If you leave this closed, the server uses product defaults (one match per team pair, one team per player). Open
-            only if you need different behaviour.
-          </p>
+          <summary data-i18n="createLeague.advancedSummary"></summary>
+          <p class="hint" data-i18n="createLeague.advancedHint"></p>
           <div class="form-grid">
             <label>
-              Match pair idempotency
+              <span data-i18n="createLeague.labelMatchPair"></span>
               <select name="match_pair_idempotency">
-                <option value="once_per_league" selected>Once per league (recommended)</option>
-                <option value="none">Allow multiple matches between the same two teams</option>
+                <option value="once_per_league" selected data-i18n="createLeague.optionOncePerLeague"></option>
+                <option value="none" data-i18n="createLeague.optionAllowMultiple"></option>
               </select>
             </label>
             <label class="checkbox-row">
               <input type="checkbox" name="one_team_per_player" checked />
-              <span>One team per player</span>
+              <span data-i18n="createLeague.oneTeamPerPlayer"></span>
             </label>
           </div>
         </details>
 
         <div class="create-league-actions">
-          <button type="submit" class="btn-primary" id="create-league-submit">Create league</button>
+          <button type="submit" class="btn-primary" id="create-league-submit" data-i18n="createLeague.submit"></button>
         </div>
       </form>
 
       <div id="create-league-error" class="create-league-alert create-league-alert-error" hidden></div>
 
       <section id="create-league-success" class="create-league-success" hidden>
-        <h2>League created</h2>
-        <p>Copy these values somewhere safe. The host token is not shown again.</p>
+        <h2 data-i18n="createLeague.successH2"></h2>
+        <p data-i18n="createLeague.successP"></p>
         <dl class="create-league-credentials">
           <div>
-            <dt>League ID</dt>
+            <dt data-i18n="createLeague.leagueId"></dt>
             <dd>
               <code id="out-league-id"></code>
-              <button type="button" class="btn-ghost" data-copy-target="out-league-id">Copy</button>
+              <button type="button" class="btn-ghost" data-copy-target="out-league-id" data-i18n="createLeague.copy"></button>
             </dd>
           </div>
           <div>
-            <dt>Host token</dt>
+            <dt data-i18n="createLeague.hostToken"></dt>
             <dd>
               <code id="out-host-token"></code>
-              <button type="button" class="btn-ghost" data-copy-target="out-host-token">Copy</button>
+              <button type="button" class="btn-ghost" data-copy-target="out-host-token" data-i18n="createLeague.copy"></button>
             </dd>
           </div>
         </dl>
         <div class="create-league-links">
-          <p><strong>Open chat</strong></p>
+          <p><strong data-i18n="createLeague.openChat"></strong></p>
           <ul>
-            <li><a id="link-player" href="#">Player (league ID only)</a></li>
-            <li><a id="link-admin" href="#">Admin (includes host token)</a></li>
+            <li><a id="link-player" href="#" data-i18n="createLeague.linkPlayer"></a></li>
+            <li><a id="link-admin" href="#" data-i18n="createLeague.linkAdmin"></a></li>
           </ul>
         </div>
       </section>
 
-      <p class="hint create-league-config-hint">
-        API base URL is set in <code>js/config.js</code> or override with <code>?backendApi=https://your-host</code>.
-      </p>
+      <p class="hint create-league-config-hint" data-i18n-html="common.configHint"></p>
     </main>
     <footer class="chat-footer">
-      <span>Backend source:</span>
+      <span class="footer-lang-group"
+        ><span data-i18n="footer.language"></span>:
+        <button type="button" class="lang-switch" data-locale-switch="en">English</button>
+        ·
+        <button type="button" class="lang-switch" data-locale-switch="ko">한국어</button></span
+      >
+      <span data-i18n="footer.backendSource"></span>
       <a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>
       <a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>
     </footer>
+    <script src="/js/i18n.js"></script>
     <script src="/js/config.js"></script>
     <script src="/js/user-facing-errors.js"></script>
     <script src="/js/create-league.js"></script>
+    <script>
+      TLCHAT_I18N.initPage();
+    </script>
   </body>
 </html>

@@ -1,6 +1,12 @@
 (function () {
   "use strict";
 
+  function t(key, params) {
+    var I = window.TLCHAT_I18N;
+    if (!I || typeof I.t !== "function") return "";
+    return I.t("findLeagueJs." + key, params);
+  }
+
   function backendBase() {
     var c = window.TLCHAT_CONFIG || {};
     var u = c.backendMainBaseUrl;
@@ -28,7 +34,7 @@
     if (ufe && typeof ufe.fromTechnical === "function") {
       return ufe.fromTechnical(technicalFromResponse(status, bodyText));
     }
-    return "Something went wrong. Please try again.";
+    return t("genericError") || "Something went wrong. Please try again.";
   }
 
   function setHidden(el, hidden) {
@@ -64,14 +70,14 @@
 
       var base = backendBase();
       if (!base) {
-        errEl.textContent = "Backend URL is not configured.";
+        errEl.textContent = t("backendNotConfigured");
         setHidden(errEl, false);
         return;
       }
 
       var prefix = (form.title_prefix.value || "").trim();
       if (!prefix) {
-        errEl.textContent = "Enter at least one non-space character to search.";
+        errEl.textContent = t("enterPrefix");
         setHidden(errEl, false);
         return;
       }
@@ -99,23 +105,23 @@
             try {
               data = JSON.parse(text);
             } catch (parseErr) {
-              errEl.textContent = "The server returned an unexpected response.";
+              errEl.textContent = t("unexpectedResponse");
               setHidden(errEl, false);
               return;
             }
             var leagues = data && Array.isArray(data.leagues) ? data.leagues : null;
             if (!leagues) {
-              errEl.textContent = "The server response was missing a leagues list.";
+              errEl.textContent = t("missingLeaguesList");
               setHidden(errEl, false);
               return;
             }
 
             summaryEl.textContent =
               leagues.length === 0
-                ? "No leagues matched that prefix."
+                ? t("noMatch")
                 : leagues.length === 1
-                  ? "1 league matched."
-                  : leagues.length + " leagues matched (up to your max results).";
+                  ? t("oneMatch")
+                  : t("manyMatches", { n: leagues.length });
 
             var chatIconSvg =
               '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
@@ -137,8 +143,8 @@
               var a = document.createElement("a");
               a.className = "find-league-card-icon-link";
               a.href = playerChatUrl(row.league_id);
-              a.setAttribute("aria-label", "Open player chat");
-              a.setAttribute("title", "Chat");
+              a.setAttribute("aria-label", t("openPlayerChat"));
+              a.setAttribute("title", t("chatTitle"));
               a.innerHTML = chatIconSvg;
 
               inner.appendChild(h3);
@@ -159,7 +165,7 @@
           var msg =
             ufe && typeof ufe.fromTechnical === "function"
               ? ufe.fromTechnical(String(err && err.message ? err.message : err))
-              : "We couldn’t reach the server.";
+              : t("networkError");
           errEl.textContent = msg;
           setHidden(errEl, false);
         })

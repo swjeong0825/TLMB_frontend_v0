@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Noto+Sans+KR:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -19,45 +19,58 @@
       })();
     </script>
   </head>
-  <body>
+  <body data-i18n-title-key="meta.titleHome">
     <main class="landing">
-      <h1>Tennis League Management Bot</h1>
-      <p>Vanilla client for the chat-to-intent server. Open a league-specific URL to start chatting.</p>
-      <p>Chat API base URL is configured in <code>js/config.js</code>.</p>
+      <h1 data-i18n="home.h1"></h1>
+      <p data-i18n="home.intro1"></p>
+      <p>
+        <span data-i18n="home.intro2"></span>
+        <code data-i18n="common.configJs"></code>.
+      </p>
       <div class="examples">
-        <h2>Pages</h2>
+        <h2 data-i18n="home.pagesHeading"></h2>
         <ul>
           <li>
-            <strong>Create league</strong><br />
+            <strong data-i18n="home.linkCreate"></strong><br />
             <a href="/create-league/">/create-league/</a>
           </li>
           <li>
-            <strong>Find league</strong><br />
+            <strong data-i18n="home.linkFind"></strong><br />
             <a href="/find-league/">/find-league/</a>
           </li>
           <li>
-            <strong>Find league (URL prefix only)</strong><br />
+            <strong data-i18n="home.linkFindPrefix"></strong><br />
             <a href="/find-league-prefix/?prefix=MTB">/find-league-prefix/?prefix=MTB</a>
           </li>
           <li>
-            <strong>Demo</strong><br />
+            <strong data-i18n="home.linkDemo"></strong><br />
             <a href="/demo">/demo</a>
           </li>
           <li>
-            <strong>Player</strong><br />
-            <code>/league?league_id={league_id}</code>
+            <strong data-i18n="home.linkPlayer"></strong><br />
+            <code data-i18n="home.codeHintPlayer"></code>
           </li>
           <li>
-            <strong>Admin</strong><br />
-            <code>/league?league_id={league_id}&amp;host_token={host_token}</code>
+            <strong data-i18n="home.linkAdmin"></strong><br />
+            <code data-i18n="home.codeHintAdmin"></code>
           </li>
         </ul>
       </div>
     </main>
     <footer class="chat-footer">
-      <span>Backend source:</span>
+      <span class="footer-lang-group"
+        ><span data-i18n="footer.language"></span>:
+        <button type="button" class="lang-switch" data-locale-switch="en">English</button>
+        ·
+        <button type="button" class="lang-switch" data-locale-switch="ko">한국어</button></span
+      >
+      <span data-i18n="footer.backendSource"></span>
       <a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>
       <a href="https://github.com/swjeong0825/TLMB_chat_to_intent" target="_blank" rel="noopener noreferrer">Chat-to-Intent Server</a>
     </footer>
+    <script src="/js/i18n.js"></script>
+    <script>
+      TLCHAT_I18N.initPage();
+    </script>
   </body>
 </html>

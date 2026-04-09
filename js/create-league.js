@@ -1,6 +1,12 @@
 (function () {
   "use strict";
 
+  function t(key, params) {
+    var I = window.TLCHAT_I18N;
+    if (!I || typeof I.t !== "function") return "";
+    return I.t("createLeague." + key, params);
+  }
+
   function backendBase() {
     var c = window.TLCHAT_CONFIG || {};
     var u = c.backendMainBaseUrl;
@@ -27,7 +33,7 @@
     try {
       var j = JSON.parse(bodyText);
       if (j && j.error === "LeagueTitleAlreadyExistsError") {
-        return "A league with this title already exists. Try a different name.";
+        return t("titleExists");
       }
     } catch (_e) {
       /* ignore */
@@ -36,6 +42,8 @@
     if (ufe && typeof ufe.fromTechnical === "function") {
       return ufe.fromTechnical(technicalFromResponse(status, bodyText));
     }
+    var I = window.TLCHAT_I18N;
+    if (I && typeof I.t === "function") return I.t("findLeagueJs.genericError");
     return "Something went wrong. Please try again.";
   }
 
@@ -100,15 +108,15 @@
       copyText(text).then(
         function () {
           var prev = btn.textContent;
-          btn.textContent = "Copied";
+          btn.textContent = t("copied");
           setTimeout(function () {
             btn.textContent = prev;
           }, 1500);
         },
         function () {
-          btn.textContent = "Failed";
+          btn.textContent = t("failed");
           setTimeout(function () {
-            btn.textContent = "Copy";
+            btn.textContent = t("copy");
           }, 1500);
         }
       );
@@ -121,14 +129,17 @@
 
       var base = backendBase();
       if (!base) {
-        errEl.textContent = "Backend URL is not configured.";
+        errEl.textContent =
+          window.TLCHAT_I18N && window.TLCHAT_I18N.t
+            ? window.TLCHAT_I18N.t("findLeagueJs.backendNotConfigured")
+            : "Backend URL is not configured.";
         setHidden(errEl, false);
         return;
       }
 
       var payload = buildPayload(form);
       if (!payload.title) {
-        errEl.textContent = "Please enter a league title.";
+        errEl.textContent = t("enterTitle");
         setHidden(errEl, false);
         return;
       }
@@ -152,12 +163,15 @@
             try {
               data = JSON.parse(text);
             } catch (parseErr) {
-              errEl.textContent = "The server returned an unexpected response.";
+              errEl.textContent =
+                window.TLCHAT_I18N && window.TLCHAT_I18N.t
+                  ? window.TLCHAT_I18N.t("findLeagueJs.unexpectedResponse")
+                  : "The server returned an unexpected response.";
               setHidden(errEl, false);
               return;
             }
             if (!data.league_id || !data.host_token) {
-              errEl.textContent = "The server response was missing league_id or host_token.";
+              errEl.textContent = t("missingIds");
               setHidden(errEl, false);
               return;
             }
@@ -191,7 +205,9 @@
           var msg =
             ufe && typeof ufe.fromTechnical === "function"
               ? ufe.fromTechnical(String(err && err.message ? err.message : err))
-              : "We couldn’t reach the server.";
+              : window.TLCHAT_I18N && window.TLCHAT_I18N.t
+                ? window.TLCHAT_I18N.t("findLeagueJs.networkError")
+                : "We couldn’t reach the server.";
           errEl.textContent = msg;
           setHidden(errEl, false);
         })

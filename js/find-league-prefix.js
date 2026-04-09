@@ -1,6 +1,12 @@
 (function () {
   "use strict";
 
+  function t(key, params) {
+    var I = window.TLCHAT_I18N;
+    if (!I || typeof I.t !== "function") return "";
+    return I.t("findLeagueJs." + key, params);
+  }
+
   function backendBase() {
     var c = window.TLCHAT_CONFIG || {};
     var u = c.backendMainBaseUrl;
@@ -28,7 +34,7 @@
     if (ufe && typeof ufe.fromTechnical === "function") {
       return ufe.fromTechnical(technicalFromResponse(status, bodyText));
     }
-    return "Something went wrong. Please try again.";
+    return t("genericError") || "Something went wrong. Please try again.";
   }
 
   function clampLimit(raw) {
@@ -79,8 +85,8 @@
       var a = document.createElement("a");
       a.className = "find-league-card-icon-link";
       a.href = playerChatUrl(row.league_id);
-      a.setAttribute("aria-label", "Open player chat");
-      a.setAttribute("title", "Chat");
+      a.setAttribute("aria-label", t("openPlayerChat"));
+      a.setAttribute("title", t("chatTitle"));
       a.innerHTML = chatIconSvg;
 
       inner.appendChild(h3);
@@ -103,7 +109,7 @@
     if (!prefix) {
       showMessage(
         outlet,
-        "Add a search prefix to the URL, for example ?prefix=MTB",
+        t("addPrefixHint"),
         "find-league-prefix-message find-league-prefix-message-muted"
       );
       return;
@@ -111,7 +117,7 @@
 
     var base = backendBase();
     if (!base) {
-      showMessage(outlet, "Backend URL is not configured.", "find-league-prefix-message");
+      showMessage(outlet, t("backendNotConfigured"), "find-league-prefix-message");
       return;
     }
 
@@ -134,12 +140,12 @@
           try {
             data = JSON.parse(text);
           } catch (parseErr) {
-            showMessage(outlet, "Unexpected response from server.", "find-league-prefix-message");
+            showMessage(outlet, t("unexpectedResponseShort"), "find-league-prefix-message");
             return;
           }
           var leagues = data && Array.isArray(data.leagues) ? data.leagues : null;
           if (!leagues) {
-            showMessage(outlet, "Invalid response: missing leagues list.", "find-league-prefix-message");
+            showMessage(outlet, t("invalidMissingLeagues"), "find-league-prefix-message");
             return;
           }
           if (leagues.length === 0) {
@@ -156,7 +162,7 @@
         var msg =
           ufe && typeof ufe.fromTechnical === "function"
             ? ufe.fromTechnical(String(err && err.message ? err.message : err))
-            : "We couldn’t reach the server.";
+            : t("networkError");
         showMessage(outlet, msg, "find-league-prefix-message");
       });
   });
