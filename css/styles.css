@@ -401,7 +401,7 @@ a:hover {
   font-weight: 500;
 }
 
-.roster-amp {
+.roster-plus {
   color: var(--muted);
   font-weight: 400;
 }
@@ -426,6 +426,20 @@ table.data td {
 table.data th {
   color: var(--muted);
   font-weight: 500;
+}
+
+.standings-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+table.data th.standings-metric-rank,
+table.data td.standings-metric-rank strong {
+  font-weight: 700;
+}
+
+table.data th.standings-metric-rank {
+  color: var(--text);
 }
 
 .match-form-roster-notes {

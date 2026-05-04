@@ -330,7 +330,7 @@
   }
 
   function escapeTeamPairLabel(p1, p2) {
-    return escapeHtml(p1) + " &amp; " + escapeHtml(p2);
+    return escapeHtml(p1) + " + " + escapeHtml(p2);
   }
 
   /**
@@ -488,36 +488,181 @@
     return "[" + resp.data_type + "]";
   }
 
+  // Per-metric column: i18n header, accessor, signed formatting for differentials.
+  // Keys mirror backend LeagueRules RankingMetric; `matches_played` is an extra
+  // row field (not a ranking metric). See backend design doc 17.
+  var METRIC_COLUMN = {
+    matches_won: {
+      headerKey: "tableMatchesWon",
+      headerFallback: "Won",
+      get: function (r) { return r.wins; },
+      signed: false,
+    },
+    match_diff: {
+      headerKey: "tableMatchDiff",
+      headerFallback: "Match \u00B1",
+      get: function (r) {
+        var w = typeof r.wins === "number" ? r.wins : 0;
+        var l = typeof r.losses === "number" ? r.losses : 0;
+        return w - l;
+      },
+      signed: true,
+    },
+    games_won: {
+      headerKey: "tableGamesWon",
+      headerFallback: "Games won",
+      get: function (r) { return r.games_won; },
+      signed: false,
+    },
+    games_lost: {
+      headerKey: "tableGamesLost",
+      headerFallback: "Games lost",
+      get: function (r) { return r.games_lost; },
+      signed: false,
+    },
+    games_diff: {
+      headerKey: "tableGamesDiff",
+      headerFallback: "Games \u00B1",
+      get: function (r) { return r.games_diff; },
+      signed: true,
+    },
+    win_pct: {
+      headerKey: "tableWinPct",
+      headerFallback: "Win %",
+      get: function (r) {
+        var v = typeof r.win_pct === "number" ? r.win_pct : 0;
+        return Math.round(v * 1000) / 10 + "%";
+      },
+      signed: false,
+    },
+    matches_played: {
+      headerKey: "tableMatchesPlayed",
+      headerFallback: "Played",
+      get: function (r) { return r.matches_played; },
+      signed: false,
+    },
+  };
+
+  // Metrics not in tie_breakers appear in this order after tie-breaker columns.
+  var STANDINGS_METRIC_BASE_ORDER = [
+    "matches_won",
+    "match_diff",
+    "games_won",
+    "games_lost",
+    "games_diff",
+    "win_pct",
+    "matches_played",
+  ];
+
+  function orderedStandingsMetricKeys(tieBreakers) {
+    var tb = Array.isArray(tieBreakers) ? tieBreakers : [];
+    var first = [];
+    var seen = {};
+    var i;
+    for (i = 0; i < tb.length; i++) {
+      var m = tb[i];
+      if (METRIC_COLUMN[m] && !seen[m]) {
+        seen[m] = true;
+        first.push(m);
+      }
+    }
+    var rest = [];
+    for (i = 0; i < STANDINGS_METRIC_BASE_ORDER.length; i++) {
+      var key = STANDINGS_METRIC_BASE_ORDER[i];
+      if (!seen[key]) {
+        seen[key] = true;
+        rest.push(key);
+      }
+    }
+    return first.concat(rest);
+  }
+
+  function rankingMetricSet(tieBreakers) {
+    var s = {};
+    if (Array.isArray(tieBreakers)) {
+      var i;
+      for (i = 0; i < tieBreakers.length; i++) {
+        if (METRIC_COLUMN[tieBreakers[i]]) s[tieBreakers[i]] = true;
+      }
+    }
+    return s;
+  }
+
+  function formatMetricValue(col, row) {
+    var raw = col.get(row);
+    if (raw === null || raw === undefined) return "";
+    if (col.signed && typeof raw === "number") {
+      return raw > 0 ? "+" + raw : String(raw);
+    }
+    return String(raw);
+  }
+
   function renderStandings(data) {
     var rows = data.standings || [];
     if (!rows.length) {
       return "<p class=\"hint\">" + escapeHtml(tr("standingsEmpty") || "No standings yet.") + "</p>";
     }
+    var subjectKind = rows[0].subject_kind || "team";
+    var subjectHeader =
+      subjectKind === "player"
+        ? escapeHtml(tr("tablePlayer") || "Player")
+        : escapeHtml(tr("tableTeam") || "Team");
+    var metricKeys = orderedStandingsMetricKeys(data.tie_breakers);
+    var rankMetrics = rankingMetricSet(data.tie_breakers);
     var h =
-      "<table class=\"data\"><thead><tr><th>" +
+      "<div class=\"standings-table-wrap\"><table class=\"data standings-table\"><thead><tr><th>" +
       escapeHtml(tr("tableRank") || "Rank") +
       "</th><th>" +
-      escapeHtml(tr("tableTeam") || "Team") +
+      subjectHeader +
       "</th><th>" +
       escapeHtml(tr("tableW") || "W") +
       "</th><th>" +
       escapeHtml(tr("tableL") || "L") +
-      "</th></tr></thead><tbody>";
+      "</th>";
+    var hi;
+    for (hi = 0; hi < metricKeys.length; hi++) {
+      var mk = metricKeys[hi];
+      var colDef = METRIC_COLUMN[mk];
+      var hdr = escapeHtml(tr(colDef.headerKey) || colDef.headerFallback);
+      if (rankMetrics[mk]) {
+        h += "<th class=\"standings-metric-rank\"><strong>" + hdr + "</strong></th>";
+      } else {
+        h += "<th>" + hdr + "</th>";
+      }
+    }
+    h += "</tr></thead><tbody>";
     rows.forEach(function (r) {
+      var subjectLabel;
+      if ((r.subject_kind || "team") === "player") {
+        subjectLabel = escapeHtml(r.nickname);
+      } else {
+        subjectLabel =
+          escapeHtml(r.player1_nickname) + " + " + escapeHtml(r.player2_nickname);
+      }
       h +=
         "<tr><td>" +
         escapeHtml(r.rank) +
         "</td><td>" +
-        escapeHtml(r.player1_nickname) +
-        " &amp; " +
-        escapeHtml(r.player2_nickname) +
+        subjectLabel +
         "</td><td>" +
         escapeHtml(r.wins) +
         "</td><td>" +
         escapeHtml(r.losses) +
-        "</td></tr>";
+        "</td>";
+      var ci;
+      for (ci = 0; ci < metricKeys.length; ci++) {
+        var ck = metricKeys[ci];
+        var cdef = METRIC_COLUMN[ck];
+        var cell = escapeHtml(formatMetricValue(cdef, r));
+        if (rankMetrics[ck]) {
+          h += "<td class=\"standings-metric-rank\"><strong>" + cell + "</strong></td>";
+        } else {
+          h += "<td>" + cell + "</td>";
+        }
+      }
+      h += "</tr>";
     });
-    return h + "</tbody></table>";
+    return h + "</tbody></table></div>";
   }
 
   function renderMatches(data) {
@@ -534,8 +679,8 @@
       escapeHtml(tr("tableWhen") || "When") +
       "</th></tr></thead><tbody>";
     rows.forEach(function (m) {
-      var t1 = escapeHtml(m.team1_player1_nickname) + " &amp; " + escapeHtml(m.team1_player2_nickname);
-      var t2 = escapeHtml(m.team2_player1_nickname) + " &amp; " + escapeHtml(m.team2_player2_nickname);
+      var t1 = escapeHtml(m.team1_player1_nickname) + " + " + escapeHtml(m.team1_player2_nickname);
+      var t2 = escapeHtml(m.team2_player1_nickname) + " + " + escapeHtml(m.team2_player2_nickname);
       var when = m.created_at ? formatWhen(m.created_at) : escapeHtml(tr("emDash") || "—");
       h +=
         "<tr><td>" +
@@ -568,7 +713,7 @@
         h +=
           "<li class=\"roster-item\"><span class=\"roster-pair\">" +
           escapeHtml(t.player1_nickname) +
-          " <span class=\"roster-amp\">&amp;</span> " +
+          " <span class=\"roster-plus\">+</span> " +
           escapeHtml(t.player2_nickname) +
           "</span></li>";
       });
@@ -1398,6 +1543,11 @@
       );
     }
 
+    /** Each "+" is sent as " + " to the chat-to-intent server (doubles / partner notation). */
+    function normalizePlusForIntentServer(message) {
+      return String(message).replace(/\s*\+\s*/g, " + ");
+    }
+
     async function postChat(clientMessage) {
       var url = chatApiBase() + "/leagues/" + encodeURIComponent(route.leagueId) + "/chat";
       var headers = { "Content-Type": "application/json" };
@@ -1637,11 +1787,12 @@
       input.value = "";
       input.style.height = "auto";
       appendUser(text);
+      var submittedText = normalizePlusForIntentServer(text);
       sendBtn.disabled = true;
       try {
-        var resp = await postChat(text);
+        var resp = await postChat(submittedText);
         renderResponse(resp);
-        conversationHistory.push({ role: "user", content: text });
+        conversationHistory.push({ role: "user", content: submittedText });
         var assistantContent = assistantContentFromResponse(resp);
         if (assistantContent) {
           conversationHistory.push({ role: "assistant", content: assistantContent });

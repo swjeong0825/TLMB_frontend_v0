@@ -64,9 +64,47 @@
                 <option value="none" data-i18n="createLeague.optionAllowMultiple"></option>
               </select>
             </label>
-            <label class="checkbox-row">
-              <input type="checkbox" name="one_team_per_player" checked />
-              <span data-i18n="createLeague.oneTeamPerPlayer"></span>
+            <label>
+              <span data-i18n="createLeague.labelRankingSubject"></span>
+              <select name="ranking_subject">
+                <option value="team" selected data-i18n="createLeague.optionRankingSubjectTeam"></option>
+                <option value="player" data-i18n="createLeague.optionRankingSubjectPlayer"></option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="createLeague.labelTieBreakerPrimary"></span>
+              <select name="tie_breaker_primary" data-tie-breaker="primary">
+                <option value="matches_won" selected data-i18n="createLeague.metricMatchesWon"></option>
+                <option value="match_diff" data-i18n="createLeague.metricMatchDiff"></option>
+                <option value="games_won" data-i18n="createLeague.metricGamesWon"></option>
+                <option value="games_lost" data-i18n="createLeague.metricGamesLost"></option>
+                <option value="games_diff" data-i18n="createLeague.metricGamesDiff"></option>
+                <option value="win_pct" data-i18n="createLeague.metricWinPct"></option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="createLeague.labelTieBreakerSecondary"></span>
+              <select name="tie_breaker_secondary" data-tie-breaker="secondary">
+                <option value="" selected data-i18n="createLeague.metricNone"></option>
+                <option value="matches_won" data-i18n="createLeague.metricMatchesWon"></option>
+                <option value="match_diff" data-i18n="createLeague.metricMatchDiff"></option>
+                <option value="games_won" data-i18n="createLeague.metricGamesWon"></option>
+                <option value="games_lost" data-i18n="createLeague.metricGamesLost"></option>
+                <option value="games_diff" data-i18n="createLeague.metricGamesDiff"></option>
+                <option value="win_pct" data-i18n="createLeague.metricWinPct"></option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="createLeague.labelTieBreakerTertiary"></span>
+              <select name="tie_breaker_tertiary" data-tie-breaker="tertiary">
+                <option value="" selected data-i18n="createLeague.metricNone"></option>
+                <option value="matches_won" data-i18n="createLeague.metricMatchesWon"></option>
+                <option value="match_diff" data-i18n="createLeague.metricMatchDiff"></option>
+                <option value="games_won" data-i18n="createLeague.metricGamesWon"></option>
+                <option value="games_lost" data-i18n="createLeague.metricGamesLost"></option>
+                <option value="games_diff" data-i18n="createLeague.metricGamesDiff"></option>
+                <option value="win_pct" data-i18n="createLeague.metricWinPct"></option>
+              </select>
             </label>
           </div>
         </details>
