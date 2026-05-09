@@ -65,12 +65,20 @@
               </select>
             </label>
             <label>
+              <span data-i18n="createLeague.labelOneTeamPerPlayer"></span>
+              <select name="one_team_per_player">
+                <option value="true" selected data-i18n="createLeague.optionOTPPTrue"></option>
+                <option value="false" data-i18n="createLeague.optionOTPPFalse"></option>
+              </select>
+            </label>
+            <label>
               <span data-i18n="createLeague.labelRankingSubject"></span>
               <select name="ranking_subject">
                 <option value="team" selected data-i18n="createLeague.optionRankingSubjectTeam"></option>
                 <option value="player" data-i18n="createLeague.optionRankingSubjectPlayer"></option>
               </select>
             </label>
+            <p class="hint create-league-cross-rule-hint" data-i18n="createLeague.crossRuleHint"></p>
             <label>
               <span data-i18n="createLeague.labelTieBreakerPrimary"></span>
               <select name="tie_breaker_primary" data-tie-breaker="primary">

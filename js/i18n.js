@@ -89,9 +89,14 @@
         optionOncePerLeague: "Once per league (recommended)",
         optionAllowMultiple: "Allow multiple matches between the same two teams",
         oneTeamPerPlayer: "One team per player",
+        labelOneTeamPerPlayer: "One team per player",
+        optionOTPPTrue: "Yes — each player joins exactly one team (default)",
+        optionOTPPFalse: "No — players may belong to multiple teams",
         labelRankingSubject: "Rank by",
         optionRankingSubjectTeam: "Team (default)",
         optionRankingSubjectPlayer: "Player",
+        crossRuleHint:
+          "Player-level ranking requires allowing players on multiple teams. Choosing \u201cRank by: Player\u201d will switch \u201cOne team per player\u201d to No.",
         labelTieBreakerPrimary: "Primary metric",
         labelTieBreakerSecondary: "Tie-breaker 1",
         labelTieBreakerTertiary: "Tie-breaker 2",
@@ -136,6 +141,8 @@
           "We couldn’t find what you asked for. Double-check spelling and names, or try asking in another way.",
         duplicateMatch:
           "This league only allows one match per pair of teams, and those two teams already have a match. Edit the existing result if you meant to change the score, or use different players if it was a new matchup.",
+        invalidLeagueRules:
+          "Those league rules can\u2019t be combined. Player-level ranking requires allowing players on multiple teams. Set \u201cOne team per player\u201d to No, or switch \u201cRank by\u201d back to Team.",
         titleExists: "A league with this title already exists. Try a different name.",
         forbidden:
           "You don’t have permission for that action. Admins should use the league link that includes the host token.",
@@ -354,9 +361,14 @@
         optionOncePerLeague: "리그당 한 번(권장)",
         optionAllowMultiple: "같은 두 팀 간 경기 여러 번 허용",
         oneTeamPerPlayer: "플레이어당 팀 하나",
+        labelOneTeamPerPlayer: "플레이어당 팀 하나",
+        optionOTPPTrue: "예 — 플레이어는 한 팀에만 소속됩니다(기본)",
+        optionOTPPFalse: "아니오 — 같은 플레이어가 여러 팀에 소속될 수 있습니다",
         labelRankingSubject: "순위 단위",
         optionRankingSubjectTeam: "팀(기본)",
         optionRankingSubjectPlayer: "플레이어",
+        crossRuleHint:
+          "플레이어 단위 순위를 선택하면 같은 플레이어가 여러 팀에 소속될 수 있어야 합니다. \u201c순위 단위: 플레이어\u201d를 선택하면 \u201c플레이어당 팀 하나\u201d가 자동으로 \u201c아니오\u201d로 바뀝니다.",
         labelTieBreakerPrimary: "기본 지표",
         labelTieBreakerSecondary: "동률 시 1순위",
         labelTieBreakerTertiary: "동률 시 2순위",
@@ -399,6 +411,8 @@
           "요청하신 내용을 찾지 못했습니다. 철자와 이름을 다시 확인하거나 다른 방식으로 질문해 보세요.",
         duplicateMatch:
           "이 리그는 팀 쌍당 경기를 한 번만 허용하며, 해당 두 팀의 경기가 이미 있습니다. 점수만 바꾸려면 기존 결과를 수정하고, 새로운 대결이면 다른 선수 조합을 사용하세요.",
+        invalidLeagueRules:
+          "선택한 리그 규칙 조합은 허용되지 않습니다. 플레이어 단위 순위를 사용하려면 같은 플레이어가 여러 팀에 소속될 수 있어야 합니다. \u201c플레이어당 팀 하나\u201d를 \u201c아니오\u201d로 바꾸거나 \u201c순위 단위\u201d를 다시 팀으로 설정하세요.",
         titleExists: "이미 같은 제목의 리그가 있습니다. 다른 이름을 사용해 보세요.",
         forbidden:
           "해당 작업을 할 권한이 없습니다. 관리자는 호스트 토큰이 포함된 리그 링크를 사용하세요.",

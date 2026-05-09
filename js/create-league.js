@@ -76,22 +76,35 @@
         form.ranking_subject && form.ranking_subject.value
           ? form.ranking_subject.value
           : "team";
+      var otpp =
+        form.one_team_per_player && form.one_team_per_player.value
+          ? form.one_team_per_player.value === "true"
+          : true;
       var tieBreakers = collectTieBreakers(form);
       if (!tieBreakers.length) tieBreakers = ["matches_won"];
-      // TODO(v3-ranking-tightening): v2 locks one_team_per_player to true, so
-      // the form does not expose the choice. v3 will accept OTPP=false; when it
-      // ships, re-introduce the OTPP control here and add a (subject, OTPP)
-      // coupling that disables subject="player" while OTPP=true. See design
-      // doc 17.
       payload.rules = {
-        version: 2,
+        version: 3,
         match_pair_idempotency: mpi,
-        one_team_per_player: true,
+        one_team_per_player: otpp,
         ranking_subject: subject,
         tie_breakers: tieBreakers,
       };
     }
     return payload;
+  }
+
+  function applyCrossRule(form, source) {
+    var subjectSel = form.ranking_subject;
+    var otppSel = form.one_team_per_player;
+    if (!subjectSel || !otppSel) return;
+    if (source === "ranking_subject" && subjectSel.value === "player") {
+      if (otppSel.value !== "false") otppSel.value = "false";
+      return;
+    }
+    if (source === "one_team_per_player" && otppSel.value === "true") {
+      if (subjectSel.value !== "team") subjectSel.value = "team";
+      return;
+    }
   }
 
   function setHidden(el, hidden) {
@@ -124,6 +137,17 @@
     var errEl = document.getElementById("create-league-error");
     var successEl = document.getElementById("create-league-success");
     if (!form || !submitBtn) return;
+
+    if (form.ranking_subject) {
+      form.ranking_subject.addEventListener("change", function () {
+        applyCrossRule(form, "ranking_subject");
+      });
+    }
+    if (form.one_team_per_player) {
+      form.one_team_per_player.addEventListener("change", function () {
+        applyCrossRule(form, "one_team_per_player");
+      });
+    }
 
     document.body.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-copy-target]");

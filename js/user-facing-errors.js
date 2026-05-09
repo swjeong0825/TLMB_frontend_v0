@@ -99,6 +99,14 @@
     }
 
     if (
+      low.indexOf("invalidleaguerules") !== -1 ||
+      low.indexOf("ranking_subject='player' requires") !== -1 ||
+      low.indexOf("ranking_subject=\"player\" requires") !== -1
+    ) {
+      return t("errors.invalidLeagueRules") || genericMessage();
+    }
+
+    if (
       /\b404\b/.test(low) ||
       low.indexOf("not found") !== -1 ||
       low.indexOf("couldn't find") !== -1 ||
