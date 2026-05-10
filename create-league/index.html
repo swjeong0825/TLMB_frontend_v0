@@ -58,21 +58,54 @@
           <p class="hint" data-i18n="createLeague.advancedHint"></p>
           <div class="form-grid">
             <label>
-              <span data-i18n="createLeague.labelMatchPair"></span>
+              <span class="field-label-with-help">
+                <span data-i18n="createLeague.labelMatchPair"></span>
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="matchPair"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.matchPairAria"
+                >
+                  ?
+                </button>
+              </span>
               <select name="match_pair_idempotency">
                 <option value="once_per_league" selected data-i18n="createLeague.optionOncePerLeague"></option>
                 <option value="none" data-i18n="createLeague.optionAllowMultiple"></option>
               </select>
             </label>
             <label>
-              <span data-i18n="createLeague.labelOneTeamPerPlayer"></span>
+              <span class="field-label-with-help">
+                <span data-i18n="createLeague.labelOneTeamPerPlayer"></span>
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="oneTeamPerPlayer"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.oneTeamPerPlayerAria"
+                >
+                  ?
+                </button>
+              </span>
               <select name="one_team_per_player">
-                <option value="true" selected data-i18n="createLeague.optionOTPPTrue"></option>
                 <option value="false" data-i18n="createLeague.optionOTPPFalse"></option>
+                <option value="true" selected data-i18n="createLeague.optionOTPPTrue"></option>
               </select>
             </label>
             <label>
-              <span data-i18n="createLeague.labelRankingSubject"></span>
+              <span class="field-label-with-help">
+                <span data-i18n="createLeague.labelRankingSubject"></span>
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="rankingSubject"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.rankingSubjectAria"
+                >
+                  ?
+                </button>
+              </span>
               <select name="ranking_subject">
                 <option value="team" selected data-i18n="createLeague.optionRankingSubjectTeam"></option>
                 <option value="player" data-i18n="createLeague.optionRankingSubjectPlayer"></option>
@@ -80,7 +113,18 @@
             </label>
             <p class="hint create-league-cross-rule-hint" data-i18n="createLeague.crossRuleHint"></p>
             <label>
-              <span data-i18n="createLeague.labelTieBreakerPrimary"></span>
+              <span class="field-label-with-help">
+                <span data-i18n="createLeague.labelTieBreakerPrimary"></span>
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="tieBreakers"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.tieBreakersAria"
+                >
+                  ?
+                </button>
+              </span>
               <select name="tie_breaker_primary" data-tie-breaker="primary">
                 <option value="matches_won" selected data-i18n="createLeague.metricMatchesWon"></option>
                 <option value="match_diff" data-i18n="createLeague.metricMatchDiff"></option>
@@ -147,6 +191,28 @@
 
       <p class="hint create-league-config-hint" data-i18n-html="common.configHint"></p>
     </main>
+
+    <div id="create-league-help-modal" class="help-modal" hidden>
+      <div class="help-modal-backdrop" tabindex="-1" aria-hidden="true"></div>
+      <div
+        class="help-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-league-help-title"
+      >
+        <div class="help-modal-header">
+          <h2 id="create-league-help-title" class="help-modal-title"></h2>
+          <button
+            type="button"
+            class="help-modal-close"
+            data-i18n-aria-label="createLeague.help.modalCloseAria"
+          >
+            ×
+          </button>
+        </div>
+        <div id="create-league-help-body" class="help-modal-body"></div>
+      </div>
+    </div>
     <footer class="chat-footer">
       <span data-i18n="footer.backendSource"></span>
       <a href="https://github.com/swjeong0825/TLMB_backend_main" target="_blank" rel="noopener noreferrer">Backend Main</a>

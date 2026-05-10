@@ -113,6 +113,23 @@
     else el.removeAttribute("aria-hidden");
   }
 
+  var HELP_KEYS = { matchPair: true, oneTeamPerPlayer: true, rankingSubject: true, tieBreakers: true };
+
+  function fillHelpModalBody(container, text) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+    var parts = String(text || "")
+      .split(/\n\n+/)
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+    for (var i = 0; i < parts.length; i++) {
+      var p = document.createElement("p");
+      p.textContent = parts[i];
+      container.appendChild(p);
+    }
+  }
+
   function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text);
@@ -137,6 +154,65 @@
     var errEl = document.getElementById("create-league-error");
     var successEl = document.getElementById("create-league-success");
     if (!form || !submitBtn) return;
+
+    var helpModal = document.getElementById("create-league-help-modal");
+    var helpTitle = document.getElementById("create-league-help-title");
+    var helpBody = document.getElementById("create-league-help-body");
+    var helpClose = helpModal && helpModal.querySelector(".help-modal-close");
+    var helpBackdrop = helpModal && helpModal.querySelector(".help-modal-backdrop");
+    var helpReturnFocus = null;
+
+    function openHelpModal(key) {
+      if (!helpModal || !helpTitle || !helpBody) return;
+      if (!HELP_KEYS[key]) return;
+      var I = window.TLCHAT_I18N;
+      if (!I || typeof I.t !== "function") return;
+      helpTitle.textContent = I.t("createLeague.help." + key + "Title");
+      fillHelpModalBody(helpBody, I.t("createLeague.help." + key + "Body"));
+      helpReturnFocus = document.activeElement;
+      helpModal.hidden = false;
+      document.body.style.overflow = "hidden";
+      if (helpClose && typeof helpClose.focus === "function") {
+        helpClose.focus();
+      }
+    }
+
+    function closeHelpModal() {
+      if (!helpModal || helpModal.hidden) return;
+      helpModal.hidden = true;
+      document.body.style.overflow = "";
+      if (helpReturnFocus && typeof helpReturnFocus.focus === "function") {
+        try {
+          helpReturnFocus.focus();
+        } catch (_e) {
+          /* ignore */
+        }
+      }
+      helpReturnFocus = null;
+    }
+
+    if (helpModal && helpClose && helpBackdrop) {
+      helpClose.addEventListener("click", function () {
+        closeHelpModal();
+      });
+      helpBackdrop.addEventListener("click", function () {
+        closeHelpModal();
+      });
+      document.addEventListener("keydown", function (ev) {
+        if (!helpModal.hidden && ev.key === "Escape") {
+          ev.preventDefault();
+          closeHelpModal();
+        }
+      });
+      document.body.addEventListener("click", function (ev) {
+        var btn = ev.target && ev.target.closest && ev.target.closest("[data-help-key]");
+        if (!btn) return;
+        var key = btn.getAttribute("data-help-key");
+        if (!key || !HELP_KEYS[key]) return;
+        ev.preventDefault();
+        openHelpModal(key);
+      });
+    }
 
     if (form.ranking_subject) {
       form.ranking_subject.addEventListener("change", function () {
