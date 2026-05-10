@@ -988,13 +988,7 @@
         "admin-intents"
       );
     }
-
-    var intro =
-      "<p class=\"hint help-panel-intro\">" +
-      escapeHtml(tr("helpIntro") || "Here's what I can help you with. Try one of the example phrases below.") +
-      "</p>";
-
-    return "<div class=\"help-panel\">" + intro + "<div class=\"intent-helper-body help-panel-body\">" + body + "</div></div>";
+    return "<div class=\"help-panel\">" + "" + "<div class=\"intent-helper-body help-panel-body\">" + body + "</div></div>";
   }
 
   function renderReadPanel(dataType, data, isAdmin) {
