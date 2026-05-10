@@ -700,6 +700,122 @@
     return h + "</tbody></table>";
   }
 
+  /**
+   * Edit-match-score picker:
+   *   - renders the candidate matches table with a per-row "Edit" button
+   *   - empty matches → friendly hint instead of a table
+   *   - the inline edit form per row is created lazily in
+   *     bindEditMatchScorePicker when the user clicks "Edit"
+   */
+  function renderEditMatchScorePicker(data) {
+    var matches = Array.isArray(data && data.matches) ? data.matches : [];
+    var filters = Array.isArray(data && data.player_filters) ? data.player_filters : [];
+
+    var filterChips = filters
+      .map(function (n) {
+        return '<span class="match-picker-filter">' + escapeHtml(n) + "</span>";
+      })
+      .join("");
+    var heading =
+      '<div class="match-picker-heading">' +
+      '<span class="match-picker-heading-label">' +
+      escapeHtml(
+        tr("editMatchPickerLabel") || "Showing matches that contain ALL of:"
+      ) +
+      "</span>" +
+      filterChips +
+      "</div>";
+
+    var title =
+      "<h3>" +
+      escapeHtml(tr("editMatchPickerTitle") || "Pick a match to edit") +
+      "</h3>";
+
+    if (!matches.length) {
+      return (
+        '<div class="data-panel match-picker">' +
+        title +
+        heading +
+        '<p class="hint match-picker-empty">' +
+        escapeHtml(
+          tr("editMatchPickerEmpty") ||
+            "No recorded match contains ALL of those players. Try mentioning fewer or different nicknames."
+        ) +
+        "</p>" +
+        "</div>"
+      );
+    }
+
+    var rowsHtml = matches
+      .map(function (m) {
+        var t1 =
+          escapeHtml(m.team1_player1_nickname) +
+          " + " +
+          escapeHtml(m.team1_player2_nickname);
+        var t2 =
+          escapeHtml(m.team2_player1_nickname) +
+          " + " +
+          escapeHtml(m.team2_player2_nickname);
+        var when = m.created_at
+          ? formatWhen(m.created_at)
+          : escapeHtml(tr("emDash") || "—");
+        var matchId = m.match_id || "";
+        return (
+          '<tr class="match-picker-row" data-match-row-id="' +
+          escapeAttr(matchId) +
+          '">' +
+          "<td>" +
+          t1 +
+          " " +
+          escapeHtml(tr("vs") || "vs") +
+          " " +
+          t2 +
+          "</td>" +
+          "<td>" +
+          escapeHtml(m.team1_score) +
+          " – " +
+          escapeHtml(m.team2_score) +
+          "</td>" +
+          "<td>" +
+          when +
+          "</td>" +
+          '<td class="match-picker-actions">' +
+          '<button type="button" class="btn-edit-row" data-edit-match-id="' +
+          escapeAttr(matchId) +
+          '">' +
+          escapeHtml(tr("editButton") || "Edit") +
+          "</button>" +
+          "</td>" +
+          "</tr>"
+        );
+      })
+      .join("");
+
+    return (
+      '<div class="data-panel match-picker">' +
+      title +
+      heading +
+      '<table class="data match-picker-table">' +
+      "<thead><tr>" +
+      "<th>" +
+      escapeHtml(tr("tableTeams") || "Teams") +
+      "</th>" +
+      "<th>" +
+      escapeHtml(tr("tableScore") || "Score") +
+      "</th>" +
+      "<th>" +
+      escapeHtml(tr("tableWhen") || "When") +
+      "</th>" +
+      "<th></th>" +
+      "</tr></thead>" +
+      "<tbody>" +
+      rowsHtml +
+      "</tbody>" +
+      "</table>" +
+      "</div>"
+    );
+  }
+
   function renderRoster(data) {
     var players = data.players || [];
     var teams = data.teams || [];
@@ -919,10 +1035,13 @@
       },
       {
         name: "EDIT_MATCH_SCORE",
-        desc: tr("intentEditScoreDesc") || "Correct the score of a previously recorded match.",
+        desc:
+          tr("intentEditScoreDesc") ||
+          "Find a recorded match by mentioning 1-4 player nicknames, then pick one and edit its score in a form.",
         examples: [
-          tr("intentEditScoreEx1") ||
-            "fix the score for Alice and Bob vs Charlie and Diana — it should be 6-2 not 6-3",
+          tr("intentEditScoreEx1") || "edit match score for Alice",
+          tr("intentEditScoreEx2") || "fix a match score involving Alice and Bob",
+          tr("intentEditScoreEx3") || "correct the score of the match Alice and Bob vs Charlie and Diana",
         ],
       },
       {
@@ -1687,6 +1806,113 @@
       }
     }
 
+    /**
+     * Edit-match-score picker: posts the assistant message and wires up
+     * per-row Edit/Submit click handlers. Each row's Edit button toggles an
+     * inline form prefilled with the match's current scores; only one form is
+     * open at a time. Submission delegates to submitBackendAction so we reuse
+     * validation, host-token wiring, and success/error rendering.
+     */
+    function renderEditMatchScorePickerMessage(resp) {
+      var d = resp.data || {};
+      var matches = Array.isArray(d.matches) ? d.matches : [];
+      var matchById = {};
+      matches.forEach(function (m) {
+        if (m && m.match_id) matchById[String(m.match_id)] = m;
+      });
+      var urlTemplate = d.url_template || "";
+      var method = d.method || "PATCH";
+      var bodySchema = (d.body_schema && typeof d.body_schema === "object") ? d.body_schema : {};
+
+      var parts = [];
+      if (resp.server_message && resp.server_message.trim()) {
+        parts.push(
+          '<div class="server-message">' +
+            escapeHtml(resp.server_message.trim()) +
+            "</div>"
+        );
+      }
+      if (needsHostTokenForUrl(urlTemplate) && !route.hostToken) {
+        parts.push(
+          '<p class="hint" style="color:var(--warn)">' +
+            (tr("adminUrlWarn") ||
+              "This write targets an admin endpoint. Use the Admin URL with <code>X-Host-Token</code>.") +
+            "</p>"
+        );
+      }
+      parts.push(renderEditMatchScorePicker(d));
+
+      var wrap = appendAssistant(parts.join(""));
+      var panel = wrap.querySelector(".match-picker");
+      if (!panel) return;
+
+      panel.querySelectorAll("[data-edit-match-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var id = btn.getAttribute("data-edit-match-id");
+          toggleEditMatchScoreForm(panel, id, matchById[id], urlTemplate, method, bodySchema);
+        });
+      });
+    }
+
+    function toggleEditMatchScoreForm(panel, matchId, match, urlTemplate, method, bodySchema) {
+      var existing = panel.querySelector(".match-picker-edit-row[data-edit-row-id]");
+      if (existing) {
+        var existingId = existing.getAttribute("data-edit-row-id");
+        existing.parentNode.removeChild(existing);
+        if (existingId === matchId) return;
+      }
+      if (!match) return;
+      var anchor = panel.querySelector(
+        '.match-picker-row[data-match-row-id="' + cssEscapeAttrValue(matchId) + '"]'
+      );
+      if (!anchor) return;
+
+      var initialValues = {
+        team1_score: match.team1_score == null ? "" : String(match.team1_score),
+        team2_score: match.team2_score == null ? "" : String(match.team2_score),
+      };
+      var bodySpec = {};
+      Object.keys(bodySchema).forEach(function (key) {
+        var meta = bodySchema[key] || {};
+        bodySpec[key] = {
+          type: meta.type || "string",
+          required: !!meta.required,
+          value: Object.prototype.hasOwnProperty.call(initialValues, key)
+            ? initialValues[key]
+            : "",
+        };
+      });
+
+      var formRow = document.createElement("tr");
+      formRow.className = "match-picker-edit-row";
+      formRow.setAttribute("data-edit-row-id", matchId);
+      formRow.innerHTML =
+        '<td colspan="4">' +
+        '<div class="action-card match-picker-edit-card">' +
+        renderWriteForm(bodySpec) +
+        '<button type="button" class="btn-secondary" data-submit-write>' +
+        escapeHtml(tr("submitToLeague") || "Submit to league API") +
+        "</button>" +
+        "</div>" +
+        "</td>";
+      anchor.parentNode.insertBefore(formRow, anchor.nextSibling);
+
+      var card = formRow.querySelector(".match-picker-edit-card");
+      var submitBtn = card.querySelector("[data-submit-write]");
+      var url = urlTemplate.replace(
+        "{match_id}",
+        encodeURIComponent(String(matchId))
+      );
+      submitBtn.addEventListener("click", function () {
+        submitBackendAction(card, method, url, bodySpec);
+      });
+    }
+
+    /** Escape only the chars that break a quoted attribute filter ("..."). */
+    function cssEscapeAttrValue(v) {
+      return String(v == null ? "" : v).replace(/(["\\])/g, "\\$1");
+    }
+
     function renderResponse(resp) {
 
       if (resp.data_type === "ERROR") {
@@ -1720,6 +1946,14 @@
       }
 
       if (WRITE_TYPES[resp.data_type]) {
+        if (
+          resp.data_type === "EDIT_MATCH_SCORE" &&
+          resp.data &&
+          Array.isArray(resp.data.matches)
+        ) {
+          renderEditMatchScorePickerMessage(resp);
+          return;
+        }
         parts = [];
         var d = resp.data || {};
         var method = d.method || "POST";

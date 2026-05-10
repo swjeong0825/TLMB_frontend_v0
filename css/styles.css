@@ -654,6 +654,62 @@ table.data th.standings-metric-rank {
   cursor: not-allowed;
 }
 
+.match-picker .match-picker-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.match-picker .match-picker-heading-label {
+  margin-right: 0.15rem;
+}
+
+.match-picker .match-picker-filter {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.match-picker-table td.match-picker-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.btn-edit-row {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-edit-row:hover {
+  background: rgba(61, 154, 106, 0.15);
+}
+
+.match-picker-edit-row > td {
+  padding: 0.25rem 0 0.65rem;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.match-picker-edit-card {
+  margin-top: 0.35rem;
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--muted);
