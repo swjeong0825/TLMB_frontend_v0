@@ -1043,7 +1043,7 @@
         name: "GET_STANDINGS",
         desc:
           tr("intentGetStandingsDesc") ||
-          "View the full league leaderboard (teams or players, depending on how the league is configured).",
+          "League leaderboard (teams or players).",
         examples: [
           tr("intentGetStandingsEx1") || "show me the standings",
           tr("intentGetStandingsEx2") || "who's winning the league?",
@@ -1054,7 +1054,7 @@
         name: "GET_STANDINGS_BY_PLAYER",
         desc:
           tr("intentGetStandingsByPlayerDesc") ||
-          "View the standings row for a specific player (their own row, or their team's row, depending on the league).",
+          "One player's standings row.",
         examples: [
           tr("intentGetStandingsByPlayerEx1") || "what's Alice's rank in the league?",
           tr("intentGetStandingsByPlayerEx2") || "where does Bob's team stand?",
@@ -1063,7 +1063,7 @@
       },
       {
         name: "GET_MATCH_HISTORY",
-        desc: tr("intentGetMatchHistoryDesc") || "View all recorded match results, most recent first.",
+        desc: tr("intentGetMatchHistoryDesc") || "All match results, newest first.",
         examples: [
           tr("intentGetMatchHistoryEx1") || "show me all the matches",
           tr("intentGetMatchHistoryEx2") || "what matches have been played?",
@@ -1074,7 +1074,7 @@
         name: "GET_MATCH_HISTORY_BY_PLAYER",
         desc:
           tr("intentGetMatchHistoryByPlayerDesc") ||
-          "View the match history for a specific player.",
+          "One player's match history.",
         examples: [
           tr("intentGetMatchHistoryByPlayerEx1") || "show me Alice's match history",
           tr("intentGetMatchHistoryByPlayerEx2") || "what matches has Bob played?",
@@ -1083,7 +1083,7 @@
       },
       {
         name: "GET_ROSTER",
-        desc: tr("intentGetRosterDesc") || "View all registered players and teams.",
+        desc: tr("intentGetRosterDesc") || "All registered players and teams.",
         examples: [
           tr("intentGetRosterEx1") || "show me all the players",
           tr("intentGetRosterEx2") || "who's in the league?",
@@ -1094,7 +1094,7 @@
         name: "SUBMIT_MATCH_RESULT",
         desc:
           tr("intentSubmitMatchDesc") ||
-          "Record a doubles match result. You can include players and scores, or just say \"record a match\" to open a blank form. New players are registered automatically.",
+          "Record a doubles match result.",
         examples: [
           tr("intentSubmitMatchEx1") || "record a match",
           tr("intentSubmitMatchEx2") || "Jae + Jazz 6:4 DK + Casper",
@@ -1108,7 +1108,7 @@
     return [
       {
         name: "EDIT_PLAYER_NICKNAME",
-        desc: tr("intentEditNickDesc") || "Correct or update a player's nickname.",
+        desc: tr("intentEditNickDesc") || "Change a player's nickname.",
         examples: [
           tr("intentEditNickEx1") || "rename Alice to Alicia",
           tr("intentEditNickEx2") || "change John's nickname to Johnny",
@@ -1118,7 +1118,7 @@
         name: "EDIT_MATCH_SCORE",
         desc:
           tr("intentEditScoreDesc") ||
-          "Mention 1\u20134 player nicknames to find a recorded match, then pick one and edit its score in a form. Don't type the new score in chat \u2014 you'll enter it in the picker form.",
+          "Fix a logged match score (via form).",
         examples: [
           tr("intentEditScoreEx1") || "edit match score for Alice",
           tr("intentEditScoreEx2") || "fix a match score involving Alice and Bob",
@@ -1127,12 +1127,12 @@
       },
       {
         name: "DELETE_MATCH",
-        desc: tr("intentDeleteMatchDesc") || "Permanently delete a match record.",
+        desc: tr("intentDeleteMatchDesc") || "Delete a match (four nicknames).",
         examples: [tr("intentDeleteMatchEx1") || "delete the match between Alice/Bob and Charlie/Diana"],
       },
       {
         name: "DELETE_TEAM",
-        desc: tr("intentDeleteTeamDesc") || "Permanently delete a team from the roster.",
+        desc: tr("intentDeleteTeamDesc") || "Delete a team with no matches.",
         examples: [tr("intentDeleteTeamEx1") || "delete the team Alice and Bob"],
       },
     ];
