@@ -243,6 +243,12 @@
     }
   }
 
+  function isMatchCreationCall(method, url) {
+    if (method !== "POST" || typeof url !== "string") return false;
+    var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
+    return /\/matches$/.test(withoutQuery);
+  }
+
   function responseLooksLikeStaticHtml(text) {
     var t = (text || "").slice(0, 500);
     return /^\s*</.test(t) && (/<!DOCTYPE/i.test(t) || /<html[\s>]/i.test(t));
@@ -1774,20 +1780,52 @@
         var txt = await res.text();
         var ok = res.ok;
         if (ok) {
-          var successLine = humanSuccessFromHttpBody(txt);
-          appendAssistant(
-            '<div class="response-callout response-callout-success"><strong>' +
+          var matchCreation = isMatchCreationCall(method, url);
+          if (matchCreation) {
+            refreshLeagueRoster();
+            var matchRecordedLine = tr("matchRecorded") || "Match recorded.";
+            var calloutHtml =
+              '<div class="response-callout response-callout-success"><strong>' +
               escapeHtml(tr("done") || "Done.") +
               "</strong> " +
-              escapeHtml(successLine) +
-              "</div>"
-          );
-          conversationHistory.push({
-            role: "assistant",
-            content: (tr("actionCompleted") || "Action completed: ") + successLine,
-          });
-          if (method === "POST" && typeof url === "string" && url.indexOf("/matches") !== -1) {
-            refreshLeagueRoster();
+              escapeHtml(matchRecordedLine) +
+              "</div>";
+            // Pure synthetic render: build the single-row match history panel
+            // straight from the form values the user just submitted, with the
+            // same trim+lowercase normalization the backend applies, so the
+            // row visually matches existing server-rendered history rows.
+            var t1 = Array.isArray(payload.team1_nicknames) ? payload.team1_nicknames : [];
+            var t2 = Array.isArray(payload.team2_nicknames) ? payload.team2_nicknames : [];
+            var newMatchRecord = {
+              team1_player1_nickname: normalizeMatchNickname(t1[0]),
+              team1_player2_nickname: normalizeMatchNickname(t1[1]),
+              team2_player1_nickname: normalizeMatchNickname(t2[0]),
+              team2_player2_nickname: normalizeMatchNickname(t2[1]),
+              team1_score: payload.team1_score,
+              team2_score: payload.team2_score,
+              created_at: new Date().toISOString(),
+            };
+            appendAssistant(
+              calloutHtml +
+                renderReadPanel("GET_MATCH_HISTORY", { matches: [newMatchRecord] })
+            );
+            conversationHistory.push({
+              role: "assistant",
+              content: matchRecordedLine,
+            });
+          } else {
+            var successLine = humanSuccessFromHttpBody(txt);
+            appendAssistant(
+              '<div class="response-callout response-callout-success"><strong>' +
+                escapeHtml(tr("done") || "Done.") +
+                "</strong> " +
+                escapeHtml(successLine) +
+                "</div>"
+            );
+            conversationHistory.push({
+              role: "assistant",
+              content: (tr("actionCompleted") || "Action completed: ") + successLine,
+            });
           }
         } else {
           var errLine = humanDetailFromHttpBody(txt);
