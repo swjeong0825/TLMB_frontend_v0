@@ -227,7 +227,6 @@
               setHidden(errEl, false);
               return;
             }
-            document.getElementById("out-league-id").textContent = data.league_id;
             document.getElementById("out-host-token").textContent = data.host_token;
 
             var playerUrl =
@@ -238,8 +237,9 @@
               new URLSearchParams({ league_id: data.league_id, host_token: data.host_token }).toString();
             var linkPlayer = document.getElementById("link-player");
             var linkAdmin = document.getElementById("link-admin");
-            linkPlayer.href = playerUrl;
-            linkAdmin.href = adminUrl;
+            var origin = window.location.origin || "";
+            linkPlayer.href = origin ? new URL(playerUrl, origin).href : playerUrl;
+            linkAdmin.href = origin ? new URL(adminUrl, origin).href : adminUrl;
 
             form.reset();
             var adv = form.querySelector("details.create-league-advanced");
