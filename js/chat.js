@@ -245,6 +245,35 @@
     }
   }
 
+  /** GET /leagues/{id}/matches — full history, same origin as roster (no host token). */
+  async function fetchLeagueMatchHistory(leagueId) {
+    var base = backendMainBase();
+    if (!base || !leagueId) {
+      return { ok: false, error: "missing_config_or_league" };
+    }
+    var url = base + "/leagues/" + encodeURIComponent(leagueId) + "/matches";
+    var res = await fetch(url);
+    var text = await res.text();
+    if (!res.ok) {
+      return { ok: false, error: "http", status: res.status, body: text };
+    }
+    try {
+      var data = JSON.parse(text);
+      return {
+        ok: true,
+        matches: Array.isArray(data.matches) ? data.matches : [],
+      };
+    } catch (e) {
+      return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };
+    }
+  }
+
+  function leagueApiJsonErrorCode(text) {
+    var o = tryParseJson(text);
+    if (o && typeof o === "object" && typeof o.error === "string") return o.error;
+    return "";
+  }
+
   function isMatchCreationCall(method, url) {
     if (method !== "POST" || typeof url !== "string") return false;
     var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
@@ -301,6 +330,39 @@
   function rosterTeamPairKey(a, b) {
     if (!a || !b) return "";
     return a < b ? a + "\0" + b : b + "\0" + a;
+  }
+
+  function matchRecordTeamPairKeys(record) {
+    if (!record) return ["", ""];
+    var k1 = rosterTeamPairKey(
+      normalizeMatchNickname(record.team1_player1_nickname),
+      normalizeMatchNickname(record.team1_player2_nickname)
+    );
+    var k2 = rosterTeamPairKey(
+      normalizeMatchNickname(record.team2_player1_nickname),
+      normalizeMatchNickname(record.team2_player2_nickname)
+    );
+    return [k1, k2];
+  }
+
+  /**
+   * Find the league match row for the same unordered pair of teams (handles swapped sides).
+   * t1Norms/t2Norms: two-element arrays of normalized nicknames per team.
+   */
+  function findMatchRecordForSubmittedPair(matches, t1Norms, t2Norms) {
+    var kA = rosterTeamPairKey(t1Norms[0], t1Norms[1]);
+    var kB = rosterTeamPairKey(t2Norms[0], t2Norms[1]);
+    if (!kA || !kB) return null;
+    for (var i = 0; i < (matches || []).length; i++) {
+      var sides = matchRecordTeamPairKeys(matches[i]);
+      var s0 = sides[0];
+      var s1 = sides[1];
+      if (!s0 || !s1) continue;
+      if ((kA === s0 && kB === s1) || (kA === s1 && kB === s0)) {
+        return matches[i];
+      }
+    }
+    return null;
   }
 
   function rosterPairKeysFromTeams(teams) {
@@ -1927,7 +1989,43 @@
             "] " +
             (errLine || "(no detail in body)") +
             (txt && txt.length ? " | body: " + (txt.length > 800 ? txt.slice(0, 800) + "…" : txt) : "");
-          appendErrorTechnical(technical, "League API error");
+
+          var failedMatchCreate =
+            isMatchCreationCall(method, url) &&
+            res.status === 409 &&
+            leagueApiJsonErrorCode(txt) === "DuplicateTeamPairMatchError";
+          if (failedMatchCreate) {
+            var hist = await fetchLeagueMatchHistory(route.leagueId);
+            var pt1 = Array.isArray(payload.team1_nicknames) ? payload.team1_nicknames : [];
+            var pt2 = Array.isArray(payload.team2_nicknames) ? payload.team2_nicknames : [];
+            var t1n = [normalizeMatchNickname(pt1[0]), normalizeMatchNickname(pt1[1])];
+            var t2n = [normalizeMatchNickname(pt2[0]), normalizeMatchNickname(pt2[1])];
+            var existingRow = hist.ok ? findMatchRecordForSubmittedPair(hist.matches, t1n, t2n) : null;
+            var shortMsg = tr("matchAlreadyExists") || "Match already exists. Record Not Saved";
+            var calloutHtml =
+              '<div class="response-callout response-callout-clarify"><strong>' +
+              escapeHtml(shortMsg) +
+              "</strong></div>";
+            if (!hist.ok) {
+              console.warn("[TLCHAT] Duplicate match — match history fetch failed", hist);
+            } else if (!existingRow) {
+              console.warn("[TLCHAT] Duplicate match — no matching row in history (unexpected)");
+            }
+            if (existingRow) {
+              appendAssistant(
+                calloutHtml +
+                  renderReadPanel("GET_MATCH_HISTORY", { matches: [existingRow] }, !!route.hostToken)
+              );
+            } else {
+              appendAssistant(calloutHtml);
+            }
+            conversationHistory.push({
+              role: "assistant",
+              content: shortMsg,
+            });
+          } else {
+            appendErrorTechnical(technical, "League API error");
+          }
         }
       } catch (e) {
         appendErrorTechnical(e.message || String(e), "League API request failed");

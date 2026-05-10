@@ -50,6 +50,12 @@
   background: rgba(46, 128, 85, 0.1);
 }
 
+[data-theme="light"] .response-callout-clarify {
+  background: rgba(234, 179, 8, 0.2);
+  border-color: rgba(176, 125, 16, 0.35);
+  border-left-color: var(--warn);
+}
+
 [data-theme="light"] .btn-secondary:hover {
   background: rgba(46, 128, 85, 0.12);
 }
@@ -339,10 +345,10 @@ a:hover {
 }
 
 .response-callout-clarify {
-  background: var(--surface-2);
-  border-color: var(--accent);
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(201, 162, 39, 0.4);
   border-left-width: 3px;
-  border-left-color: var(--accent);
+  border-left-color: var(--warn);
 }
 
 .response-callout-success {

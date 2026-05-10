@@ -305,6 +305,7 @@
         done: "Done.",
         actionCompleted: "Action completed:",
         matchRecorded: "Match recorded.",
+        matchAlreadyExists: "Match already exists. Record Not Saved",
         submitToLeague: "Submit to league API",
         adminUrlWarn:
           "This write targets an admin endpoint. Use the Admin URL with <code>X-Host-Token</code>.",
@@ -602,6 +603,7 @@
         done: "완료.",
         actionCompleted: "작업 완료:",
         matchRecorded: "경기가 기록되었습니다.",
+        matchAlreadyExists: "해당 팀들의 경기가 이미 있습니다.",
         submitToLeague: "리그 API로 전송",
         adminUrlWarn:
           "이 작업은 관리자 엔드포인트입니다. <code>X-Host-Token</code>이 있는 관리자 URL을 사용하세요.",
