@@ -989,11 +989,24 @@
     return [
       {
         name: "GET_STANDINGS",
-        desc: tr("intentGetStandingsDesc") || "View current win/loss standings for all teams.",
+        desc:
+          tr("intentGetStandingsDesc") ||
+          "View the full league leaderboard (teams or players, depending on how the league is configured).",
         examples: [
           tr("intentGetStandingsEx1") || "show me the standings",
           tr("intentGetStandingsEx2") || "who's winning the league?",
           tr("intentGetStandingsEx3") || "what's the current leaderboard?",
+        ],
+      },
+      {
+        name: "GET_STANDINGS_BY_PLAYER",
+        desc:
+          tr("intentGetStandingsByPlayerDesc") ||
+          "View the standings row for a specific player (their own row, or their team's row, depending on the league).",
+        examples: [
+          tr("intentGetStandingsByPlayerEx1") || "what's Alice's rank in the league?",
+          tr("intentGetStandingsByPlayerEx2") || "where does Bob's team stand?",
+          tr("intentGetStandingsByPlayerEx3") || "show me Charlie's standing",
         ],
       },
       {
@@ -1003,6 +1016,17 @@
           tr("intentGetMatchHistoryEx1") || "show me all the matches",
           tr("intentGetMatchHistoryEx2") || "what matches have been played?",
           tr("intentGetMatchHistoryEx3") || "what were the recent results?",
+        ],
+      },
+      {
+        name: "GET_MATCH_HISTORY_BY_PLAYER",
+        desc:
+          tr("intentGetMatchHistoryByPlayerDesc") ||
+          "View the match history for a specific player.",
+        examples: [
+          tr("intentGetMatchHistoryByPlayerEx1") || "show me Alice's match history",
+          tr("intentGetMatchHistoryByPlayerEx2") || "what matches has Bob played?",
+          tr("intentGetMatchHistoryByPlayerEx3") || "matches involving Charlie",
         ],
       },
       {
@@ -1018,12 +1042,11 @@
         name: "SUBMIT_MATCH_RESULT",
         desc:
           tr("intentSubmitMatchDesc") ||
-          "Record a doubles match result. New players are registered automatically.",
+          "Record a doubles match result. You can include players and scores, or just say \"record a match\" to open a blank form. New players are registered automatically.",
         examples: [
-          tr("intentSubmitMatchEx1") || "Jae + Jazz 6:4 DK + Casper",
-          tr("intentSubmitMatchEx2") || "Alice and Bob beat Charlie and Diana 6 to 3",
-          tr("intentSubmitMatchEx3") ||
-            "record a match: John and Sarah vs Mike and Emma, 7-5",
+          tr("intentSubmitMatchEx1") || "record a match",
+          tr("intentSubmitMatchEx2") || "Jae + Jazz 6:4 DK + Casper",
+          tr("intentSubmitMatchEx3") || "Alice and Bob beat Charlie and Diana 6 to 3",
         ],
       },
     ];
@@ -1043,7 +1066,7 @@
         name: "EDIT_MATCH_SCORE",
         desc:
           tr("intentEditScoreDesc") ||
-          "Find a recorded match by mentioning 1-4 player nicknames, then pick one and edit its score in a form.",
+          "Mention 1\u20134 player nicknames to find a recorded match, then pick one and edit its score in a form. Don't type the new score in chat \u2014 you'll enter it in the picker form.",
         examples: [
           tr("intentEditScoreEx1") || "edit match score for Alice",
           tr("intentEditScoreEx2") || "fix a match score involving Alice and Bob",
