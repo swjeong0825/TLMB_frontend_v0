@@ -281,9 +281,8 @@
         intentCountOne: "{n} intent",
         intentCountMany: "{n} intents",
         placeholderMobile:
-          "Report a match, ask about standings/matches/roster, or type \"help\".",
-        placeholderDesktop:
-          "Report a match, or ask about standings, match history, or the roster.\nType \"help\" any time to see all commands, or open \"Supported commands\" above.",
+          'Type "help" to see all commands',
+        placeholderDesktop: 'Type "help" to see all commands',
         h1: "Tennis League Management Bot",
         badgeAdmin: "Admin",
         badgePlayer: "Player",
@@ -579,9 +578,8 @@
         helperHint: "또는 채팅에 \"help\" 입력",
         intentCountOne: "의도 {n}개",
         intentCountMany: "의도 {n}개",
-        placeholderMobile: "경기 결과를 입력하거나, 순위·기록·명단을 묻거나, \"help\"를 입력하세요.",
-        placeholderDesktop:
-          "경기 결과를 입력하거나, 순위·경기 기록·명단을 물어보세요.\n전체 명령을 보려면 채팅에 \"help\"를 입력하거나 위의 \"지원 명령\"을 펼치세요.",
+        placeholderMobile: '"help"를 입력하면 모든 명령을 볼 수 있습니다',
+        placeholderDesktop: '"help"를 입력하면 모든 명령을 볼 수 있습니다',
         h1: "테니스 리그 관리 봇",
         badgeAdmin: "관리자",
         badgePlayer: "플레이어",
