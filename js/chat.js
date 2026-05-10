@@ -7,6 +7,7 @@
     GET_MATCH_HISTORY: true,
     GET_MATCH_HISTORY_BY_PLAYER: true,
     GET_ROSTER: true,
+    HELP: true,
   };
 
   var WRITE_TYPES = {
@@ -35,6 +36,7 @@
       return tr("panelMatchHistory");
     }
     if (dataType === "GET_ROSTER") return tr("panelRoster");
+    if (dataType === "HELP") return tr("panelHelp");
     var human = String(dataType || "")
       .replace(/^GET_/, "")
       .replace(/_/g, " ")
@@ -865,7 +867,56 @@
     );
   }
 
-  function renderReadPanel(dataType, data) {
+  function renderHelpPanel(data, isAdmin) {
+    var intents = (data && Array.isArray(data.intents)) ? data.intents : [];
+    if (!intents.length) {
+      return "<p class=\"hint\">" + escapeHtml(tr("helpEmpty") || "No commands available.") + "</p>";
+    }
+
+    var userIntents = [];
+    var adminIntents = [];
+    intents.forEach(function (intent) {
+      if (!intent || typeof intent !== "object") return;
+      // Admin commands are only relevant on the admin (host-token) URL.
+      // Drop them on the public/player URL so the help panel matches what
+      // the viewer can actually do.
+      if (intent.requires_admin && !isAdmin) return;
+      var item = {
+        name: String(intent.name || ""),
+        desc: String(intent.description || ""),
+        examples: Array.isArray(intent.example_messages)
+          ? intent.example_messages.map(function (e) { return String(e == null ? "" : e); })
+          : [],
+      };
+      if (intent.requires_admin) adminIntents.push(item);
+      else userIntents.push(item);
+    });
+
+    var body = "";
+    if (userIntents.length) {
+      body += renderIntentGroup(
+        adminIntents.length ? (tr("groupPlayerCommands") || "Player commands") : "",
+        userIntents,
+        "user-intents"
+      );
+    }
+    if (adminIntents.length) {
+      body += renderIntentGroup(
+        tr("groupAdminCommands") || "Admin commands",
+        adminIntents,
+        "admin-intents"
+      );
+    }
+
+    var intro =
+      "<p class=\"hint help-panel-intro\">" +
+      escapeHtml(tr("helpIntro") || "Here's what I can help you with. Try one of the example phrases below.") +
+      "</p>";
+
+    return "<div class=\"help-panel\">" + intro + "<div class=\"intent-helper-body help-panel-body\">" + body + "</div></div>";
+  }
+
+  function renderReadPanel(dataType, data, isAdmin) {
     var inner = "";
     var filterNote = "";
     if (dataType === "GET_STANDINGS" || dataType === "GET_STANDINGS_BY_PLAYER") {
@@ -875,6 +926,7 @@
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
       inner = renderMatches(data);
     } else if (dataType === "GET_ROSTER") inner = renderRoster(data);
+    else if (dataType === "HELP") inner = renderHelpPanel(data, !!isAdmin);
     else inner = renderFallbackData(data);
     return (
       '<div class="data-panel"><h3>' +
@@ -1126,10 +1178,18 @@
         "admin-intents"
       );
     }
+    var rawHint = tr("helperHint") || "or just type \"help\" in chat";
+    var hintHtml = escapeHtml(rawHint).replace(
+      /["']help["']/g,
+      '<code class="intent-helper-hint-cmd">help</code>'
+    );
     return (
       '<details class="intent-helper">' +
       '<summary class="intent-helper-summary"><span class="intent-helper-title">' +
       escapeHtml(tr("supportedCommands") || "Supported commands") +
+      "</span>" +
+      '<span class="intent-helper-hint">' +
+      hintHtml +
       "</span>" +
       '<span class="intent-helper-count">' +
       escapeHtml(countLabel) +
@@ -1830,7 +1890,11 @@
             };
             appendAssistant(
               calloutHtml +
-                renderReadPanel("GET_MATCH_HISTORY", { matches: [newMatchRecord] })
+                renderReadPanel(
+                  "GET_MATCH_HISTORY",
+                  { matches: [newMatchRecord] },
+                  !!route.hostToken
+                )
             );
             conversationHistory.push({
               role: "assistant",
@@ -2001,7 +2065,7 @@
       }
 
       if (READ_TYPES[resp.data_type]) {
-        parts.push(renderReadPanel(resp.data_type, resp.data || {}));
+        parts.push(renderReadPanel(resp.data_type, resp.data || {}, !!route.hostToken));
         appendAssistant(parts.join(""));
         return;
       }

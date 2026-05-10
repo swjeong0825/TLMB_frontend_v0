@@ -860,6 +860,32 @@ table.data th.standings-metric-rank {
   color: var(--text);
 }
 
+.intent-helper-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.intent-helper-hint-cmd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+@media (max-width: 520px) {
+  .intent-helper-hint {
+    display: none;
+  }
+}
+
 .intent-helper-count {
   margin-left: auto;
   font-size: 0.7rem;
