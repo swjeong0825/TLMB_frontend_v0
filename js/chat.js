@@ -1144,15 +1144,20 @@
       h += '<div class="intent-group-title">' + escapeHtml(title) + "</div>";
     }
     intents.forEach(function (intent) {
-      h += '<div class="intent-item">';
-      h += '<div class="intent-name">' + escapeHtml(intent.name) + "</div>";
-      h += '<div class="intent-desc">' + escapeHtml(intent.desc) + "</div>";
-      h += '<div class="intent-examples">';
+      var exHtml = "";
       intent.examples.forEach(function (ex) {
-        h += '<span class="intent-ex">&ldquo;' + escapeHtml(ex) + "&rdquo;</span>";
+        exHtml += '<span class="intent-ex">&ldquo;' + escapeHtml(ex) + "&rdquo;</span>";
       });
+      h += '<details class="intent-item intent-accordion">';
+      h += '<summary class="intent-item-summary">';
+      h += '<span class="intent-chevron" aria-hidden="true"></span>';
+      h += '<span class="intent-name">' + escapeHtml(intent.name) + "</span>";
+      h += "</summary>";
+      h += '<div class="intent-item-details">';
+      h += '<div class="intent-desc">' + escapeHtml(intent.desc) + "</div>";
+      h += '<div class="intent-examples">' + exHtml + "</div>";
       h += "</div>";
-      h += "</div>";
+      h += "</details>";
     });
     h += "</div>";
     return h;
