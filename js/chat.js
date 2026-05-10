@@ -929,6 +929,22 @@
     );
   }
 
+  /** Match HELP payload ordering to the shell intent helper (getUserIntents / getAdminIntents). */
+  function orderIntentsByCanonical(intents, canonical) {
+    var rank = {};
+    canonical.forEach(function (c, idx) {
+      rank[c.name] = idx;
+    });
+    return intents.slice().sort(function (a, b) {
+      var fa = rank[a.name];
+      var fb = rank[b.name];
+      var ia = fa === undefined ? Number.MAX_SAFE_INTEGER : fa;
+      var ib = fb === undefined ? Number.MAX_SAFE_INTEGER : fb;
+      if (ia !== ib) return ia - ib;
+      return String(a.name).localeCompare(String(b.name));
+    });
+  }
+
   function renderHelpPanel(data, isAdmin) {
     var intents = (data && Array.isArray(data.intents)) ? data.intents : [];
     if (!intents.length) {
@@ -953,6 +969,9 @@
       if (intent.requires_admin) adminIntents.push(item);
       else userIntents.push(item);
     });
+
+    userIntents = orderIntentsByCanonical(userIntents, getUserIntents());
+    adminIntents = orderIntentsByCanonical(adminIntents, getAdminIntents());
 
     var body = "";
     if (userIntents.length) {
@@ -1102,6 +1121,17 @@
   function getUserIntents() {
     return [
       {
+        name: "SUBMIT_MATCH_RESULT",
+        desc:
+          tr("intentSubmitMatchDesc") ||
+          "Record a doubles match result.",
+        examples: [
+          tr("intentSubmitMatchEx1") || "record a match",
+          tr("intentSubmitMatchEx2") || "Jae + Jazz 6:4 DK + Casper",
+          tr("intentSubmitMatchEx3") || "Alice and Bob beat Charlie and Diana 6 to 3",
+        ],
+      },
+      {
         name: "GET_STANDINGS",
         desc:
           tr("intentGetStandingsDesc") ||
@@ -1150,17 +1180,6 @@
           tr("intentGetRosterEx1") || "show me all the players",
           tr("intentGetRosterEx2") || "who's in the league?",
           tr("intentGetRosterEx3") || "list all teams",
-        ],
-      },
-      {
-        name: "SUBMIT_MATCH_RESULT",
-        desc:
-          tr("intentSubmitMatchDesc") ||
-          "Record a doubles match result.",
-        examples: [
-          tr("intentSubmitMatchEx1") || "record a match",
-          tr("intentSubmitMatchEx2") || "Jae + Jazz 6:4 DK + Casper",
-          tr("intentSubmitMatchEx3") || "Alice and Bob beat Charlie and Diana 6 to 3",
         ],
       },
     ];
