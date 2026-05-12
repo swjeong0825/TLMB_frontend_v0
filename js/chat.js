@@ -2632,16 +2632,20 @@
       appendAssistant('<div class="data-panel unknown-response">' + unkParts.join("") + "</div>");
     }
 
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      var text = (input.value || "").trim();
-      if (!text) return;
-      input.value = "";
-      input.style.height = "auto";
-      appendUser(text);
-      var submittedText = normalizePlusForIntentServer(text);
+    /**
+     * @param {string} rawMessage trimmed user text (e.g. "help")
+     * @param {{ silent?: boolean }} opts when silent, no user bubble (used for auto help on open)
+     */
+    async function deliverChatMessage(rawMessage, opts) {
+      var silent = opts && opts.silent;
+      var trimmed = String(rawMessage || "").trim();
+      if (!trimmed) return;
+      var submittedText = normalizePlusForIntentServer(trimmed);
       sendBtn.disabled = true;
       try {
+        if (!silent) {
+          appendUser(trimmed);
+        }
         var resp = await postChat(submittedText);
         renderResponse(resp);
         conversationHistory.push({ role: "user", content: submittedText });
@@ -2655,7 +2659,18 @@
         sendBtn.disabled = false;
         input.focus();
       }
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = (input.value || "").trim();
+      if (!text) return;
+      input.value = "";
+      input.style.height = "auto";
+      deliverChatMessage(text, { silent: false });
     });
+
+    deliverChatMessage("help", { silent: true });
 
     input.focus();
   }
