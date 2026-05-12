@@ -171,7 +171,76 @@
     return genericMessage();
   }
 
-  var api = { fromTechnical: fromTechnical };
+  /**
+   * Suggest an @-mention prefix from backend `missing_nicknames`
+   * (first non-empty trimmed nickname becomes "@x" using its first character).
+   */
+  function mentionSearchPromptFromMissing(missingNicknames) {
+    if (!Array.isArray(missingNicknames)) return "@";
+    for (var i = 0; i < missingNicknames.length; i++) {
+      var s = String(missingNicknames[i] == null ? "" : missingNicknames[i]).trim();
+      if (!s.length) continue;
+      var ch = s.charAt(0);
+      if (ch) return "@" + ch;
+    }
+    return "@";
+  }
+
+  /**
+   * Structured handler for HTTP 422 IneligiblePlayerError from the backend.
+   *
+   * Returns { isIneligible: true, headline: string, missing_nicknames: string[] }
+   * when the body matches, otherwise returns { isIneligible: false }.
+   *
+   * IMPORTANT: reads missing_nicknames from the structured JSON body — never
+   * parses the `detail` string, per the backend contract in 20_eligible_players.md.
+   *
+   * @param {number} status HTTP status code
+   * @param {object|null} jsonBody parsed response body (or null)
+   * @returns {{ isIneligible: boolean, headline?: string, missing_nicknames?: string[] }}
+   */
+  function fromMatchSubmissionError(status, jsonBody) {
+    if (
+      status !== 422 ||
+      !jsonBody ||
+      typeof jsonBody !== "object" ||
+      jsonBody.error !== "IneligiblePlayerError"
+    ) {
+      return { isIneligible: false };
+    }
+
+    var missing = Array.isArray(jsonBody.missing_nicknames)
+      ? jsonBody.missing_nicknames.map(function (n) { return String(n); })
+      : [];
+
+    var names =
+      missing.length > 0
+        ? missing.join(", ")
+        : (jsonBody.detail ? String(jsonBody.detail) : "some players");
+
+    var atHint = mentionSearchPromptFromMissing(missing);
+
+    var I = global.TLCHAT_I18N;
+    var headline =
+      I && typeof I.t === "function"
+        ? I.t("chat.ineligibleHeadline", { names: names, atHint: atHint })
+        : names +
+          " are not in this league's eligible-players list. use \"" +
+          atHint +
+          '" to search the player.';
+
+    if (!headline || headline === "chat.ineligibleHeadline") {
+      headline =
+        names +
+        " are not in this league\u2019s eligible-players list. use \"" +
+        atHint +
+        '" to search the player.';
+    }
+
+    return { isIneligible: true, headline: headline, missing_nicknames: missing };
+  }
+
+  var api = { fromTechnical: fromTechnical, fromMatchSubmissionError: fromMatchSubmissionError };
   Object.defineProperty(api, "GENERIC_MESSAGE", {
     enumerable: true,
     get: genericMessage,

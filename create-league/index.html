@@ -93,6 +93,49 @@
                 <option value="true" selected data-i18n="createLeague.optionOTPPTrue"></option>
               </select>
             </label>
+            <div class="allowlist-field">
+              <span class="field-label-with-help allowlist-label-row">
+                <label
+                  for="require-eligible-players-toggle"
+                  data-i18n="createLeague.labelRequireEligiblePlayers"
+                ></label>
+                <input
+                  type="checkbox"
+                  name="require_eligible_players"
+                  id="require-eligible-players-toggle"
+                  class="allowlist-toggle-input"
+                  data-allowlist-toggle
+                />
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="requireEligiblePlayers"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.requireEligiblePlayersAria"
+                >
+                  ?
+                </button>
+              </span>
+              <div
+                class="chips-input"
+                data-allowlist-chips
+                data-enabled="false"
+                aria-disabled="true"
+              >
+                <input
+                  type="text"
+                  id="eligible-players-chips-input"
+                  class="chips-input-field"
+                  autocomplete="off"
+                  spellcheck="false"
+                  disabled
+                  data-i18n-placeholder="createLeague.eligiblePlayersChipsPlaceholder"
+                  data-i18n-aria-label="createLeague.eligiblePlayersChipsAria"
+                />
+              </div>
+              <p class="hint" data-i18n="createLeague.eligiblePlayersChipsHint"></p>
+              <p class="hint" data-i18n="createLeague.requireEligiblePlayersHint"></p>
+            </div>
             <label>
               <span class="field-label-with-help">
                 <span data-i18n="createLeague.labelRankingSubject"></span>

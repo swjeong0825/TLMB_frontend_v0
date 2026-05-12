@@ -63,6 +63,18 @@
     return picked;
   }
 
+  function readAllowlistChips(form) {
+    var wrap = form.querySelector("[data-allowlist-chips]");
+    if (!wrap) return [];
+    var nodes = wrap.querySelectorAll(".chip[data-chip-name]");
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var name = nodes[i].getAttribute("data-chip-name");
+      if (name) out.push(name);
+    }
+    return out;
+  }
+
   function buildPayload(form) {
     var title = (form.title.value || "").trim();
     var desc = (form.description.value || "").trim();
@@ -70,6 +82,10 @@
     if (desc) payload.description = desc;
 
     var details = form.querySelector("details.create-league-advanced");
+    var requireEligiblePlayers = !!(
+      form.require_eligible_players && form.require_eligible_players.checked
+    );
+
     if (details && details.open) {
       var mpi = form.match_pair_idempotency.value;
       var subject =
@@ -83,12 +99,17 @@
       var tieBreakers = collectTieBreakers(form);
       if (!tieBreakers.length) tieBreakers = ["matches_won"];
       payload.rules = {
-        version: 3,
+        version: 4,
         match_pair_idempotency: mpi,
         one_team_per_player: otpp,
         ranking_subject: subject,
         tie_breakers: tieBreakers,
+        require_eligible_players: requireEligiblePlayers,
       };
+    }
+
+    if (requireEligiblePlayers) {
+      payload.eligible_players = readAllowlistChips(form);
     }
     return payload;
   }
@@ -113,7 +134,7 @@
     else el.removeAttribute("aria-hidden");
   }
 
-  var HELP_KEYS = { matchPair: true, oneTeamPerPlayer: true, rankingSubject: true, tieBreakers: true };
+  var HELP_KEYS = { matchPair: true, oneTeamPerPlayer: true, rankingSubject: true, tieBreakers: true, requireEligiblePlayers: true };
 
   function fillHelpModalBody(container, text) {
     while (container.firstChild) container.removeChild(container.firstChild);
@@ -128,6 +149,188 @@
       p.textContent = parts[i];
       container.appendChild(p);
     }
+  }
+
+  function chipNormalizeKey(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function findChipByKey(chipsContainer, key) {
+    var nodes = chipsContainer.querySelectorAll(".chip[data-chip-name]");
+    for (var i = 0; i < nodes.length; i++) {
+      var n = chipNormalizeKey(nodes[i].getAttribute("data-chip-name"));
+      if (n === key) return nodes[i];
+    }
+    return null;
+  }
+
+  function createChipElement(name) {
+    var chip = document.createElement("span");
+    chip.className = "chip";
+    chip.setAttribute("data-chip-name", name);
+
+    var label = document.createElement("span");
+    label.className = "chip-label";
+    label.textContent = name;
+    chip.appendChild(label);
+
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "chip-remove";
+    remove.setAttribute("data-chip-remove", "");
+    remove.setAttribute("tabindex", "-1");
+    var I = window.TLCHAT_I18N;
+    if (I && typeof I.t === "function") {
+      remove.setAttribute(
+        "aria-label",
+        I.t("createLeague.eligiblePlayersChipRemoveAria", { name: name })
+      );
+    } else {
+      remove.setAttribute("aria-label", "Remove " + name);
+    }
+    remove.textContent = "\u00D7";
+    chip.appendChild(remove);
+
+    return chip;
+  }
+
+  function commitChipFromText(chipsContainer, fieldEl, rawText) {
+    var trimmed = String(rawText || "").trim();
+    if (!trimmed) return false;
+    var key = chipNormalizeKey(trimmed);
+    if (!key) return false;
+    if (findChipByKey(chipsContainer, key)) {
+      return false;
+    }
+    var chip = createChipElement(trimmed);
+    chipsContainer.insertBefore(chip, fieldEl);
+    return true;
+  }
+
+  function commitMultipleChipsFromText(chipsContainer, fieldEl, text) {
+    var parts = String(text || "").split(/[,\n\r\t]+/);
+    var added = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (commitChipFromText(chipsContainer, fieldEl, parts[i])) added++;
+    }
+    return added;
+  }
+
+  function setAllowlistChipsEnabled(wrap, enabled) {
+    if (!wrap) return;
+    wrap.setAttribute("data-enabled", enabled ? "true" : "false");
+    wrap.setAttribute("aria-disabled", enabled ? "false" : "true");
+    var field = wrap.querySelector(".chips-input-field");
+    if (field) {
+      field.disabled = !enabled;
+      if (!enabled) {
+        try {
+          field.blur();
+        } catch (_e) {
+          /* ignore */
+        }
+      }
+    }
+  }
+
+  function setupAllowlistToggle(form) {
+    var toggle = form.querySelector('input[name="require_eligible_players"]');
+    var wrap = form.querySelector("[data-allowlist-chips]");
+    if (!toggle || !wrap) return;
+    var field = wrap.querySelector(".chips-input-field");
+
+    setAllowlistChipsEnabled(wrap, !!toggle.checked);
+
+    toggle.addEventListener("change", function () {
+      setAllowlistChipsEnabled(wrap, !!toggle.checked);
+      if (toggle.checked && field) {
+        try {
+          field.focus();
+        } catch (_e) {
+          /* ignore */
+        }
+      }
+    });
+
+    if (!field) return;
+
+    wrap.addEventListener("click", function (ev) {
+      if (wrap.getAttribute("data-enabled") !== "true") return;
+      if (ev.target.closest && ev.target.closest(".chip")) return;
+      try {
+        field.focus();
+      } catch (_e) {
+        /* ignore */
+      }
+    });
+
+    wrap.addEventListener("click", function (ev) {
+      var btn = ev.target && ev.target.closest && ev.target.closest("[data-chip-remove]");
+      if (!btn) return;
+      if (wrap.getAttribute("data-enabled") !== "true") return;
+      var chip = btn.closest(".chip");
+      if (chip) chip.parentNode.removeChild(chip);
+    });
+
+    field.addEventListener("keydown", function (ev) {
+      if (wrap.getAttribute("data-enabled") !== "true") return;
+      var key = ev.key;
+      if (key === "Enter" || key === " " || key === "," ) {
+        if (field.value && field.value.trim().length > 0) {
+          ev.preventDefault();
+          if (commitChipFromText(wrap, field, field.value)) {
+            field.value = "";
+          } else {
+            field.value = "";
+          }
+        } else if (key === "Enter") {
+          ev.preventDefault();
+        }
+        return;
+      }
+      if (key === "Backspace" && field.value.length === 0) {
+        var chips = wrap.querySelectorAll(".chip[data-chip-name]");
+        if (chips.length > 0) {
+          ev.preventDefault();
+          var last = chips[chips.length - 1];
+          last.parentNode.removeChild(last);
+        }
+      }
+    });
+
+    field.addEventListener("paste", function (ev) {
+      if (wrap.getAttribute("data-enabled") !== "true") return;
+      var data = ev.clipboardData && ev.clipboardData.getData
+        ? ev.clipboardData.getData("text")
+        : "";
+      if (!data) return;
+      if (!/[,\n\r\t]/.test(data)) return;
+      ev.preventDefault();
+      commitMultipleChipsFromText(wrap, field, data);
+    });
+
+    field.addEventListener("blur", function () {
+      if (wrap.getAttribute("data-enabled") !== "true") return;
+      if (field.value && field.value.trim().length > 0) {
+        if (commitChipFromText(wrap, field, field.value)) {
+          field.value = "";
+        }
+      }
+    });
+  }
+
+  function clearAllowlistUi(form) {
+    var wrap = form.querySelector("[data-allowlist-chips]");
+    if (!wrap) return;
+    var chips = wrap.querySelectorAll(".chip[data-chip-name]");
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].parentNode.removeChild(chips[i]);
+    }
+    var field = wrap.querySelector(".chips-input-field");
+    if (field) field.value = "";
+    var toggle = form.querySelector('input[name="require_eligible_players"]');
+    if (toggle) toggle.checked = false;
+    setAllowlistChipsEnabled(wrap, false);
   }
 
   function copyText(text) {
@@ -225,6 +428,8 @@
       });
     }
 
+    setupAllowlistToggle(form);
+
     document.body.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-copy-target]");
       if (!btn) return;
@@ -269,6 +474,24 @@
       if (!payload.title) {
         errEl.textContent = t("enterTitle");
         setHidden(errEl, false);
+        return;
+      }
+      if (
+        form.require_eligible_players &&
+        form.require_eligible_players.checked &&
+        (!payload.eligible_players || payload.eligible_players.length === 0)
+      ) {
+        errEl.textContent = t("eligiblePlayersRequiredError");
+        setHidden(errEl, false);
+        var wrap = form.querySelector("[data-allowlist-chips]");
+        var field = wrap && wrap.querySelector(".chips-input-field");
+        if (field) {
+          try {
+            field.focus();
+          } catch (_e) {
+            /* ignore */
+          }
+        }
         return;
       }
 
@@ -318,6 +541,7 @@
             linkAdmin.href = origin ? new URL(adminUrl, origin).href : adminUrl;
 
             form.reset();
+            clearAllowlistUi(form);
             var adv = form.querySelector("details.create-league-advanced");
             if (adv) adv.open = false;
 
