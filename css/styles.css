@@ -571,6 +571,27 @@ table.data th.standings-metric-rank {
   min-width: 0;
 }
 
+/* Match score picker: <select> renders as a native wheel on iOS and a
+ * list/dropdown elsewhere, all of which prevent free-form typing. */
+.form-score-select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  appearance: auto;
+}
+
+@media (max-width: 520px) {
+  .form-score-select {
+    font-size: 1rem;
+  }
+}
+
 .composer {
   flex-shrink: 0;
   padding: 0.85rem 1.25rem 1.25rem;

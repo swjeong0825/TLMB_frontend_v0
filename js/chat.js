@@ -1159,6 +1159,32 @@
     return true;
   }
 
+  var SCORE_PICKER_MAX = 21;
+
+  /**
+   * Render a <select> as the score picker. iOS shows it as a native wheel,
+   * Android shows a list picker, desktop shows a dropdown — all of which
+   * prevent typos and avoid the keyboard layout shift on phones.
+   */
+  function renderScorePicker(fieldName, value) {
+    var current = value == null ? "" : String(value).trim();
+    var opts = [
+      '<option value="" disabled' + (current === "" ? " selected" : "") + ">\u2014</option>",
+    ];
+    for (var i = 0; i <= SCORE_PICKER_MAX; i++) {
+      var s = String(i);
+      var sel = s === current ? " selected" : "";
+      opts.push('<option value="' + s + '"' + sel + ">" + s + "</option>");
+    }
+    return (
+      '<select class="form-score-input form-score-select" data-field="' +
+      escapeAttr(fieldName) +
+      '">' +
+      opts.join("") +
+      "</select>"
+    );
+  }
+
   function renderWriteForm(bodySpec) {
     if (!bodySpec || typeof bodySpec !== "object" || !Object.keys(bodySpec).length) {
       return (
@@ -1195,15 +1221,15 @@
             "<label><span>" +
             escapeHtml(tr("formScoreTeam1") || "Team 1") +
             req1 +
-            '</span><input type="text" data-field="team1_score" value="' +
-            escapeAttr(v1) +
-            '" /></label>' +
+            "</span>" +
+            renderScorePicker("team1_score", v1) +
+            "</label>" +
             "<label><span>" +
             escapeHtml(tr("formScoreTeam2") || "Team 2") +
             req2 +
-            '</span><input type="text" data-field="team2_score" value="' +
-            escapeAttr(v2) +
-            '" /></label>' +
+            "</span>" +
+            renderScorePicker("team2_score", v2) +
+            "</label>" +
             "</div></div>"
         );
         handled.team1_score = true;
@@ -1255,8 +1281,9 @@
         });
         out[key] = arr;
       } else {
-        var inp = root.querySelector('input[data-field="' + key.replace(/"/g, "\\\"") + '"]');
-        out[key] = inp ? inp.value.trim() : spec.value;
+        var sel = '[data-field="' + key.replace(/"/g, "\\\"") + '"]';
+        var inp = root.querySelector(sel);
+        out[key] = inp ? String(inp.value == null ? "" : inp.value).trim() : spec.value;
       }
     });
     return out;
