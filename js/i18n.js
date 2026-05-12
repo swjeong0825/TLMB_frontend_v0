@@ -333,6 +333,7 @@
         mentionMore: "Showing {cap} of {total}. Type to narrow down.",
         labelYou: "You",
         labelAssistant: "Assistant",
+        assistantThinking: "Assistant is thinking",
         fillRequired: "Please fill required fields:",
         adminEndpointHint:
           "This action calls an admin endpoint. Open the Admin URL with your host token.",
@@ -680,6 +681,7 @@
         mentionMore: "총 {total}명 중 {cap}명만 표시합니다. 더 입력해 좁히세요.",
         labelYou: "나",
         labelAssistant: "어시스턴트",
+        assistantThinking: "어시스턴트가 응답을 준비 중입니다",
         fillRequired: "필수 항목을 입력하세요:",
         adminEndpointHint:
           "이 작업은 관리자 API를 호출합니다. 호스트 토큰이 포함된 관리자 URL로 여세요.",

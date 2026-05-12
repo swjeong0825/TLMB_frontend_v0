@@ -2210,6 +2210,38 @@
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    /**
+     * Small "typing" bubble shown while we wait for the chat server.
+     * Caller is responsible for removing it via removeLoadingBubble(node)
+     * once the response arrives (or fails).
+     */
+    function appendLoadingBubble() {
+      clearEmpty();
+      var div = document.createElement("div");
+      div.className = "msg assistant msg-loading";
+      div.setAttribute("aria-live", "polite");
+      div.setAttribute(
+        "aria-label",
+        tr("assistantThinking") || "Assistant is thinking"
+      );
+      div.innerHTML =
+        '<div class="label">' +
+        escapeHtml(tr("labelAssistant") || "Assistant") +
+        "</div>" +
+        '<div class="typing-indicator" aria-hidden="true">' +
+        "<span></span><span></span><span></span>" +
+        "</div>";
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    function removeLoadingBubble(node) {
+      if (node && node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+    }
+
     function appendAssistant(html, extraClass) {
       clearEmpty();
       var div = document.createElement("div");
@@ -2348,6 +2380,7 @@
       var btn = cardEl.querySelector("[data-submit-write]");
       if (btn) btn.disabled = true;
 
+      var loadingNode = appendLoadingBubble();
       try {
         var opts = { method: method, headers: headers };
         if (hasJsonBody) {
@@ -2382,6 +2415,8 @@
               team2_score: payload.team2_score,
               created_at: new Date().toISOString(),
             };
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
             appendAssistant(
               calloutHtml +
                 renderReadPanel(
@@ -2396,6 +2431,8 @@
             });
           } else {
             var successLine = humanSuccessFromHttpBody(txt);
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
             appendAssistant(
               '<div class="response-callout response-callout-success"><strong>' +
                 escapeHtml(tr("done") || "Done.") +
@@ -2443,6 +2480,8 @@
                 escapeHtml(addBtnLabel) +
                 "</button>";
             }
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
             var ineligibleWrap = appendAssistant(calloutHtml, "msg-error");
             if (route.hostToken && missing.length) {
               var addMissingBtn = ineligibleWrap && ineligibleWrap.querySelector(".eligible-players-add-missing");
@@ -2478,6 +2517,8 @@
             } else if (!existingRow) {
               console.warn("[TLCHAT] Duplicate match — no matching row in history (unexpected)");
             }
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
             if (existingRow) {
               appendAssistant(
                 calloutHtml +
@@ -2491,13 +2532,18 @@
               content: shortMsg,
             });
           } else {
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
             appendErrorTechnical(technical, "League API error");
           }
           } // close ineligibleResult.isIneligible else block
         }
       } catch (e) {
+        removeLoadingBubble(loadingNode);
+        loadingNode = null;
         appendErrorTechnical(e.message || String(e), "League API request failed");
       } finally {
+        removeLoadingBubble(loadingNode);
         if (btn) btn.disabled = false;
       }
     }
@@ -2720,11 +2766,15 @@
       if (!trimmed) return;
       var submittedText = normalizePlusForIntentServer(trimmed);
       sendBtn.disabled = true;
+      var loadingNode = null;
       try {
         if (!silent) {
           appendUser(trimmed);
         }
+        loadingNode = appendLoadingBubble();
         var resp = await postChat(submittedText);
+        removeLoadingBubble(loadingNode);
+        loadingNode = null;
         renderResponse(resp);
         conversationHistory.push({ role: "user", content: submittedText });
         var assistantContent = assistantContentFromResponse(resp);
@@ -2732,8 +2782,11 @@
           conversationHistory.push({ role: "assistant", content: assistantContent });
         }
       } catch (err) {
+        removeLoadingBubble(loadingNode);
+        loadingNode = null;
         appendErrorTechnical(err.message || String(err), "Chat request failed");
       } finally {
+        removeLoadingBubble(loadingNode);
         sendBtn.disabled = false;
         input.focus();
       }

@@ -317,6 +317,56 @@ a:hover {
   line-height: 1.45;
 }
 
+.msg-loading {
+  max-width: max-content;
+}
+
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0;
+  height: 1rem;
+}
+
+.typing-indicator > span {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--muted);
+  display: inline-block;
+  opacity: 0.35;
+  animation: tlchat-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.typing-indicator > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-indicator > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes tlchat-typing-bounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-indicator > span {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
 .data-panel {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
