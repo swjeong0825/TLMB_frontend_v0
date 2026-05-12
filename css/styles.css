@@ -525,12 +525,50 @@ table.data th.standings-metric-rank {
   background: var(--surface);
   color: var(--text);
   font: inherit;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .form-grid .nick-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
+  align-items: end;
+  min-width: 0;
+}
+
+.form-grid .nick-pair label {
+  min-width: 0;
+}
+
+.form-scores-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-scores-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.form-scores-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+  min-width: 0;
+}
+
+.form-scores-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  min-width: 0;
 }
 
 .composer {
@@ -1660,10 +1698,6 @@ table.data th.standings-metric-rank {
 }
 
 @media (max-width: 520px) {
-  .form-grid .nick-pair {
-    grid-template-columns: 1fr;
-  }
-
   #theme-toggle-btn {
     display: none;
   }

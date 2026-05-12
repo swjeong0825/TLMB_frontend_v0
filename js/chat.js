@@ -1150,6 +1150,15 @@
     );
   }
 
+  function isScorePairBodyFields(bodySpec) {
+    var s1 = bodySpec.team1_score;
+    var s2 = bodySpec.team2_score;
+    if (!isFieldSpec(s1) || !isFieldSpec(s2)) return false;
+    if (s1.type && s1.type.indexOf("array") === 0) return false;
+    if (s2.type && s2.type.indexOf("array") === 0) return false;
+    return true;
+  }
+
   function renderWriteForm(bodySpec) {
     if (!bodySpec || typeof bodySpec !== "object" || !Object.keys(bodySpec).length) {
       return (
@@ -1157,9 +1166,51 @@
       );
     }
     var parts = ['<div class="form-grid">'];
-    Object.keys(bodySpec).forEach(function (key) {
+    var keys = Object.keys(bodySpec);
+    var handled = Object.create(null);
+    for (var ki = 0; ki < keys.length; ki++) {
+      var key = keys[ki];
+      if (handled[key]) continue;
       var spec = bodySpec[key];
-      if (!isFieldSpec(spec)) return;
+      if (!isFieldSpec(spec)) continue;
+
+      if (
+        (key === "team1_score" || key === "team2_score") &&
+        isScorePairBodyFields(bodySpec) &&
+        !handled.team1_score &&
+        !handled.team2_score
+      ) {
+        var sc1 = bodySpec.team1_score;
+        var sc2 = bodySpec.team2_score;
+        var req1 = sc1.required ? " *" : "";
+        var req2 = sc2.required ? " *" : "";
+        var v1 = sc1.value == null ? "" : String(sc1.value);
+        var v2 = sc2.value == null ? "" : String(sc2.value);
+        parts.push(
+          '<div class="form-scores-group">' +
+            '<div class="form-scores-heading">' +
+            escapeHtml(tr("formScoresHeading") || "Scores") +
+            "</div>" +
+            '<div class="form-scores-row">' +
+            "<label><span>" +
+            escapeHtml(tr("formScoreTeam1") || "Team 1") +
+            req1 +
+            '</span><input type="text" data-field="team1_score" value="' +
+            escapeAttr(v1) +
+            '" /></label>' +
+            "<label><span>" +
+            escapeHtml(tr("formScoreTeam2") || "Team 2") +
+            req2 +
+            '</span><input type="text" data-field="team2_score" value="' +
+            escapeAttr(v2) +
+            '" /></label>' +
+            "</div></div>"
+        );
+        handled.team1_score = true;
+        handled.team2_score = true;
+        continue;
+      }
+
       var req = spec.required ? " *" : "";
       if (spec.type && spec.type.indexOf("array") === 0) {
         parts.push(
@@ -1180,7 +1231,7 @@
             "\" /></label>"
         );
       }
-    });
+    }
     parts.push("</div>");
     return parts.join("");
   }
