@@ -223,7 +223,10 @@
   }
 
   /**
-   * GET /leagues/{id}/roster — used on chat open; includes league title for header + roster cache for mentions.
+   * GET /leagues/{id}/roster — used on chat open; includes league title for
+   * header, the active LeagueRules config (so we can gate UI hints like the
+   * partner-conflict warning without a second round-trip), and the roster
+   * cache used to power @-mention autocomplete and match-form previews.
    */
   async function fetchLeagueRoster(leagueId) {
     var base = backendMainBase();
@@ -243,6 +246,7 @@
       return {
         ok: true,
         title: leagueTitle,
+        rules: data && typeof data.rules === "object" && data.rules !== null ? data.rules : null,
         players: Array.isArray(data.players) ? data.players : [],
         teams: Array.isArray(data.teams) ? data.teams : [],
       };
@@ -500,7 +504,16 @@
 
   /**
    * Compares prefilled match form nicknames to cached GET /roster (same normalization as backend).
-   * Assumes default one-team-per-player when flagging partner conflicts (matches typical league rules).
+   *
+   * The partner-conflict warning ("Player X is already in the following team:
+   * ...") only makes sense under `LeagueRules.one_team_per_player = true`,
+   * which is the backend-default but configurable since rules v3. When the
+   * league explicitly allows a player to belong to multiple teams we skip the
+   * warning entirely — the partnership is legitimately a new team, not a
+   * conflict — and still surface the "new team registration" hint. If
+   * `leagueRoster.rules` is missing (older response or fetch in progress) we
+   * fall back to the conservative one-team-per-player assumption so existing
+   * leagues don't lose the warning.
    */
   function renderMatchSubmitRosterNotes(bodySpec, leagueRoster) {
     if (!leagueRoster || leagueRoster.status !== "ok") {
@@ -517,6 +530,8 @@
     var teams = leagueRoster.teams || [];
     var known = rosterPlayerNormSet(players);
     var pairKeys = rosterPairKeysFromTeams(teams);
+    var allowMultipleTeamsPerPlayer =
+      !!(leagueRoster.rules && leagueRoster.rules.one_team_per_player === false);
 
     var t1 = nickPairFromBodySpec(bodySpec, "team1_nicknames");
     var t2 = nickPairFromBodySpec(bodySpec, "team2_nicknames");
@@ -551,6 +566,11 @@
       var r1 = raw[1];
       if (!n0 || !n1 || n0 === n1) return;
       if (pairKeys[rosterTeamPairKey(n0, n1)]) return;
+
+      if (allowMultipleTeamsPerPlayer) {
+        newTeams.push(escapeTeamPairLabel(r0, r1));
+        return;
+      }
 
       var sideConflict = false;
       var teamA = findRosterTeamForPlayer(n0, teams);
@@ -1703,14 +1723,17 @@
     var emptyRemoved = false;
 
     /** Latest roster from main API; refreshed when this chat view mounts.
-     * `eligiblePlayers` is the league's host-curated allowlist (loaded
-     * in parallel with the roster) and is merged into the @-mention
-     * popover so users can also pick names that have been pre-declared
-     * but haven't played yet. */
+     * `rules` is the LeagueRules config returned by GET /roster — used by
+     * `renderMatchSubmitRosterNotes` to suppress the partner-conflict
+     * warning when `one_team_per_player === false`. `eligiblePlayers` is
+     * the league's host-curated allowlist (loaded in parallel with the
+     * roster) and is merged into the @-mention popover so users can also
+     * pick names that have been pre-declared but haven't played yet. */
     var leagueRoster = {
       status: "loading",
       players: [],
       teams: [],
+      rules: null,
       eligiblePlayers: [],
       fetchedAt: null,
     };
@@ -1722,6 +1745,7 @@
           if (result.ok) {
             leagueRoster.players = result.players;
             leagueRoster.teams = result.teams;
+            leagueRoster.rules = result.rules || null;
             leagueRoster.status = "ok";
             leagueRoster.fetchedAt = Date.now();
             if (result.title != null && String(result.title).trim() !== "") {
