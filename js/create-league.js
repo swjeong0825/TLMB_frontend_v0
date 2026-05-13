@@ -82,8 +82,8 @@
     if (desc) payload.description = desc;
 
     var details = form.querySelector("details.create-league-advanced");
-    var requireEligiblePlayers = !!(
-      form.require_eligible_players && form.require_eligible_players.checked
+    var requireAllowlist = !!(
+      form.require_allowlist && form.require_allowlist.checked
     );
 
     if (details && details.open) {
@@ -99,17 +99,17 @@
       var tieBreakers = collectTieBreakers(form);
       if (!tieBreakers.length) tieBreakers = ["matches_won"];
       payload.rules = {
-        version: 4,
+        version: 5,
         match_pair_idempotency: mpi,
         one_team_per_player: otpp,
         ranking_subject: subject,
         tie_breakers: tieBreakers,
-        require_eligible_players: requireEligiblePlayers,
+        require_allowlist: requireAllowlist,
       };
     }
 
-    if (requireEligiblePlayers) {
-      payload.eligible_players = readAllowlistChips(form);
+    if (requireAllowlist) {
+      payload.allowlist = readAllowlistChips(form);
     }
     return payload;
   }
@@ -134,7 +134,7 @@
     else el.removeAttribute("aria-hidden");
   }
 
-  var HELP_KEYS = { matchPair: true, oneTeamPerPlayer: true, rankingSubject: true, tieBreakers: true, requireEligiblePlayers: true };
+  var HELP_KEYS = { matchPair: true, oneTeamPerPlayer: true, rankingSubject: true, tieBreakers: true, requireAllowlist: true };
 
   function fillHelpModalBody(container, text) {
     while (container.firstChild) container.removeChild(container.firstChild);
@@ -183,7 +183,7 @@
     if (I && typeof I.t === "function") {
       remove.setAttribute(
         "aria-label",
-        I.t("createLeague.eligiblePlayersChipRemoveAria", { name: name })
+        I.t("createLeague.allowlistChipRemoveAria", { name: name })
       );
     } else {
       remove.setAttribute("aria-label", "Remove " + name);
@@ -234,7 +234,7 @@
   }
 
   function setupAllowlistToggle(form) {
-    var toggle = form.querySelector('input[name="require_eligible_players"]');
+    var toggle = form.querySelector('input[name="require_allowlist"]');
     var wrap = form.querySelector("[data-allowlist-chips]");
     if (!toggle || !wrap) return;
     var field = wrap.querySelector(".chips-input-field");
@@ -328,7 +328,7 @@
     }
     var field = wrap.querySelector(".chips-input-field");
     if (field) field.value = "";
-    var toggle = form.querySelector('input[name="require_eligible_players"]');
+    var toggle = form.querySelector('input[name="require_allowlist"]');
     if (toggle) toggle.checked = false;
     setAllowlistChipsEnabled(wrap, false);
   }
@@ -477,11 +477,11 @@
         return;
       }
       if (
-        form.require_eligible_players &&
-        form.require_eligible_players.checked &&
-        (!payload.eligible_players || payload.eligible_players.length === 0)
+        form.require_allowlist &&
+        form.require_allowlist.checked &&
+        (!payload.allowlist || payload.allowlist.length === 0)
       ) {
-        errEl.textContent = t("eligiblePlayersRequiredError");
+        errEl.textContent = t("allowlistRequiredError");
         setHidden(errEl, false);
         var wrap = form.querySelector("[data-allowlist-chips]");
         var field = wrap && wrap.querySelector(".chips-input-field");

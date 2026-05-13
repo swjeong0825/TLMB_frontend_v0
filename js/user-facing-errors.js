@@ -187,26 +187,26 @@
   }
 
   /**
-   * Structured handler for HTTP 422 IneligiblePlayerError from the backend.
+   * Structured handler for HTTP 422 NotInAllowlistError from the backend.
    *
-   * Returns { isIneligible: true, headline: string, missing_nicknames: string[] }
-   * when the body matches, otherwise returns { isIneligible: false }.
+   * Returns { isNotInAllowlist: true, headline: string, missing_nicknames: string[] }
+   * when the body matches, otherwise returns { isNotInAllowlist: false }.
    *
    * IMPORTANT: reads missing_nicknames from the structured JSON body — never
-   * parses the `detail` string, per the backend contract in 20_eligible_players.md.
+   * parses the `detail` string, per the backend contract in 20_allowlist.md.
    *
    * @param {number} status HTTP status code
    * @param {object|null} jsonBody parsed response body (or null)
-   * @returns {{ isIneligible: boolean, headline?: string, missing_nicknames?: string[] }}
+   * @returns {{ isNotInAllowlist: boolean, headline?: string, missing_nicknames?: string[] }}
    */
   function fromMatchSubmissionError(status, jsonBody) {
     if (
       status !== 422 ||
       !jsonBody ||
       typeof jsonBody !== "object" ||
-      jsonBody.error !== "IneligiblePlayerError"
+      jsonBody.error !== "NotInAllowlistError"
     ) {
-      return { isIneligible: false };
+      return { isNotInAllowlist: false };
     }
 
     var missing = Array.isArray(jsonBody.missing_nicknames)
@@ -223,21 +223,21 @@
     var I = global.TLCHAT_I18N;
     var headline =
       I && typeof I.t === "function"
-        ? I.t("chat.ineligibleHeadline", { names: names, atHint: atHint })
+        ? I.t("chat.notInAllowlistHeadline", { names: names, atHint: atHint })
         : names +
-          " are not in this league's eligible-players list. use \"" +
+          " are not in this league's allowlist. use \"" +
           atHint +
           '" to search the player.';
 
-    if (!headline || headline === "chat.ineligibleHeadline") {
+    if (!headline || headline === "chat.notInAllowlistHeadline") {
       headline =
         names +
-        " are not in this league\u2019s eligible-players list. use \"" +
+        " are not in this league\u2019s allowlist. use \"" +
         atHint +
         '" to search the player.';
     }
 
-    return { isIneligible: true, headline: headline, missing_nicknames: missing };
+    return { isNotInAllowlist: true, headline: headline, missing_nicknames: missing };
   }
 
   var api = { fromTechnical: fromTechnical, fromMatchSubmissionError: fromMatchSubmissionError };

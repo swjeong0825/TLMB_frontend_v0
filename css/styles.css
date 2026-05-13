@@ -1233,7 +1233,7 @@ table.data th.standings-metric-rank {
   flex-shrink: 0;
 }
 
-.allowlist-label-row label[for="require-eligible-players-toggle"] {
+.allowlist-label-row label[for="require-allowlist-toggle"] {
   cursor: pointer;
 }
 

@@ -7,7 +7,7 @@
     GET_MATCH_HISTORY: true,
     GET_MATCH_HISTORY_BY_PLAYER: true,
     GET_ROSTER: true,
-    GET_ELIGIBLE_PLAYERS: true,
+    GET_ALLOWLIST: true,
     HELP: true,
   };
 
@@ -17,8 +17,8 @@
     EDIT_MATCH_SCORE: true,
     DELETE_MATCH: true,
     DELETE_TEAM: true,
-    ADD_ELIGIBLE_PLAYERS: true,
-    REMOVE_ELIGIBLE_PLAYER: true,
+    ADD_ALLOWLIST_ENTRIES: true,
+    REMOVE_ALLOWLIST_ENTRY: true,
   };
 
   function escapeHtml(s) {
@@ -39,7 +39,7 @@
       return tr("panelMatchHistory");
     }
     if (dataType === "GET_ROSTER") return tr("panelRoster");
-    if (dataType === "GET_ELIGIBLE_PLAYERS") return tr("panelEligiblePlayers") || tr("eligiblePanelTitle") || "Eligible players";
+    if (dataType === "GET_ALLOWLIST") return tr("panelAllowlist") || tr("allowlistPanelTitle") || "Allowlist";
     if (dataType === "HELP") return tr("panelHelp");
     var human = String(dataType || "")
       .replace(/^GET_/, "")
@@ -66,8 +66,8 @@
       team2_score: tr("fieldTeam2Score"),
       method: tr("fieldMethod"),
       url: tr("fieldUrl"),
-      nicknames: tr("fieldEligibleNicknames") || "Eligible nicknames",
-      nickname: tr("fieldEligibleNickname") || "Eligible nickname",
+      nicknames: tr("fieldAllowlistNicknames") || "Allowlist nicknames",
+      nickname: tr("fieldAllowlistNickname") || "Allowlist nickname",
     };
     if (byKey[key]) return byKey[key];
     return key
@@ -278,13 +278,13 @@
     }
   }
 
-  /** GET /leagues/{id}/eligible-players — host-only panel data. */
-  async function fetchEligiblePlayersFromApi(leagueId, hostToken) {
+  /** GET /leagues/{id}/allowlist — host-only panel data. */
+  async function fetchAllowlistFromApi(leagueId, hostToken) {
     var base = backendMainBase();
     if (!base || !leagueId) {
       return { ok: false, error: "missing_config_or_league" };
     }
-    var url = base + "/leagues/" + encodeURIComponent(leagueId) + "/eligible-players";
+    var url = base + "/leagues/" + encodeURIComponent(leagueId) + "/allowlist";
     var headers = {};
     if (hostToken) headers["X-Host-Token"] = hostToken;
     try {
@@ -296,75 +296,75 @@
       var data = JSON.parse(text);
       return {
         ok: true,
-        eligible_players: Array.isArray(data.eligible_players) ? data.eligible_players : [],
+        allowlist: Array.isArray(data.allowlist) ? data.allowlist : [],
       };
     } catch (e) {
       return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };
     }
   }
 
-  function renderEligiblePlayersPanelHtml(state) {
-    var players = (state && state.eligible_players) || [];
+  function renderAllowlistPanelHtml(state) {
+    var entries = (state && state.allowlist) || [];
     var isLoading = state && state.loading;
     var errorMsg = state && state.error;
-    var count = players.length;
+    var count = entries.length;
 
     var heading =
-      '<summary class="eligible-players-summary" aria-expanded="false">' +
-      escapeHtml(tr("eligiblePanelTitle") || "Eligible players") +
-      ' <span class="eligible-players-count">(' + count + ')</span>' +
+      '<summary class="allowlist-summary" aria-expanded="false">' +
+      escapeHtml(tr("allowlistPanelTitle") || "Allowlist") +
+      ' <span class="allowlist-count">(' + count + ')</span>' +
       "</summary>";
 
     var bodyHtml;
     if (isLoading) {
       bodyHtml =
         '<p class="hint">' +
-        escapeHtml(tr("eligiblePanelLoading") || "Loading eligible players\u2026") +
+        escapeHtml(tr("allowlistPanelLoading") || "Loading allowlist\u2026") +
         "</p>";
     } else if (errorMsg) {
       bodyHtml =
-        '<p class="hint eligible-players-error">' +
-        escapeHtml(tr("eligiblePanelError") || "Could not load eligible players.") +
+        '<p class="hint allowlist-error">' +
+        escapeHtml(tr("allowlistPanelError") || "Could not load allowlist.") +
         "</p>";
-    } else if (!players.length) {
+    } else if (!entries.length) {
       bodyHtml =
         '<p class="hint">' +
-        escapeHtml(tr("eligiblePanelEmpty") || "No eligible players defined yet.") +
+        escapeHtml(tr("allowlistPanelEmpty") || "No allowlist entries defined yet.") +
         "</p>";
     } else {
-      var rows = players
-        .map(function (ep) {
+      var rows = entries
+        .map(function (entry) {
           return (
-            '<li class="eligible-player-item">' +
-            '<span class="eligible-player-name">' +
-            escapeHtml(ep.nickname || "") +
+            '<li class="allowlist-item">' +
+            '<span class="allowlist-name">' +
+            escapeHtml(entry.nickname || "") +
             "</span>" +
-            '<button type="button" class="btn-remove-eligible" data-eligible-id="' +
-            escapeAttr(String(ep.eligible_player_id || "")) +
+            '<button type="button" class="btn-remove-allowlist" data-allowlist-entry-id="' +
+            escapeAttr(String(entry.allowlist_entry_id || "")) +
             '" aria-label="' +
-            escapeAttr(tr("eligibleRemoveAria") || "Remove") +
+            escapeAttr(tr("allowlistRemoveAria") || "Remove") +
             " " +
-            escapeAttr(ep.nickname || "") +
+            escapeAttr(entry.nickname || "") +
             '">\u00d7</button>' +
             "</li>"
           );
         })
         .join("");
-      bodyHtml = '<ul class="eligible-players-list">' + rows + "</ul>";
+      bodyHtml = '<ul class="allowlist-list">' + rows + "</ul>";
     }
 
     var addRow =
-      '<div class="eligible-players-add-row">' +
-      '<input type="text" class="eligible-players-add-input" placeholder="' +
-      escapeAttr(tr("eligibleAddPlaceholder") || "e.g. alice, bob, charlie") +
+      '<div class="allowlist-add-row">' +
+      '<input type="text" class="allowlist-add-input" placeholder="' +
+      escapeAttr(tr("allowlistAddPlaceholder") || "e.g. alice, bob, charlie") +
       '" />' +
-      '<button type="button" class="btn-secondary eligible-players-add-btn">' +
-      escapeHtml(tr("eligibleAddButton") || "Add") +
+      '<button type="button" class="btn-secondary allowlist-add-btn">' +
+      escapeHtml(tr("allowlistAddButton") || "Add") +
       "</button>" +
       "</div>" +
-      '<div class="eligible-players-inline-msg" hidden></div>';
+      '<div class="allowlist-inline-msg" hidden></div>';
 
-    return heading + '<div class="eligible-players-body">' + bodyHtml + addRow + "</div>";
+    return heading + '<div class="allowlist-body">' + bodyHtml + addRow + "</div>";
   }
 
   function leagueApiJsonErrorCode(text) {
@@ -1034,18 +1034,18 @@
     return h;
   }
 
-  function renderEligiblePlayersList(data) {
-    var players = data.eligible_players || [];
-    if (!players.length) {
+  function renderAllowlistList(data) {
+    var entries = data.allowlist || [];
+    if (!entries.length) {
       return (
         "<p class=\"hint\">" +
-        escapeHtml(tr("eligiblePanelEmpty") || "No eligible players defined yet.") +
+        escapeHtml(tr("allowlistPanelEmpty") || "No allowlist entries defined yet.") +
         "</p>"
       );
     }
-    var items = players
-      .map(function (ep) {
-        return "<li class=\"roster-item\">" + escapeHtml(ep.nickname || "") + "</li>";
+    var items = entries
+      .map(function (entry) {
+        return "<li class=\"roster-item\">" + escapeHtml(entry.nickname || "") + "</li>";
       })
       .join("");
     return (
@@ -1137,7 +1137,7 @@
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
       inner = renderMatches(data);
     } else if (dataType === "GET_ROSTER") inner = renderRoster(data);
-    else if (dataType === "GET_ELIGIBLE_PLAYERS") inner = renderEligiblePlayersList(data);
+    else if (dataType === "GET_ALLOWLIST") inner = renderAllowlistList(data);
     else if (dataType === "HELP") inner = renderHelpPanel(data, !!isAdmin);
     else inner = renderFallbackData(data);
     return (
@@ -1392,11 +1392,11 @@
         ],
       },
       {
-        name: "GET_ELIGIBLE_PLAYERS",
-        desc: tr("intentGetEligiblePlayersDesc") || "Show the eligible-players allowlist.",
+        name: "GET_ALLOWLIST",
+        desc: tr("intentGetAllowlistDesc") || "Show the league's allowlist.",
         examples: [
-          tr("intentGetEligiblePlayersEx1") || "show me the eligible players",
-          tr("intentGetEligiblePlayersEx2") || "who can join this league?",
+          tr("intentGetAllowlistEx1") || "show me the allowlist",
+          tr("intentGetAllowlistEx2") || "who is allowed to play in this league?",
         ],
       },
     ];
@@ -1434,19 +1434,19 @@
         examples: [tr("intentDeleteTeamEx1") || "delete the team Alice and Bob"],
       },
       {
-        name: "ADD_ELIGIBLE_PLAYERS",
-        desc: tr("intentAddEligiblePlayersDesc") || "Add nicknames to the eligible list.",
+        name: "ADD_ALLOWLIST_ENTRIES",
+        desc: tr("intentAddAllowlistEntriesDesc") || "Add nicknames to the allowlist.",
         examples: [
-          tr("intentAddEligiblePlayersEx1") || "add Alex and Daniel to the eligible players",
-          tr("intentAddEligiblePlayersEx2") || "make Jason eligible to play",
+          tr("intentAddAllowlistEntriesEx1") || "add Alex and Daniel to the allowlist",
+          tr("intentAddAllowlistEntriesEx2") || "allow Jason to play",
         ],
       },
       {
-        name: "REMOVE_ELIGIBLE_PLAYER",
-        desc: tr("intentRemoveEligiblePlayerDesc") || "Remove one nickname from the eligible list.",
+        name: "REMOVE_ALLOWLIST_ENTRY",
+        desc: tr("intentRemoveAllowlistEntryDesc") || "Remove one nickname from the allowlist.",
         examples: [
-          tr("intentRemoveEligiblePlayerEx1") || "remove Michael from the eligible players",
-          tr("intentRemoveEligiblePlayerEx2") || "drop Ryan from the allowlist",
+          tr("intentRemoveAllowlistEntryEx1") || "remove Michael from the allowlist",
+          tr("intentRemoveAllowlistEntryEx2") || "drop Ryan from the allowlist",
         ],
       },
     ];
@@ -1648,8 +1648,8 @@
       "</header>" +
       renderIntentHelper(isAdmin) +
       (isAdmin
-        ? '<details id="eligible-players-panel" class="eligible-players-panel">' +
-          renderEligiblePlayersPanelHtml({ loading: true }) +
+        ? '<details id="allowlist-panel" class="allowlist-panel">' +
+          renderAllowlistPanelHtml({ loading: true }) +
           "</details>"
         : "") +
       '<main class="chat-main is-empty">' +
@@ -1725,16 +1725,16 @@
     /** Latest roster from main API; refreshed when this chat view mounts.
      * `rules` is the LeagueRules config returned by GET /roster — used by
      * `renderMatchSubmitRosterNotes` to suppress the partner-conflict
-     * warning when `one_team_per_player === false`. `eligiblePlayers` is
-     * the league's host-curated allowlist (loaded in parallel with the
-     * roster) and is merged into the @-mention popover so users can also
-     * pick names that have been pre-declared but haven't played yet. */
+     * warning when `one_team_per_player === false`. `allowlist` is the
+     * league's host-curated allowlist (loaded in parallel with the roster)
+     * and is merged into the @-mention popover so users can also pick names
+     * that have been pre-declared but haven't played yet. */
     var leagueRoster = {
       status: "loading",
       players: [],
       teams: [],
       rules: null,
-      eligiblePlayers: [],
+      allowlist: [],
       fetchedAt: null,
     };
 
@@ -1780,56 +1780,56 @@
         });
     }
 
-    function refreshEligiblePlayersForMentions() {
-      fetchEligiblePlayersFromApi(route.leagueId, route.hostToken)
+    function refreshAllowlistForMentions() {
+      fetchAllowlistFromApi(route.leagueId, route.hostToken)
         .then(function (result) {
-          leagueRoster.eligiblePlayers = result.ok
-            ? result.eligible_players || []
+          leagueRoster.allowlist = result.ok
+            ? result.allowlist || []
             : [];
           updateMentionUI();
         })
         .catch(function (err) {
-          console.warn("[TLCHAT] Eligible-players fetch failed:", err);
-          leagueRoster.eligiblePlayers = [];
+          console.warn("[TLCHAT] Allowlist fetch failed:", err);
+          leagueRoster.allowlist = [];
         });
     }
 
     refreshLeagueRoster();
-    refreshEligiblePlayersForMentions();
+    refreshAllowlistForMentions();
 
-    // ── Eligible-players panel (host/admin only) ─────────────────────────────
+    // ── Allowlist panel (host/admin only) ─────────────────────────────
 
-    var eligiblePanel = document.getElementById("eligible-players-panel");
+    var allowlistPanel = document.getElementById("allowlist-panel");
 
-    function refreshEligiblePlayersPanel() {
-      if (!eligiblePanel) return;
-      fetchEligiblePlayersFromApi(route.leagueId, route.hostToken).then(function (result) {
+    function refreshAllowlistPanel() {
+      if (!allowlistPanel) return;
+      fetchAllowlistFromApi(route.leagueId, route.hostToken).then(function (result) {
         var state = result.ok
-          ? { eligible_players: result.eligible_players }
-          : { eligible_players: [], error: true };
-        eligiblePanel.innerHTML = renderEligiblePlayersPanelHtml(state);
-        bindEligiblePanelEvents(state.eligible_players || []);
+          ? { allowlist: result.allowlist }
+          : { allowlist: [], error: true };
+        allowlistPanel.innerHTML = renderAllowlistPanelHtml(state);
+        bindAllowlistPanelEvents(state.allowlist || []);
       });
     }
 
-    function bindEligiblePanelEvents(players) {
-      if (!eligiblePanel) return;
+    function bindAllowlistPanelEvents(entries) {
+      if (!allowlistPanel) return;
 
-      var inlineMsg = eligiblePanel.querySelector(".eligible-players-inline-msg");
+      var inlineMsg = allowlistPanel.querySelector(".allowlist-inline-msg");
 
       function showMsg(text, isError) {
         if (!inlineMsg) return;
         inlineMsg.textContent = text;
         inlineMsg.hidden = false;
         inlineMsg.className =
-          "eligible-players-inline-msg" + (isError ? " eligible-msg-error" : " eligible-msg-ok");
+          "allowlist-inline-msg" + (isError ? " allowlist-msg-error" : " allowlist-msg-ok");
         setTimeout(function () {
           inlineMsg.hidden = true;
         }, 4000);
       }
 
-      var addBtn = eligiblePanel.querySelector(".eligible-players-add-btn");
-      var addInput = eligiblePanel.querySelector(".eligible-players-add-input");
+      var addBtn = allowlistPanel.querySelector(".allowlist-add-btn");
+      var addInput = allowlistPanel.querySelector(".allowlist-add-input");
 
       if (addBtn && addInput) {
         addBtn.addEventListener("click", async function () {
@@ -1842,10 +1842,10 @@
           if (!nicknames.length) return;
 
           addBtn.disabled = true;
-          addBtn.textContent = tr("eligibleAddingButton") || "Adding\u2026";
+          addBtn.textContent = tr("allowlistAddingButton") || "Adding\u2026";
 
           var base = backendMainBase();
-          var url = base + "/admin/leagues/" + encodeURIComponent(route.leagueId) + "/eligible-players";
+          var url = base + "/admin/leagues/" + encodeURIComponent(route.leagueId) + "/allowlist";
           try {
             var res = await fetch(url, {
               method: "POST",
@@ -1858,59 +1858,59 @@
             var txt = await res.text();
             if (res.ok) {
               addInput.value = "";
-              showMsg(tr("eligibleAddSuccess") || "Added to eligible list.", false);
-              refreshEligiblePlayersPanel();
+              showMsg(tr("allowlistAddSuccess") || "Added to allowlist.", false);
+              refreshAllowlistPanel();
             } else if (
               res.status === 409 &&
-              leagueApiJsonErrorCode(txt) === "EligiblePlayerNicknameAlreadyExistsError"
+              leagueApiJsonErrorCode(txt) === "AllowlistNicknameAlreadyExistsError"
             ) {
               showMsg(
-                tr("eligibleAlreadyExists") || "One or more nicknames are already in the list.",
+                tr("allowlistAlreadyExists") || "One or more nicknames are already in the allowlist.",
                 true
               );
               addBtn.disabled = false;
-              addBtn.textContent = tr("eligibleAddButton") || "Add";
+              addBtn.textContent = tr("allowlistAddButton") || "Add";
             } else {
               showMsg(friendlyMessageFromTechnicalError(txt), true);
               addBtn.disabled = false;
-              addBtn.textContent = tr("eligibleAddButton") || "Add";
+              addBtn.textContent = tr("allowlistAddButton") || "Add";
             }
           } catch (e) {
             showMsg(friendlyMessageFromTechnicalError(String(e)), true);
             addBtn.disabled = false;
-            addBtn.textContent = tr("eligibleAddButton") || "Add";
+            addBtn.textContent = tr("allowlistAddButton") || "Add";
           }
         });
       }
 
-      eligiblePanel.querySelectorAll(".btn-remove-eligible").forEach(function (btn) {
+      allowlistPanel.querySelectorAll(".btn-remove-allowlist").forEach(function (btn) {
         btn.addEventListener("click", async function () {
-          var eligibleId = btn.getAttribute("data-eligible-id");
-          if (!eligibleId) return;
+          var entryId = btn.getAttribute("data-allowlist-entry-id");
+          if (!entryId) return;
           var prevLabel = btn.textContent;
           btn.disabled = true;
-          btn.setAttribute("aria-label", tr("eligibleRemovingAria") || "Removing\u2026");
+          btn.setAttribute("aria-label", tr("allowlistRemovingAria") || "Removing\u2026");
 
           var base = backendMainBase();
           var url =
             base +
             "/admin/leagues/" +
             encodeURIComponent(route.leagueId) +
-            "/eligible-players/" +
-            encodeURIComponent(eligibleId);
+            "/allowlist/" +
+            encodeURIComponent(entryId);
           try {
             var res = await fetch(url, {
               method: "DELETE",
               headers: { "X-Host-Token": route.hostToken || "" },
             });
             if (res.ok) {
-              showMsg(tr("eligibleRemoveSuccess") || "Removed from eligible list.", false);
-              refreshEligiblePlayersPanel();
+              showMsg(tr("allowlistRemoveSuccess") || "Removed from allowlist.", false);
+              refreshAllowlistPanel();
             } else {
               var txt = await res.text();
               showMsg(friendlyMessageFromTechnicalError(txt), true);
               btn.disabled = false;
-              btn.setAttribute("aria-label", tr("eligibleRemoveAria") || "Remove");
+              btn.setAttribute("aria-label", tr("allowlistRemoveAria") || "Remove");
             }
           } catch (e) {
             showMsg(friendlyMessageFromTechnicalError(String(e)), true);
@@ -1921,25 +1921,25 @@
       });
     }
 
-    if (eligiblePanel) {
+    if (allowlistPanel) {
       // Render loading state immediately visible when the panel is first opened
-      eligiblePanel.addEventListener("toggle", function () {
-        if (eligiblePanel.open) {
-          refreshEligiblePlayersPanel();
+      allowlistPanel.addEventListener("toggle", function () {
+        if (allowlistPanel.open) {
+          refreshAllowlistPanel();
         }
       });
       // Bind the initial (loading) state so the add row is functional right away
-      bindEligiblePanelEvents([]);
+      bindAllowlistPanelEvents([]);
     }
 
-    /** Pre-fill the eligible-players panel add-input and open the panel. */
-    function openEligiblePanelWithNicknames(nicknames) {
-      if (!eligiblePanel) return;
-      eligiblePanel.open = true;
-      refreshEligiblePlayersPanel();
+    /** Pre-fill the allowlist panel add-input and open the panel. */
+    function openAllowlistPanelWithNicknames(nicknames) {
+      if (!allowlistPanel) return;
+      allowlistPanel.open = true;
+      refreshAllowlistPanel();
       // After the DOM refreshes, set the add-input value
       setTimeout(function () {
-        var addInput = eligiblePanel.querySelector(".eligible-players-add-input");
+        var addInput = allowlistPanel.querySelector(".allowlist-add-input");
         if (addInput && nicknames && nicknames.length) {
           addInput.value = nicknames.join(", ");
           addInput.focus();
@@ -1966,14 +1966,14 @@
     }
 
     /**
-     * Returns the union of roster nicknames and eligible-players-allowlist
-     * nicknames, deduplicated case-insensitively via `normalizeMatchNickname`.
+     * Returns the union of roster nicknames and allowlist nicknames,
+     * deduplicated case-insensitively via `normalizeMatchNickname`.
      * Roster entries take precedence on conflict so the picked text matches
      * the registered casing.
      */
     function combinedMentionCandidates() {
       var roster = leagueRoster.players || [];
-      var eligible = leagueRoster.eligiblePlayers || [];
+      var allowlist = leagueRoster.allowlist || [];
       var seen = {};
       var out = [];
       function push(entry) {
@@ -1985,7 +1985,7 @@
         out.push({ nickname: nick });
       }
       roster.forEach(push);
-      eligible.forEach(push);
+      allowlist.forEach(push);
       return out;
     }
 
@@ -2478,7 +2478,7 @@
             (errLine || "(no detail in body)") +
             (txt && txt.length ? " | body: " + (txt.length > 800 ? txt.slice(0, 800) + "…" : txt) : "");
 
-          var ineligibleResult =
+          var notInAllowlistResult =
             isMatchCreationCall(method, url) &&
             res.status === 422
               ? (function () {
@@ -2487,37 +2487,37 @@
                     var parsed = tryParseJson(txt);
                     return ufe.fromMatchSubmissionError(res.status, parsed);
                   }
-                  return { isIneligible: false };
+                  return { isNotInAllowlist: false };
                 })()
-              : { isIneligible: false };
+              : { isNotInAllowlist: false };
 
-          if (ineligibleResult.isIneligible) {
-            var missing = ineligibleResult.missing_nicknames || [];
+          if (notInAllowlistResult.isNotInAllowlist) {
+            var missing = notInAllowlistResult.missing_nicknames || [];
             var calloutHtml =
               '<div class="response-callout response-callout-clarify">' +
-              escapeHtml(ineligibleResult.headline || "") +
+              escapeHtml(notInAllowlistResult.headline || "") +
               "</div>";
             if (route.hostToken && missing.length) {
-              var addBtnLabel = tr("ineligibleAddButton") || "+ Add to eligible players";
+              var addBtnLabel = tr("notInAllowlistAddButton") || "+ Add to allowlist";
               calloutHtml +=
-                '<button type="button" class="btn-secondary eligible-players-add-missing" style="margin-top:0.5rem">' +
+                '<button type="button" class="btn-secondary allowlist-add-missing" style="margin-top:0.5rem">' +
                 escapeHtml(addBtnLabel) +
                 "</button>";
             }
             removeLoadingBubble(loadingNode);
             loadingNode = null;
-            var ineligibleWrap = appendAssistant(calloutHtml, "msg-error");
+            var notInAllowlistWrap = appendAssistant(calloutHtml, "msg-error");
             if (route.hostToken && missing.length) {
-              var addMissingBtn = ineligibleWrap && ineligibleWrap.querySelector(".eligible-players-add-missing");
+              var addMissingBtn = notInAllowlistWrap && notInAllowlistWrap.querySelector(".allowlist-add-missing");
               if (addMissingBtn) {
                 addMissingBtn.addEventListener("click", function () {
-                  openEligiblePanelWithNicknames(missing);
+                  openAllowlistPanelWithNicknames(missing);
                 });
               }
             }
             conversationHistory.push({
               role: "assistant",
-              content: ineligibleResult.headline || "",
+              content: notInAllowlistResult.headline || "",
             });
           } else {
           var failedMatchCreate =
@@ -2560,7 +2560,7 @@
             loadingNode = null;
             appendErrorTechnical(technical, "League API error");
           }
-          } // close ineligibleResult.isIneligible else block
+          } // close notInAllowlistResult.isNotInAllowlist else block
         }
       } catch (e) {
         removeLoadingBubble(loadingNode);
