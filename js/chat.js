@@ -1581,6 +1581,107 @@
     titleEl.textContent = text;
   }
 
+  /**
+   * Quick-action tiles shown in the empty chat state. Each tile usually
+   * sends a canned natural-language message to the chat-to-intent server
+   * when clicked, so the LLM produces the same response as if the user
+   * had typed the prompt themselves. Some tiles set `mode` to short-
+   * circuit the LLM round-trip entirely — see the click handler in
+   * mountChat() for the supported modes. Inline SVGs use currentColor so
+   * they pick up theme tokens automatically.
+   */
+  function renderQuickActions() {
+    var tiles = [
+      {
+        message: "record a match",
+        /* `local-submit-match` skips the chat-to-intent server and renders
+           the empty SUBMIT_MATCH_RESULT action card locally. This avoids
+           the small-LLM first-turn hallucination problem where the
+           extractor fills nicknames with placeholder names like
+           "john_doe"/"alice_smith" when the prompt carries no real data. */
+        mode: "local-submit-match",
+        title: tr("quickActionRecordMatchTitle") || "Record Match Result",
+        desc: tr("quickActionRecordMatchDesc") || "Log a doubles match score",
+        icon:
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">' +
+          '<path d="M9 4h6a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1V6a2 2 0 0 1 2-2z"/>' +
+          '<path d="M9 4h6v3H9z"/>' +
+          '<path d="m9 14 2 2 4-4"/>' +
+          "</svg>",
+      },
+      {
+        message: "show me the standings",
+        title: tr("quickActionShowStandingsTitle") || "Show Current Standings",
+        desc: tr("quickActionShowStandingsDesc") || "See the league leaderboard",
+        icon:
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">' +
+          '<path d="M4 20h16"/>' +
+          '<rect x="6" y="12" width="3" height="8" rx="0.5"/>' +
+          '<rect x="10.5" y="7" width="3" height="13" rx="0.5"/>' +
+          '<rect x="15" y="3" width="3" height="17" rx="0.5"/>' +
+          "</svg>",
+      },
+      {
+        message: "show me all the matches",
+        title: tr("quickActionShowMatchHistoryTitle") || "Show Match History",
+        desc: tr("quickActionShowMatchHistoryDesc") || "Browse all recent matches",
+        icon:
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">' +
+          '<circle cx="12" cy="12" r="9"/>' +
+          '<path d="M12 7v5l3 2"/>' +
+          "</svg>",
+      },
+      {
+        message: "help",
+        title: tr("quickActionShowMoreCommandsTitle") || "Show More Commands",
+        desc: tr("quickActionShowMoreCommandsDesc") || "See everything I can do",
+        icon:
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">' +
+          '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/>' +
+          '<rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/>' +
+          '<rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/>' +
+          '<rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>' +
+          "</svg>",
+      },
+    ];
+    var heading = tr("quickActionsHeading") || "Get started with a quick action";
+    var html =
+      '<div class="quick-actions" id="quick-actions">' +
+      '<div class="quick-actions-heading">' +
+      escapeHtml(heading) +
+      "</div>" +
+      '<div class="quick-actions-grid" role="group" aria-label="' +
+      escapeAttr(heading) +
+      '">';
+    tiles.forEach(function (tile) {
+      var modeAttr = tile.mode
+        ? ' data-quick-action-mode="' + escapeAttr(tile.mode) + '"'
+        : "";
+      html +=
+        '<button type="button" class="quick-action-tile" data-quick-action="' +
+        escapeAttr(tile.message) +
+        '"' +
+        modeAttr +
+        ' aria-label="' +
+        escapeAttr(tile.title + " — " + tile.desc) +
+        '">' +
+        '<span class="quick-action-icon" aria-hidden="true">' +
+        tile.icon +
+        "</span>" +
+        '<span class="quick-action-text">' +
+        '<span class="quick-action-title">' +
+        escapeHtml(tile.title) +
+        "</span>" +
+        '<span class="quick-action-desc">' +
+        escapeHtml(tile.desc) +
+        "</span>" +
+        "</span>" +
+        "</button>";
+    });
+    html += "</div></div>";
+    return html;
+  }
+
   function renderChatShell(route, cachedHeaderTitle) {
     var isAdmin = !!route.hostToken;
     var isMobile = window.innerWidth <= 520;
@@ -1655,6 +1756,7 @@
       '<main class="chat-main is-empty">' +
       '<div id="messages" class="messages">' +
       "</div>" +
+      renderQuickActions() +
       '<div class="composer">' +
       '<form id="chat-form">' +
       '<div class="composer-input-wrap">' +
@@ -2825,7 +2927,87 @@
       deliverChatMessage(text, { silent: false });
     });
 
-    deliverChatMessage("help", { silent: true });
+    /**
+     * Renders the empty SUBMIT_MATCH_RESULT action card without calling
+     * the chat-to-intent server. This is the local short-circuit used by
+     * the "Record Match Result" quick-action tile.
+     *
+     * Why: the upstream LLM extractor (currently `llama-3.1-8b-instant`)
+     * hallucinates placeholder nicknames such as "john_doe" / "alice_smith"
+     * when the prompt is a bare phrase like "record a match" — there is no
+     * real data to extract, but JSON mode forces the model to produce a
+     * value for every key. Rendering the card locally guarantees an empty
+     * form regardless of what the LLM would have done.
+     *
+     * We mirror the exact bodySpec shape the SubmitMatchResultHandler
+     * would have returned for an all-null extraction, then reuse the
+     * same `renderWriteForm` + `submitBackendAction` pipeline so the
+     * submission flow downstream is identical to a server-mediated turn.
+     * The synthetic [SUBMIT_MATCH_RESULT] assistant turn is pushed into
+     * `conversationHistory` so any subsequent composer messages still
+     * carry the same context the LLM would otherwise have seen.
+     */
+    function deliverEmptyMatchSubmitForm() {
+      var base = backendMainBase();
+      if (!base) {
+        appendErrorPlain(tr("requestFailed") || "Request failed.");
+        return;
+      }
+      var prompt = "record a match";
+      appendUser(prompt);
+      var url = base + "/leagues/" + encodeURIComponent(route.leagueId) + "/matches";
+      var method = "POST";
+      var bodySpec = {
+        team1_nicknames: { type: "array[string]", required: true, value: null },
+        team2_nicknames: { type: "array[string]", required: true, value: null },
+        team1_score:     { type: "string",        required: true, value: null },
+        team2_score:     { type: "string",        required: true, value: null },
+      };
+      var parts = [];
+      parts.push(renderMatchSubmitRosterNotes(bodySpec, leagueRoster));
+      parts.push(
+        '<div class="action-card">' +
+          renderWriteForm(bodySpec) +
+          '<button type="button" class="btn-secondary" data-submit-write>' +
+          escapeHtml(tr("submitToLeague") || "Submit to league API") +
+          "</button>" +
+          "</div>"
+      );
+      var wrap = appendAssistant(parts.join(""));
+      var card = wrap.querySelector(".action-card");
+      if (card) {
+        var submitBtn = card.querySelector("[data-submit-write]");
+        submitBtn.addEventListener("click", function () {
+          submitBackendAction(card, method, url, bodySpec);
+        });
+      }
+      conversationHistory.push({ role: "user", content: prompt });
+      conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
+    }
+
+    /* Empty-state quick-action tiles: clicking either dispatches the canned
+       prompt through the normal chat pipeline OR — when the tile carries a
+       `data-quick-action-mode` — runs a local short-circuit (see
+       deliverEmptyMatchSubmitForm above). Once any message lands the
+       chat-main loses its `is-empty` class and the tile container is hidden
+       via CSS, so a second click is impossible in practice. We still guard
+       against in-flight sends by checking `sendBtn.disabled`. */
+    var quickActionsEl = document.getElementById("quick-actions");
+    if (quickActionsEl) {
+      quickActionsEl.addEventListener("click", function (e) {
+        var tile = e.target.closest && e.target.closest(".quick-action-tile");
+        if (!tile || !quickActionsEl.contains(tile)) return;
+        if (sendBtn.disabled) return;
+        var mode = tile.getAttribute("data-quick-action-mode") || "";
+        if (mode === "local-submit-match") {
+          deliverEmptyMatchSubmitForm();
+          return;
+        }
+        var message = tile.getAttribute("data-quick-action") || "";
+        if (!message) return;
+        deliverChatMessage(message, { silent: false });
+      });
+    }
 
     input.focus();
   }

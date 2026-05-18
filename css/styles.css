@@ -262,14 +262,145 @@ a:hover {
   min-height: 0;
 }
 
+.chat-main.is-empty .messages {
+  display: none;
+}
+
 @media (min-width: 521px) {
   .chat-main.is-empty {
     justify-content: center;
     padding-bottom: 4rem;
   }
+}
 
-  .chat-main.is-empty .messages {
-    display: none;
+/* ── Quick-action tiles (empty state) ──────────────────────────────────
+   Rendered inside `.chat-main` but only visible when the chat is in the
+   `is-empty` state. As soon as the first user/assistant bubble appears
+   `clearEmpty()` strips the `is-empty` class on `.chat-main` and the
+   tiles disappear via the rule below. */
+.quick-actions {
+  display: none;
+}
+
+.chat-main.is-empty .quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  width: 100%;
+}
+
+.quick-actions-heading {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.quick-action-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  min-height: 7.5rem;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+}
+
+.quick-action-tile:hover {
+  background: var(--surface-2);
+  border-color: var(--accent);
+}
+
+.quick-action-tile:active {
+  transform: translateY(1px);
+}
+
+.quick-action-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.quick-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.chat-main.is-empty .quick-action-tile:hover .quick-action-icon {
+  background: var(--surface);
+}
+
+.quick-action-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.quick-action-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.quick-action-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+@media (max-width: 520px) {
+  .chat-main.is-empty .quick-actions {
+    padding: 0.75rem 0.75rem 1rem;
+    gap: 0.6rem;
+  }
+
+  .quick-actions-grid {
+    gap: 0.6rem;
+  }
+
+  .quick-action-tile {
+    padding: 0.75rem;
+    min-height: 6rem;
+    gap: 0.45rem;
+  }
+
+  .quick-action-icon {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+
+  .quick-action-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .quick-action-title {
+    font-size: 0.85rem;
+  }
+
+  .quick-action-desc {
+    font-size: 0.72rem;
   }
 }
 
