@@ -1500,47 +1500,28 @@
     return h;
   }
 
-  function renderIntentHelper(isAdmin) {
-    var userIntents = getUserIntents();
-    var adminIntents = getAdminIntents();
-    var totalCount = isAdmin ? userIntents.length + adminIntents.length : userIntents.length;
-    var countLabel =
-      totalCount === 1
-        ? tr("intentCountOne", { n: totalCount }) || String(totalCount) + " intent"
-        : tr("intentCountMany", { n: totalCount }) || String(totalCount) + " intents";
-    var body = renderIntentGroup(
-      isAdmin ? tr("groupPlayerCommands") || "Player commands" : "",
-      userIntents,
-      "user-intents"
-    );
-    if (isAdmin) {
-      body += renderIntentGroup(
-        tr("groupAdminCommands") || "Admin commands",
-        adminIntents,
-        "admin-intents"
-      );
-    }
-    var rawHint = tr("helperHint") || "or just type \"help\" in chat";
-    var hintHtml = escapeHtml(rawHint).replace(
-      /["']help["']/g,
-      '<code class="intent-helper-hint-cmd">help</code>'
-    );
-    return (
-      '<details class="intent-helper">' +
-      '<summary class="intent-helper-summary"><span class="intent-helper-title">' +
-      escapeHtml(tr("supportedCommands") || "Supported commands") +
-      "</span>" +
-      '<span class="intent-helper-hint">' +
-      hintHtml +
-      "</span>" +
-      '<span class="intent-helper-count">' +
-      escapeHtml(countLabel) +
-      "</span></summary>" +
-      '<div class="intent-helper-body">' +
-      body +
-      "</div>" +
-      "</details>"
-    );
+  /** Persistent shortcut icons (same actions as empty-state quick-action tiles). */
+  function renderIntentHelper(_isAdmin) {
+    var shortcutsAria = escapeAttr(tr("quickActionsHeading") || "Get started with a quick action");
+    var shortcutsHtml = '<div class="intent-helper-shortcuts" role="group" aria-label="' + shortcutsAria + '">';
+    getQuickActionTiles().forEach(function (tile) {
+      var modeAttr = tile.mode
+        ? ' data-quick-action-mode="' + escapeAttr(tile.mode) + '"'
+        : "";
+      shortcutsHtml +=
+        '<button type="button" class="intent-helper-quick-btn quick-action-trigger" data-quick-action="' +
+        escapeAttr(tile.message) +
+        '"' +
+        modeAttr +
+        ' aria-label="' +
+        escapeAttr(tile.title + " — " + tile.desc) +
+        '">' +
+        '<span class="intent-helper-quick-icon" aria-hidden="true">' +
+        tile.icon +
+        "</span></button>";
+    });
+    shortcutsHtml += "</div>";
+    return '<div class="intent-helper">' + shortcutsHtml + "</div>";
   }
 
   function escapeAttr(s) {
@@ -1613,8 +1594,8 @@
    * mountChat() for the supported modes. Inline SVGs use currentColor so
    * they pick up theme tokens automatically.
    */
-  function renderQuickActions() {
-    var tiles = [
+  function getQuickActionTiles() {
+    return [
       {
         message: "record a match",
         /* `local-submit-match` skips the chat-to-intent server and renders
@@ -1667,6 +1648,10 @@
           "</svg>",
       },
     ];
+  }
+
+  function renderQuickActions() {
+    var tiles = getQuickActionTiles();
     var heading = tr("quickActionsHeading") || "Get started with a quick action";
     var html =
       '<div class="quick-actions" id="quick-actions">' +
@@ -1681,7 +1666,7 @@
         ? ' data-quick-action-mode="' + escapeAttr(tile.mode) + '"'
         : "";
       html +=
-        '<button type="button" class="quick-action-tile" data-quick-action="' +
+        '<button type="button" class="quick-action-tile quick-action-trigger" data-quick-action="' +
         escapeAttr(tile.message) +
         '"' +
         modeAttr +
@@ -1712,7 +1697,7 @@
       ? tr("placeholderMobile") ||
         "Report Match Result, or Ask about standings, match history, or the roster."
       : tr("placeholderDesktop") ||
-        "Report Match Result, or Ask about standings, match history, or the roster.\nCheck \"Supported Commands\" for more details.";
+        "Report Match Result, or Ask about standings, match history, or the roster.\nUse the shortcuts above or type \"help\".";
     var inputPlaceholder = escapeAttr(rawPlaceholder);
     var headerLang =
       window.TLCHAT_I18N && typeof window.TLCHAT_I18N.renderLocaleDropdown === "function"
@@ -3209,29 +3194,26 @@
       conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
     }
 
-    /* Empty-state quick-action tiles: clicking either dispatches the canned
-       prompt through the normal chat pipeline OR — when the tile carries a
-       `data-quick-action-mode` — runs a local short-circuit (see
-       deliverEmptyMatchSubmitForm above). Once any message lands the
-       chat-main loses its `is-empty` class and the tile container is hidden
-       via CSS, so a second click is impossible in practice. We still guard
-       against in-flight sends by checking `sendBtn.disabled`. */
-    var quickActionsEl = document.getElementById("quick-actions");
-    if (quickActionsEl) {
-      quickActionsEl.addEventListener("click", function (e) {
-        var tile = e.target.closest && e.target.closest(".quick-action-tile");
-        if (!tile || !quickActionsEl.contains(tile)) return;
-        if (sendBtn.disabled) return;
-        var mode = tile.getAttribute("data-quick-action-mode") || "";
-        if (mode === "local-submit-match") {
-          deliverEmptyMatchSubmitForm();
-          return;
-        }
-        var message = tile.getAttribute("data-quick-action") || "";
-        if (!message) return;
-        deliverChatMessage(message, { silent: false });
-      });
-    }
+    /* Quick-action triggers (grid tiles plus sticky intent-helper bar):
+       delegated from `app-root` via `.quick-action-trigger`. Sends the canned
+       prompt through the chat pipeline unless `data-quick-action-mode`
+       short-circuits (see deliverEmptyMatchSubmitForm above). Once any message
+       lands, `chat-main` loses `is-empty` and the grid hides via CSS;
+       shortcuts in the bar remain available. Guard in-flight sends with
+       `sendBtn.disabled`. */
+    root.addEventListener("click", function (e) {
+      var tile = e.target.closest && e.target.closest(".quick-action-trigger");
+      if (!tile || !root.contains(tile)) return;
+      if (sendBtn.disabled) return;
+      var mode = tile.getAttribute("data-quick-action-mode") || "";
+      if (mode === "local-submit-match") {
+        deliverEmptyMatchSubmitForm();
+        return;
+      }
+      var message = tile.getAttribute("data-quick-action") || "";
+      if (!message) return;
+      deliverChatMessage(message, { silent: false });
+    });
 
     input.focus();
   }

@@ -1089,87 +1089,66 @@ table.data th.standings-metric-rank {
   font-size: 0.9rem;
 }
 
-/* ── Intent helper panel ───────────────────────────────────────────────── */
+/* ── Sticky shortcut bar (starter-tile icons). HELP accordion still uses ────
+    .intent-helper-body when rendering the HELP intent panel. ───────────── */
 
 .intent-helper {
   flex-shrink: 0;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  padding: 0.45rem 1.25rem;
 }
 
-.intent-helper-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.intent-helper-summary {
+.intent-helper-shortcuts {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 1.25rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--muted);
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.intent-helper-quick-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
   cursor: pointer;
-  list-style: none;
-  user-select: none;
+  transition:
+    border-color 0.12s,
+    background-color 0.12s,
+    transform 0.08s,
+    box-shadow 0.12s;
 }
 
-.intent-helper-summary::-webkit-details-marker {
-  display: none;
+.intent-helper-quick-btn:hover {
+  border-color: var(--muted);
+  background: var(--bg);
 }
 
-.intent-helper-summary::before {
-  content: "▶";
-  font-size: 0.6rem;
-  transition: transform 0.15s;
-  color: var(--muted);
+.intent-helper-quick-btn:active {
+  transform: translateY(1px);
 }
 
-.intent-helper[open] .intent-helper-summary::before {
-  transform: rotate(90deg);
+.intent-helper-quick-btn:focus-visible {
+  outline: 2px solid var(--accent-soft, var(--muted));
+  outline-offset: 2px;
 }
 
-.intent-helper-summary:hover {
-  color: var(--text);
+.intent-helper-quick-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.intent-helper-hint {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.intent-helper-hint-cmd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.72rem;
-  padding: 0.05rem 0.3rem;
-  border-radius: 3px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-
-@media (max-width: 520px) {
-  .intent-helper-hint {
-    display: none;
-  }
-}
-
-.intent-helper-count {
-  margin-left: auto;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--muted);
+.intent-helper-quick-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .intent-helper-body {
