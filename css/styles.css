@@ -723,6 +723,35 @@ table.data th.standings-metric-rank {
   min-width: 0;
 }
 
+/* Wraps a write-form nickname input so its autocomplete popover can be
+ * absolutely positioned below the input without escaping the form grid. */
+.nick-input-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+/* Nickname autocomplete popover: visually identical to .chat-mention-popover
+ * but anchored BELOW the input (forms are read top-down) instead of above. */
+.nick-ac-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: min(220px, 40vh);
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+}
+
+[data-theme="dark"] .nick-ac-popover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
 .form-scores-group {
   display: flex;
   flex-direction: column;

@@ -1150,22 +1150,45 @@
     );
   }
 
+  /**
+   * Module-scoped sequence used to give each nickname autocomplete
+   * popover a unique DOM id, since arrayToInputs() is called once per
+   * write-form mount and there can be multiple mounted at the same time
+   * (each chat turn appends another action-card to #messages).
+   */
+  var NICK_AC_SEQ = 0;
+  function nextNickAcId() {
+    NICK_AC_SEQ += 1;
+    return "nick-ac-" + NICK_AC_SEQ;
+  }
+
   function arrayToInputs(name, arr) {
     var a = Array.isArray(arr) ? arr : [null, null];
+    var popId0 = nextNickAcId();
+    var popId1 = nextNickAcId();
+    var ariaLabel = escapeAttr(tr("nickAcPopoverLabel") || "Pick a player");
+    function renderSlot(idx, val, popId) {
+      return (
+        "<label>" +
+        escapeHtml(idx === 0 ? (tr("formP1") || "P1") : (tr("formP2") || "P2")) +
+        " <div class=\"nick-input-wrap\">" +
+        "<input type=\"text\" data-array-index=\"" + idx + "\" value=\"" +
+        escapeHtml(val || "") +
+        "\" autocomplete=\"off\"" +
+        " aria-controls=\"" + popId + "\"" +
+        " aria-autocomplete=\"list\"" +
+        " aria-expanded=\"false\" />" +
+        "<div id=\"" + popId + "\" class=\"nick-ac-popover\" hidden" +
+        " role=\"listbox\" aria-label=\"" + ariaLabel + "\"></div>" +
+        "</div></label>"
+      );
+    }
     return (
       "<div class=\"nick-pair\" data-array-field=\"" +
       escapeHtml(name) +
       "\">" +
-      "<label>" +
-      escapeHtml(tr("formP1") || "P1") +
-      " <input type=\"text\" data-array-index=\"0\" value=\"" +
-      escapeHtml(a[0] || "") +
-      "\" /></label>" +
-      "<label>" +
-      escapeHtml(tr("formP2") || "P2") +
-      " <input type=\"text\" data-array-index=\"1\" value=\"" +
-      escapeHtml(a[1] || "") +
-      "\" /></label>" +
+      renderSlot(0, a[0], popId0) +
+      renderSlot(1, a[1], popId1) +
       "</div>"
     );
   }
@@ -2109,6 +2132,204 @@
         .sort(sortByName);
     }
 
+    /**
+     * Per-input nickname autocomplete used by the write-form nick-pair
+     * inputs (team1_nicknames / team2_nicknames). Mirrors the composer's
+     * @-mention popover behaviour (filter by substring of normalized
+     * nickname, sort by name, keyboard navigation, mousedown-to-pick)
+     * but is scoped to a single text input and triggered on focus/typing
+     * instead of an `@` sigil. Shares the candidate source
+     * (`combinedMentionCandidates`) so the roster + allowlist union stays
+     * a single concept.
+     */
+    function bindNickAutocomplete(input, popover) {
+      var list = [];
+      var selectedIndex = 0;
+      var imeActive = false;
+
+      function closeOtherNickPopovers() {
+        var others = document.querySelectorAll(".nick-ac-popover");
+        for (var i = 0; i < others.length; i++) {
+          var p = others[i];
+          if (p === popover || p.hidden) continue;
+          p.hidden = true;
+          p.innerHTML = "";
+          var ctrl = document.querySelector('[aria-controls="' + p.id + '"]');
+          if (ctrl) {
+            ctrl.removeAttribute("aria-activedescendant");
+            ctrl.setAttribute("aria-expanded", "false");
+          }
+        }
+      }
+
+      function hide() {
+        if (popover.hidden) return;
+        popover.hidden = true;
+        popover.innerHTML = "";
+        list = [];
+        selectedIndex = 0;
+        input.removeAttribute("aria-activedescendant");
+        input.setAttribute("aria-expanded", "false");
+      }
+
+      function showStatus(text) {
+        popover.innerHTML =
+          '<div class="chat-mention-item chat-mention-status" role="presentation">' +
+          escapeHtml(text) +
+          "</div>";
+        popover.hidden = false;
+        input.setAttribute("aria-expanded", "true");
+        list = [];
+        selectedIndex = 0;
+        input.removeAttribute("aria-activedescendant");
+      }
+
+      function show() {
+        closeOtherNickPopovers();
+        popover.innerHTML = "";
+        list = [];
+        selectedIndex = 0;
+
+        if (leagueRoster.status === "loading") {
+          showStatus(tr("mentionLoading") || "Loading players\u2026");
+          return;
+        }
+        if (leagueRoster.status === "error") {
+          showStatus(tr("mentionRosterError") || "Could not load roster.");
+          return;
+        }
+
+        var matches = filterPlayersForMention(input.value);
+        if (!matches.length) {
+          showStatus(tr("mentionNoMatch") || "No matching players.");
+          return;
+        }
+
+        var cap = 80;
+        var slice = matches.length > cap ? matches.slice(0, cap) : matches;
+        list = slice;
+        slice.forEach(function (p, i) {
+          var nick = String((p && p.nickname) || "");
+          var optId = popover.id + "-opt-" + i;
+          var div = document.createElement("div");
+          div.id = optId;
+          div.className = "chat-mention-item" + (i === 0 ? " is-active" : "");
+          div.setAttribute("role", "option");
+          div.setAttribute("aria-selected", i === 0 ? "true" : "false");
+          div.textContent = nick;
+          div.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            applyPick(nick);
+          });
+          popover.appendChild(div);
+        });
+        if (matches.length > cap) {
+          var more = document.createElement("div");
+          more.className = "chat-mention-item chat-mention-status";
+          more.setAttribute("role", "presentation");
+          more.textContent =
+            tr("mentionMore", { cap: cap, total: matches.length }) ||
+            "Showing " + cap + " of " + matches.length + ". Type to narrow down.";
+          popover.appendChild(more);
+        }
+        popover.hidden = false;
+        input.setAttribute("aria-expanded", "true");
+        input.setAttribute("aria-activedescendant", popover.id + "-opt-0");
+      }
+
+      function syncHighlight() {
+        if (popover.hidden) return;
+        var opts = popover.querySelectorAll('.chat-mention-item[role="option"]');
+        if (!opts.length) {
+          input.removeAttribute("aria-activedescendant");
+          return;
+        }
+        if (selectedIndex >= opts.length) selectedIndex = 0;
+        for (var i = 0; i < opts.length; i++) {
+          var sel = i === selectedIndex;
+          opts[i].setAttribute("aria-selected", sel ? "true" : "false");
+          opts[i].classList.toggle("is-active", sel);
+        }
+        var active = opts[selectedIndex];
+        if (active) {
+          input.setAttribute("aria-activedescendant", active.id);
+          active.scrollIntoView({ block: "nearest" });
+        }
+      }
+
+      function applyPick(nickname) {
+        input.value = nickname;
+        hide();
+        try {
+          var len = nickname.length;
+          input.setSelectionRange(len, len);
+        } catch (e) { /* selection unsupported on this input type */ }
+        input.focus();
+      }
+
+      function isOpen() {
+        return !popover.hidden && popover.querySelector('.chat-mention-item[role="option"]') != null;
+      }
+
+      input.addEventListener("focus", show);
+      input.addEventListener("click", show);
+      input.addEventListener("input", function () {
+        if (imeActive) return;
+        show();
+      });
+      input.addEventListener("compositionstart", function () { imeActive = true; });
+      input.addEventListener("compositionend", function () {
+        imeActive = false;
+        show();
+      });
+
+      input.addEventListener("keydown", function (e) {
+        if (!isOpen()) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          selectedIndex = (selectedIndex + 1) % list.length;
+          syncHighlight();
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          selectedIndex = (selectedIndex - 1 + list.length) % list.length;
+          syncHighlight();
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          hide();
+          return;
+        }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          var pick = list[selectedIndex];
+          if (pick && pick.nickname != null) applyPick(String(pick.nickname));
+          return;
+        }
+        // Tab: let native focus-move happen; blur handler will hide.
+      });
+
+      input.addEventListener("blur", function () {
+        // Delay so a mousedown on a popover item can fire applyPick first
+        // (mousedown -> blur -> click on item; we hide AFTER item handlers).
+        setTimeout(hide, 120);
+      });
+    }
+
+    function bindActionCardAutocomplete(card) {
+      if (!card) return;
+      var inputs = card.querySelectorAll('.nick-input-wrap > input[data-array-index]');
+      inputs.forEach(function (input) {
+        var popId = input.getAttribute("aria-controls");
+        if (!popId) return;
+        var popover = document.getElementById(popId);
+        if (!popover) return;
+        bindNickAutocomplete(input, popover);
+      });
+    }
+
     function hideMentionPopover() {
       if (!mentionPopover) return;
       mentionPopover.hidden = true;
@@ -2774,6 +2995,7 @@
       submitBtn.addEventListener("click", function () {
         submitBackendAction(card, method, url, bodySpec);
       });
+      bindActionCardAutocomplete(card);
     }
 
     /** Escape only the chars that break a quoted attribute filter ("..."). */
@@ -2854,6 +3076,7 @@
           submitBtn.addEventListener("click", function () {
             submitBackendAction(card, method, bUrl, bodySpec);
           });
+          bindActionCardAutocomplete(card);
         }
         return;
       }
@@ -2980,6 +3203,7 @@
         submitBtn.addEventListener("click", function () {
           submitBackendAction(card, method, url, bodySpec);
         });
+        bindActionCardAutocomplete(card);
       }
       conversationHistory.push({ role: "user", content: prompt });
       conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
