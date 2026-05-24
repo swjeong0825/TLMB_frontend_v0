@@ -989,6 +989,7 @@ table.data th.standings-metric-rank {
   font-size: 0.75rem;
   color: var(--muted);
   margin-top: 0.5rem;
+  white-space: pre-line;
 }
 
 .chat-footer {
@@ -1334,6 +1335,7 @@ table.data th.standings-metric-rank {
 .req {
   color: var(--danger);
   font-weight: 600;
+  margin-left: 0.15em;
 }
 
 .optional-label {
@@ -1364,6 +1366,37 @@ table.data th.standings-metric-rank {
   display: inline;
 }
 
+.roster-field-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.roster-field-hints .hint {
+  margin-top: 0;
+}
+
+.roster-label-with-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.roster-label-row.field-label-with-help {
+  flex-wrap: nowrap;
+}
+
+.create-league-form .form-grid input.roster-toggle-input {
+  width: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .roster-toggle-input {
   width: auto;
   margin: 0;
@@ -1372,7 +1405,8 @@ table.data th.standings-metric-rank {
   flex-shrink: 0;
 }
 
-.roster-label-row label[for="auto-register-toggle"] {
+.roster-label-row label[for="auto-register-toggle"],
+.roster-label-row label[for="one-team-per-player-toggle"] {
   cursor: pointer;
 }
 
@@ -1472,6 +1506,10 @@ table.data th.standings-metric-rank {
 
 .chips-input[data-enabled="false"] .chip-remove {
   pointer-events: none;
+}
+
+.create-league-main-rules {
+  margin-top: 1rem;
 }
 
 .create-league-advanced {

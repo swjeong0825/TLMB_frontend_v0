@@ -31,7 +31,10 @@
       <form id="create-league-form" class="create-league-form" novalidate>
         <div class="form-grid">
           <label>
-            <span data-i18n="createLeague.labelTitle"></span> <span class="req">*</span>
+            <span>
+              <span data-i18n="createLeague.labelTitle"></span>
+              <span class="req">*</span>
+            </span>
             <input
               type="text"
               name="title"
@@ -41,22 +44,28 @@
               data-i18n-placeholder="createLeague.placeholderTitle"
             />
           </label>
-          <label>
-            <span data-i18n="createLeague.labelDescription"></span>
-            <span class="optional-label" data-i18n="createLeague.optional"></span>
-            <textarea
-              name="description"
-              rows="3"
-              maxlength="2000"
-              data-i18n-placeholder="createLeague.placeholderDescription"
-            ></textarea>
-          </label>
         </div>
 
-        <details class="create-league-advanced">
-          <summary data-i18n="createLeague.advancedSummary"></summary>
-          <p class="hint" data-i18n="createLeague.advancedHint"></p>
-          <div class="form-grid">
+        <div class="form-grid create-league-main-rules">
+            <div class="roster-field">
+              <span data-i18n="createLeague.labelInitialPlayers"></span>
+              <div
+                class="chips-input"
+                data-initial-players-chips
+                data-enabled="true"
+              >
+                <input
+                  type="text"
+                  id="initial-players-chips-input"
+                  class="chips-input-field"
+                  autocomplete="off"
+                  spellcheck="false"
+                  data-i18n-placeholder="createLeague.initialPlayersChipsPlaceholder"
+                  data-i18n-aria-label="createLeague.initialPlayersChipsAria"
+                />
+              </div>
+              <p class="hint" data-i18n="createLeague.initialPlayersChipsHint"></p>
+            </div>
             <label>
               <span class="field-label-with-help">
                 <span data-i18n="createLeague.labelMatchPair"></span>
@@ -77,66 +86,6 @@
             </label>
             <label>
               <span class="field-label-with-help">
-                <span data-i18n="createLeague.labelOneTeamPerPlayer"></span>
-                <button
-                  type="button"
-                  class="help-icon"
-                  data-help-key="oneTeamPerPlayer"
-                  aria-haspopup="dialog"
-                  data-i18n-aria-label="createLeague.help.oneTeamPerPlayerAria"
-                >
-                  ?
-                </button>
-              </span>
-              <select name="one_team_per_player">
-                <option value="false" data-i18n="createLeague.optionOTPPFalse"></option>
-                <option value="true" selected data-i18n="createLeague.optionOTPPTrue"></option>
-              </select>
-            </label>
-            <div class="roster-field">
-              <span class="field-label-with-help roster-label-row">
-                <label
-                  for="auto-register-toggle"
-                  data-i18n="createLeague.labelAutoRegisterPlayersOnMatch"
-                ></label>
-                <input
-                  type="checkbox"
-                  name="auto_register_players_on_match"
-                  id="auto-register-toggle"
-                  class="roster-toggle-input"
-                  data-auto-register-toggle
-                  checked
-                />
-                <button
-                  type="button"
-                  class="help-icon"
-                  data-help-key="autoRegisterPlayersOnMatch"
-                  aria-haspopup="dialog"
-                  data-i18n-aria-label="createLeague.help.autoRegisterPlayersOnMatchAria"
-                >
-                  ?
-                </button>
-              </span>
-              <div
-                class="chips-input"
-                data-initial-players-chips
-                data-enabled="true"
-              >
-                <input
-                  type="text"
-                  id="initial-players-chips-input"
-                  class="chips-input-field"
-                  autocomplete="off"
-                  spellcheck="false"
-                  data-i18n-placeholder="createLeague.initialPlayersChipsPlaceholder"
-                  data-i18n-aria-label="createLeague.initialPlayersChipsAria"
-                />
-              </div>
-              <p class="hint" data-i18n="createLeague.initialPlayersChipsHint"></p>
-              <p class="hint" data-i18n="createLeague.autoRegisterPlayersOnMatchHint"></p>
-            </div>
-            <label>
-              <span class="field-label-with-help">
                 <span data-i18n="createLeague.labelRankingSubject"></span>
                 <button
                   type="button"
@@ -149,11 +98,10 @@
                 </button>
               </span>
               <select name="ranking_subject">
-                <option value="team" selected data-i18n="createLeague.optionRankingSubjectTeam"></option>
-                <option value="player" data-i18n="createLeague.optionRankingSubjectPlayer"></option>
+                <option value="team" data-i18n="createLeague.optionRankingSubjectTeam"></option>
+                <option value="player" selected data-i18n="createLeague.optionRankingSubjectPlayer"></option>
               </select>
             </label>
-            <p class="hint create-league-cross-rule-hint" data-i18n="createLeague.crossRuleHint"></p>
             <label>
               <span class="field-label-with-help">
                 <span data-i18n="createLeague.labelTieBreakerPrimary"></span>
@@ -168,14 +116,86 @@
                 </button>
               </span>
               <select name="tie_breaker_primary" data-tie-breaker="primary">
-                <option value="matches_won" selected data-i18n="createLeague.metricMatchesWon"></option>
+                <option value="matches_won" data-i18n="createLeague.metricMatchesWon"></option>
                 <option value="match_diff" data-i18n="createLeague.metricMatchDiff"></option>
-                <option value="games_won" data-i18n="createLeague.metricGamesWon"></option>
+                <option value="games_won" selected data-i18n="createLeague.metricGamesWon"></option>
                 <option value="games_lost" data-i18n="createLeague.metricGamesLost"></option>
                 <option value="games_diff" data-i18n="createLeague.metricGamesDiff"></option>
                 <option value="win_pct" data-i18n="createLeague.metricWinPct"></option>
               </select>
             </label>
+        </div>
+
+        <details class="create-league-advanced">
+          <summary data-i18n="createLeague.advancedSummary"></summary>
+          <p class="hint" data-i18n="createLeague.advancedHint"></p>
+          <div class="form-grid">
+            <label>
+              <span data-i18n="createLeague.labelDescription"></span>
+              <span class="optional-label" data-i18n="createLeague.optional"></span>
+              <textarea
+                name="description"
+                rows="3"
+                maxlength="2000"
+                data-i18n-placeholder="createLeague.placeholderDescription"
+              ></textarea>
+            </label>
+            <div class="roster-field">
+              <span class="field-label-with-help roster-label-row">
+                <span class="roster-label-with-toggle">
+                  <label
+                    for="one-team-per-player-toggle"
+                    data-i18n="createLeague.labelOneTeamPerPlayerToggle"
+                  ></label>
+                  <input
+                    type="checkbox"
+                    name="one_team_per_player"
+                    id="one-team-per-player-toggle"
+                    class="roster-toggle-input"
+                  />
+                </span>
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="oneTeamPerPlayer"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.oneTeamPerPlayerAria"
+                >
+                  ?
+                </button>
+              </span>
+              <div class="roster-field-hints">
+                <p class="hint" data-i18n="createLeague.oneTeamPerPlayerToggleHint"></p>
+                <p class="hint create-league-cross-rule-hint" data-i18n="createLeague.crossRuleHint"></p>
+              </div>
+            </div>
+            <div class="roster-field">
+              <span class="field-label-with-help roster-label-row">
+                <span class="roster-label-with-toggle">
+                  <label
+                    for="auto-register-toggle"
+                    data-i18n="createLeague.labelAutoRegisterPlayersOnMatch"
+                  ></label>
+                  <input
+                    type="checkbox"
+                    name="auto_register_players_on_match"
+                    id="auto-register-toggle"
+                    class="roster-toggle-input"
+                    data-auto-register-toggle
+                  />
+                </span>
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="autoRegisterPlayersOnMatch"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.autoRegisterPlayersOnMatchAria"
+                >
+                  ?
+                </button>
+              </span>
+              <p class="hint" data-i18n="createLeague.autoRegisterPlayersOnMatchHint"></p>
+            </div>
             <label>
               <span data-i18n="createLeague.labelTieBreakerSecondary"></span>
               <select name="tie_breaker_secondary" data-tie-breaker="secondary">

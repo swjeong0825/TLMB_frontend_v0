@@ -81,33 +81,28 @@
     var payload = { title: title };
     if (desc) payload.description = desc;
 
-    var details = form.querySelector("details.create-league-advanced");
     var autoRegister = !!(
       form.auto_register_players_on_match &&
       form.auto_register_players_on_match.checked
     );
-
-    if (details && details.open) {
-      var mpi = form.match_pair_idempotency.value;
-      var subject =
-        form.ranking_subject && form.ranking_subject.value
-          ? form.ranking_subject.value
-          : "team";
-      var otpp =
-        form.one_team_per_player && form.one_team_per_player.value
-          ? form.one_team_per_player.value === "true"
-          : true;
-      var tieBreakers = collectTieBreakers(form);
-      if (!tieBreakers.length) tieBreakers = ["matches_won"];
-      payload.rules = {
-        version: 6,
-        match_pair_idempotency: mpi,
-        one_team_per_player: otpp,
-        ranking_subject: subject,
-        tie_breakers: tieBreakers,
-        auto_register_players_on_match: autoRegister,
-      };
-    }
+    var mpi = form.match_pair_idempotency.value;
+    var subject =
+      form.ranking_subject && form.ranking_subject.value
+        ? form.ranking_subject.value
+        : "player";
+    var otpp = !!(
+      form.one_team_per_player && form.one_team_per_player.checked
+    );
+    var tieBreakers = collectTieBreakers(form);
+    if (!tieBreakers.length) tieBreakers = ["games_won"];
+    payload.rules = {
+      version: 6,
+      match_pair_idempotency: mpi,
+      one_team_per_player: otpp,
+      ranking_subject: subject,
+      tie_breakers: tieBreakers,
+      auto_register_players_on_match: autoRegister,
+    };
 
     var initialPlayers = readInitialPlayersChips(form);
     if (initialPlayers.length > 0) {
@@ -121,10 +116,10 @@
     var otppSel = form.one_team_per_player;
     if (!subjectSel || !otppSel) return;
     if (source === "ranking_subject" && subjectSel.value === "player") {
-      if (otppSel.value !== "false") otppSel.value = "false";
+      if (otppSel.checked) otppSel.checked = false;
       return;
     }
-    if (source === "one_team_per_player" && otppSel.value === "true") {
+    if (source === "one_team_per_player" && otppSel.checked) {
       if (subjectSel.value !== "team") subjectSel.value = "team";
       return;
     }
@@ -300,7 +295,7 @@
     var field = wrap.querySelector(".chips-input-field");
     if (field) field.value = "";
     var toggle = form.querySelector('input[name="auto_register_players_on_match"]');
-    if (toggle) toggle.checked = true;
+    if (toggle) toggle.checked = false;
   }
 
   function copyText(text) {
