@@ -373,6 +373,14 @@
         rosterAdminRemoveSuccess: "Removed from roster.",
         rosterAdminRemoveBlockedByParticipation:
           "Can\u2019t remove this player: they already belong to a team or appear in a match. Delete those first.",
+        rosterRemoveButton: "Remove",
+        rosterRemoveAdminOnly: "Remove is available only in Admin mode.",
+        rosterRemoveBlockedTeam:
+          "{name} belongs to a team. Delete the team first.",
+        rosterRemoveBlockedMatch:
+          "{name} appears in a match. Delete the match first.",
+        rosterRemoveBlockedTeamAndMatch:
+          "{name} belongs to a team and appears in a match. Delete those first.",
         rosterMembershipRequiredHeadline:
           "{names} are not on this league's roster. Use '{atHint}' in chat to search for the player.",
         rosterMembershipAddButton: "+ Add to roster",
@@ -732,6 +740,12 @@
         rosterAdminRemoveSuccess: "명단에서 제거되었습니다.",
         rosterAdminRemoveBlockedByParticipation:
           "이 선수는 이미 팀에 속해 있거나 경기에 등장해서 명단에서 제거할 수 없어요. 먼저 해당 팀이나 경기를 정리해 주세요.",
+        rosterRemoveButton: "제거",
+        rosterRemoveAdminOnly: "제거는 관리자 모드에서만 사용할 수 있습니다.",
+        rosterRemoveBlockedTeam: "{name}은(는) 팀에 속해 있습니다. 먼저 팀을 삭제하세요.",
+        rosterRemoveBlockedMatch: "{name}은(는) 경기 기록이 있습니다. 먼저 경기를 삭제하세요.",
+        rosterRemoveBlockedTeamAndMatch:
+          "{name}은(는) 팀에 속해 있고 경기 기록도 있습니다. 먼저 팀과 경기를 정리하세요.",
         rosterMembershipRequiredHeadline:
           "{names}은(는) 이 리그 명단에 없습니다. 경기를 기록하기 전에 주최자에게 추가를 요청하세요. 채팅에서 '{atHint}'를 입력하면 플레이어를 찾을 수 있습니다.",
         rosterMembershipAddButton: "+ 명단에 추가",

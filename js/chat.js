@@ -303,16 +303,121 @@
     }
   }
 
+  /** Participation counts for roster remove gating (API fields with teams fallback). */
+  function rosterPlayerParticipationCounts(player, teams) {
+    var teamsCount =
+      player && typeof player.teams_count === "number" ? player.teams_count : 0;
+    var matchesCount =
+      player && typeof player.matches_count === "number" ? player.matches_count : 0;
+    if (teamsCount === 0 && teams && teams.length && player && player.nickname) {
+      var nick = String(player.nickname).toLowerCase();
+      teams.forEach(function (t) {
+        if (
+          String(t.player1_nickname || "").toLowerCase() === nick ||
+          String(t.player2_nickname || "").toLowerCase() === nick
+        ) {
+          teamsCount += 1;
+        }
+      });
+    }
+    return { teamsCount: teamsCount, matchesCount: matchesCount };
+  }
+
+  function rosterPlayerCanRemove(player, teams) {
+    var c = rosterPlayerParticipationCounts(player, teams);
+    return c.teamsCount === 0 && c.matchesCount === 0;
+  }
+
+  function rosterPlayerRemoveDisableReason(isAdmin, player, teams) {
+    if (!isAdmin) {
+      return tr("rosterRemoveAdminOnly") || "Remove is available only in Admin mode.";
+    }
+    var c = rosterPlayerParticipationCounts(player, teams);
+    var name = (player && player.nickname) || "";
+    if (c.teamsCount > 0 && c.matchesCount > 0) {
+      return (
+        tr("rosterRemoveBlockedTeamAndMatch", { name: name }) ||
+        name +
+          " belongs to a team and appears in a match. Delete those first."
+      );
+    }
+    if (c.teamsCount > 0) {
+      return (
+        tr("rosterRemoveBlockedTeam", { name: name }) ||
+        name + " belongs to a team. Delete the team first."
+      );
+    }
+    if (c.matchesCount > 0) {
+      return (
+        tr("rosterRemoveBlockedMatch", { name: name }) ||
+        name + " appears in a match. Delete the match first."
+      );
+    }
+    return "";
+  }
+
+  function renderRosterPlayerRemoveButton(player, opts) {
+    opts = opts || {};
+    var isAdmin = !!opts.isAdmin;
+    var teams = opts.teams || [];
+    var canRemove = isAdmin && rosterPlayerCanRemove(player, teams);
+    var disabled = !canRemove;
+    var reason = disabled ? rosterPlayerRemoveDisableReason(isAdmin, player, teams) : "";
+    var btnLabel = tr("rosterRemoveButton") || "Remove";
+    var playerId = player && player.player_id ? String(player.player_id) : "";
+    var nickname = player && player.nickname ? String(player.nickname) : "";
+    var tipId = playerId ? "roster-remove-tip-" + playerId : "";
+    var wrapClass =
+      "roster-remove-wrap" + (disabled ? " roster-remove-wrap--disabled" : "");
+    var wrapAttrs =
+      disabled && reason
+        ? ' tabindex="0"' +
+          (tipId ? ' aria-describedby="' + escapeAttr(tipId) + '"' : "")
+        : "";
+    var btnAttrs =
+      ' type="button" class="btn-secondary btn-roster-remove"' +
+      (canRemove
+        ? ' data-player-id="' +
+          escapeAttr(playerId) +
+          '" data-player-nickname="' +
+          escapeAttr(nickname) +
+          '" aria-label="' +
+          escapeAttr(btnLabel + " " + nickname) +
+          '"'
+        : " disabled") +
+      ">";
+    var tipHtml =
+      disabled && reason
+        ? '<span class="roster-remove-tip"' +
+          (tipId ? ' id="' + escapeAttr(tipId) + '"' : "") +
+          ' role="tooltip">' +
+          escapeHtml(reason) +
+          "</span>"
+        : "";
+    return (
+      '<span class="' +
+      wrapClass +
+      '"' +
+      wrapAttrs +
+      ">" +
+      "<button" +
+      btnAttrs +
+      ">" +
+      escapeHtml(btnLabel) +
+      "</button>" +
+      tipHtml +
+      "</span>"
+    );
+  }
+
   function renderRosterAdminPanelHtml(state) {
     var entries = (state && state.players) || [];
     var isLoading = state && state.loading;
     var errorMsg = state && state.error;
-    var count = entries.length;
 
     var heading =
       '<summary class="roster-admin-summary" aria-expanded="false">' +
       escapeHtml(tr("rosterAdminPanelTitle") || "Roster") +
-      ' <span class="roster-admin-count">(' + count + ')</span>' +
       "</summary>";
 
     var bodyHtml;
@@ -332,27 +437,20 @@
         escapeHtml(tr("rosterAdminPanelEmpty") || "No players on the roster yet.") +
         "</p>";
     } else {
+      var teams = (state && state.teams) || [];
       var rows = entries
         .map(function (entry) {
           return (
-            '<li class="roster-admin-item">' +
-            '<span class="roster-admin-name">' +
+            '<li class="roster-admin-item roster-item-with-action">' +
+            '<span class="roster-admin-name roster-player-name">' +
             escapeHtml(entry.nickname || "") +
             "</span>" +
-            '<button type="button" class="btn-remove-roster-player" data-player-id="' +
-            escapeAttr(String(entry.player_id || "")) +
-            '" data-player-nickname="' +
-            escapeAttr(String(entry.nickname || "")) +
-            '" aria-label="' +
-            escapeAttr(tr("rosterAdminRemoveAria") || "Remove") +
-            " " +
-            escapeAttr(entry.nickname || "") +
-            '">\u00d7</button>' +
+            renderRosterPlayerRemoveButton(entry, { isAdmin: true, teams: teams }) +
             "</li>"
           );
         })
         .join("");
-      bodyHtml = '<ul class="roster-admin-list">' + rows + "</ul>";
+      bodyHtml = '<ul class="roster-admin-list roster-list roster-list-players">' + rows + "</ul>";
     }
 
     var addRow =
@@ -1033,7 +1131,7 @@
     );
   }
 
-  function renderRoster(data) {
+  function renderRoster(data, isAdmin) {
     var players = data.players || [];
     var teams = data.teams || [];
     var h = "";
@@ -1058,7 +1156,13 @@
         escapeHtml(tr("rosterHeadingPlayers") || "Players") +
         "</h4><ul class=\"roster-list roster-list-players\">";
       players.forEach(function (p) {
-        h += "<li class=\"roster-item\">" + escapeHtml(p.nickname) + "</li>";
+        h +=
+          '<li class="roster-item roster-item-with-action">' +
+          '<span class="roster-player-name">' +
+          escapeHtml(p.nickname) +
+          "</span>" +
+          renderRosterPlayerRemoveButton(p, { isAdmin: !!isAdmin, teams: teams }) +
+          "</li>";
       });
       h += "</ul></div>";
     }
@@ -1147,7 +1251,7 @@
     } else if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
       inner = renderMatches(data);
-    } else if (dataType === "GET_ROSTER") inner = renderRoster(data);
+    } else if (dataType === "GET_ROSTER") inner = renderRoster(data, !!isAdmin);
     else if (dataType === "HELP") inner = renderHelpPanel(data, !!isAdmin);
     else inner = renderFallbackData(data);
     return (
@@ -1910,13 +2014,59 @@
 
     function refreshRosterAdminPanel() {
       if (!rosterAdminPanel) return;
-      fetchRosterPlayersFromApi(route.leagueId).then(function (result) {
+      fetchLeagueRoster(route.leagueId).then(function (result) {
         var state = result.ok
-          ? { players: result.players }
+          ? { players: result.players, teams: result.teams }
           : { players: [], error: true };
         rosterAdminPanel.innerHTML = renderRosterAdminPanelHtml(state);
         bindRosterAdminPanelEvents();
       });
+    }
+
+    async function removePlayerFromRoster(playerId, nickname, btn) {
+      if (!playerId || !route.hostToken) return false;
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = tr("rosterAdminRemovingButton") || "Removing\u2026";
+      }
+
+      var base = backendMainBase();
+      var url =
+        base +
+        "/admin/leagues/" +
+        encodeURIComponent(route.leagueId) +
+        "/players/" +
+        encodeURIComponent(playerId);
+      try {
+        var res = await fetch(url, {
+          method: "DELETE",
+          headers: { "X-Host-Token": route.hostToken || "" },
+        });
+        if (res.ok) {
+          refreshRosterAdminPanel();
+          refreshLeagueRoster();
+          return true;
+        }
+        var txt = await res.text();
+        if (
+          res.status === 409 &&
+          leagueApiJsonErrorCode(txt) === "PlayerHasParticipationError"
+        ) {
+          throw new Error(
+            tr("rosterAdminRemoveBlockedByParticipation", { name: nickname }) ||
+              tr("rosterAdminRemoveBlockedByParticipation") ||
+              nickname +
+                " has matches recorded and can't be removed. Delete the matches first."
+          );
+        }
+        throw new Error(friendlyMessageFromTechnicalError(txt));
+      } catch (e) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = tr("rosterRemoveButton") || "Remove";
+        }
+        throw e;
+      }
     }
 
     function bindRosterAdminPanelEvents() {
@@ -1991,55 +2141,21 @@
         });
       }
 
-      rosterAdminPanel.querySelectorAll(".btn-remove-roster-player").forEach(function (btn) {
+      rosterAdminPanel.querySelectorAll(".btn-roster-remove:not(:disabled)").forEach(function (btn) {
         btn.addEventListener("click", async function () {
           var playerId = btn.getAttribute("data-player-id");
           var nickname = btn.getAttribute("data-player-nickname") || "";
           if (!playerId) return;
-          btn.disabled = true;
-          btn.setAttribute(
-            "aria-label",
-            tr("rosterAdminRemovingAria") || "Removing\u2026"
-          );
-
-          var base = backendMainBase();
-          var url =
-            base +
-            "/admin/leagues/" +
-            encodeURIComponent(route.leagueId) +
-            "/players/" +
-            encodeURIComponent(playerId);
           try {
-            var res = await fetch(url, {
-              method: "DELETE",
-              headers: { "X-Host-Token": route.hostToken || "" },
-            });
-            if (res.ok) {
+            var ok = await removePlayerFromRoster(playerId, nickname, btn);
+            if (ok) {
               showMsg(tr("rosterAdminRemoveSuccess") || "Removed from roster.", false);
-              refreshRosterAdminPanel();
-              refreshLeagueRoster();
-            } else {
-              var txt = await res.text();
-              if (
-                res.status === 409 &&
-                leagueApiJsonErrorCode(txt) === "PlayerHasParticipationError"
-              ) {
-                showMsg(
-                  tr("rosterAdminHasParticipation", { name: nickname }) ||
-                    nickname +
-                      " has matches recorded and can't be removed. Delete the matches first.",
-                  true
-                );
-              } else {
-                showMsg(friendlyMessageFromTechnicalError(txt), true);
-              }
-              btn.disabled = false;
-              btn.setAttribute("aria-label", tr("rosterAdminRemoveAria") || "Remove");
             }
           } catch (e) {
-            showMsg(friendlyMessageFromTechnicalError(String(e)), true);
-            btn.disabled = false;
-            btn.setAttribute("aria-label", tr("rosterAdminRemoveAria") || "Remove");
+            showMsg(
+              e && e.message ? e.message : friendlyMessageFromTechnicalError(String(e)),
+              true
+            );
           }
         });
       });
@@ -2051,7 +2167,7 @@
           refreshRosterAdminPanel();
         }
       });
-      bindRosterAdminPanelEvents();
+      refreshRosterAdminPanel();
     }
 
     /** Pre-fill the roster-admin add-input and open the panel. */
@@ -3202,6 +3318,47 @@
       conversationHistory.push({ role: "user", content: prompt });
       conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
     }
+
+    /* Roster remove from GET_ROSTER chat panels (admin only; player buttons are disabled). */
+    messagesEl.addEventListener("click", async function (e) {
+      var btn = e.target.closest && e.target.closest(".btn-roster-remove:not(:disabled)");
+      if (!btn || !messagesEl.contains(btn)) return;
+      var playerId = btn.getAttribute("data-player-id");
+      var nickname = btn.getAttribute("data-player-nickname") || "";
+      if (!playerId) return;
+      try {
+        var ok = await removePlayerFromRoster(playerId, nickname, btn);
+        if (ok) {
+          appendAssistant(
+            '<div class="response-callout response-callout-success"><strong>' +
+              escapeHtml(tr("done") || "Done.") +
+              "</strong> " +
+              escapeHtml(tr("rosterAdminRemoveSuccess") || "Removed from roster.") +
+              "</div>"
+          );
+        }
+      } catch (err) {
+        appendErrorPlain(
+          err && err.message ? err.message : friendlyMessageFromTechnicalError(String(err))
+        );
+      }
+    });
+
+    /* Show disabled remove tooltips on touch (mobile). */
+    root.addEventListener(
+      "touchstart",
+      function (e) {
+        var wrap =
+          e.target.closest && e.target.closest(".roster-remove-wrap--disabled");
+        root.querySelectorAll(".roster-remove-wrap--tip-open").forEach(function (el) {
+          if (el !== wrap) el.classList.remove("roster-remove-wrap--tip-open");
+        });
+        if (wrap) {
+          wrap.classList.add("roster-remove-wrap--tip-open");
+        }
+      },
+      { passive: true }
+    );
 
     /* Quick-action triggers (grid tiles plus sticky intent-helper bar):
        delegated from `app-root` via `.quick-action-trigger`. Sends the canned
