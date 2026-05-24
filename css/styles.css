@@ -1671,6 +1671,14 @@ table.data th.standings-metric-rank {
   margin-top: 1.25rem;
 }
 
+.find-league-results-actions {
+  margin: 0 0 1rem;
+}
+
+.find-league-results-actions .btn-secondary {
+  margin-top: 0;
+}
+
 .btn-primary {
   padding: 0.55rem 1.35rem;
   border-radius: 8px;

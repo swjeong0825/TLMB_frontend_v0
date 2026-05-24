@@ -28,21 +28,13 @@
       },
       home: {
         h1: "Local Match Tracker",
-        intro1: "Vanilla client for the chat-to-intent server. Open a league-specific URL to start chatting.",
-        intro2: "Chat API base URL is configured in",
+        intro1: "Track match results and standings for your local tennis group.",
         pagesHeading: "Pages",
         linkCreate: "Create league",
         linkFind: "Find league",
-        linkFindPrefix: "Find league (URL prefix only)",
-        linkDemo: "Demo",
-        linkPlayer: "Player",
-        linkAdmin: "Admin",
-        codeHintPlayer: "/league?league_id={league_id}",
-        codeHintAdmin: "/league?league_id={league_id}&host_token={host_token}",
       },
       common: {
         homeLink: "← Home",
-        configJs: "js/config.js",
         configHint:
           "API base URL is set in <code>js/config.js</code> or override with <code>?backendApi=https://your-host</code>.",
       },
@@ -55,6 +47,7 @@
         labelMaxResults: "Max results",
         labelMaxResultsHint: "(1–100, default 50)",
         submit: "Search",
+        openPrefixPage: "Open shareable page",
         resultsHeading: "Results",
       },
       findLeagueJs: {
@@ -408,22 +401,13 @@
       },
       home: {
         h1: "로컬 매치 트래커",
-        intro1:
-          "채팅-의도(chat-to-intent) 서버용 바닐라 클라이언트입니다. 리그 전용 URL을 열어 채팅을 시작하세요.",
-        intro2: "채팅 API 기본 URL은 다음 파일에서 설정합니다:",
+        intro1: "동네 테니스 모임의 경기 결과와 순위를 기록하고 확인하세요.",
         pagesHeading: "페이지",
         linkCreate: "리그 만들기",
         linkFind: "리그 찾기",
-        linkFindPrefix: "리그 찾기(URL 접두어만)",
-        linkDemo: "데모",
-        linkPlayer: "플레이어",
-        linkAdmin: "관리자",
-        codeHintPlayer: "/league?league_id={league_id}",
-        codeHintAdmin: "/league?league_id={league_id}&host_token={host_token}",
       },
       common: {
         homeLink: "← 홈",
-        configJs: "js/config.js",
         configHint:
           "API 기본 URL은 <code>js/config.js</code>에 설정하거나 <code>?backendApi=https://your-host</code>로 덮어쓸 수 있습니다.",
       },
@@ -436,6 +420,7 @@
         labelMaxResults: "최대 결과 수",
         labelMaxResultsHint: "(1–100, 기본 50)",
         submit: "검색",
+        openPrefixPage: "공유 페이지 열기",
         resultsHeading: "결과",
       },
       findLeagueJs: {

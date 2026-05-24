@@ -53,14 +53,41 @@
     return "/league/?" + new URLSearchParams({ league_id: leagueId }).toString();
   }
 
+  function prefixPageUrl(prefix, limit) {
+    var params = new URLSearchParams({ prefix: prefix, limit: String(limit) });
+    var current = new URLSearchParams(window.location.search);
+    ["backendApi", "chatApi", "lang"].forEach(function (key) {
+      var value = current.get(key);
+      if (value) params.set(key, value);
+    });
+    return "/find-league-prefix/?" + params.toString();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     var form = document.getElementById("find-league-form");
     var submitBtn = document.getElementById("find-league-submit");
+    var prefixLinkBtn = document.getElementById("find-league-prefix-link");
     var errEl = document.getElementById("find-league-error");
     var wrapEl = document.getElementById("find-league-results-wrap");
     var summaryEl = document.getElementById("find-league-results-summary");
     var listEl = document.getElementById("find-league-results");
-    if (!form || !submitBtn || !errEl || !wrapEl || !summaryEl || !listEl) return;
+    if (!form || !submitBtn || !prefixLinkBtn || !errEl || !wrapEl || !summaryEl || !listEl) return;
+
+    prefixLinkBtn.addEventListener("click", function () {
+      setHidden(errEl, true);
+
+      var prefix = (form.title_prefix.value || "").trim();
+      if (!prefix) {
+        errEl.textContent = t("enterPrefix");
+        setHidden(errEl, false);
+        form.title_prefix.focus();
+        return;
+      }
+
+      var limit = clampLimit(form.limit.value);
+      form.limit.value = String(limit);
+      window.location.href = prefixPageUrl(prefix, limit);
+    });
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
