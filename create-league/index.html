@@ -93,48 +93,47 @@
                 <option value="true" selected data-i18n="createLeague.optionOTPPTrue"></option>
               </select>
             </label>
-            <div class="allowlist-field">
-              <span class="field-label-with-help allowlist-label-row">
+            <div class="roster-field">
+              <span class="field-label-with-help roster-label-row">
                 <label
-                  for="require-allowlist-toggle"
-                  data-i18n="createLeague.labelRequireAllowlist"
+                  for="auto-register-toggle"
+                  data-i18n="createLeague.labelAutoRegisterPlayersOnMatch"
                 ></label>
                 <input
                   type="checkbox"
-                  name="require_allowlist"
-                  id="require-allowlist-toggle"
-                  class="allowlist-toggle-input"
-                  data-allowlist-toggle
+                  name="auto_register_players_on_match"
+                  id="auto-register-toggle"
+                  class="roster-toggle-input"
+                  data-auto-register-toggle
+                  checked
                 />
                 <button
                   type="button"
                   class="help-icon"
-                  data-help-key="requireAllowlist"
+                  data-help-key="autoRegisterPlayersOnMatch"
                   aria-haspopup="dialog"
-                  data-i18n-aria-label="createLeague.help.requireAllowlistAria"
+                  data-i18n-aria-label="createLeague.help.autoRegisterPlayersOnMatchAria"
                 >
                   ?
                 </button>
               </span>
               <div
                 class="chips-input"
-                data-allowlist-chips
-                data-enabled="false"
-                aria-disabled="true"
+                data-initial-players-chips
+                data-enabled="true"
               >
                 <input
                   type="text"
-                  id="allowlist-chips-input"
+                  id="initial-players-chips-input"
                   class="chips-input-field"
                   autocomplete="off"
                   spellcheck="false"
-                  disabled
-                  data-i18n-placeholder="createLeague.allowlistChipsPlaceholder"
-                  data-i18n-aria-label="createLeague.allowlistChipsAria"
+                  data-i18n-placeholder="createLeague.initialPlayersChipsPlaceholder"
+                  data-i18n-aria-label="createLeague.initialPlayersChipsAria"
                 />
               </div>
-              <p class="hint" data-i18n="createLeague.allowlistChipsHint"></p>
-              <p class="hint" data-i18n="createLeague.requireAllowlistHint"></p>
+              <p class="hint" data-i18n="createLeague.initialPlayersChipsHint"></p>
+              <p class="hint" data-i18n="createLeague.autoRegisterPlayersOnMatchHint"></p>
             </div>
             <label>
               <span class="field-label-with-help">

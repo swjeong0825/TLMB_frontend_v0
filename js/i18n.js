@@ -92,21 +92,17 @@
         labelOneTeamPerPlayer: "Can a player be on more than one team?",
         optionOTPPTrue: "No — each player belongs to one team only (default)",
         optionOTPPFalse: "Yes — a player can be on several teams",
-        labelRequireAllowlist: "Allowlist",
-        requireAllowlistCheckboxLabel:
-          "Require allowlist — only nicknames added below can play in this league",
-        optionRequireAllowlistFalse: "Off — anyone can be added on first match (default)",
-        optionRequireAllowlistTrue: "On — allowlist required",
-        requireAllowlistHint:
-          "When on, the bot rejects match submissions that include a nickname not on your allowlist.",
-        allowlistChipsPlaceholder:
+        labelAutoRegisterPlayersOnMatch: "Auto-register new players on match",
+        autoRegisterPlayersOnMatchHint:
+          "When on (default), the bot creates a Player record for any new nickname on a match submission. When off, only pre-registered roster players can play.",
+        initialPlayersChipsPlaceholder:
           "Type a nickname and press Enter, Space, or comma to add a chip",
-        allowlistChipsAria: "Allowlist",
-        allowlistChipsHint:
+        initialPlayersChipsAria: "Initial players to pre-register",
+        initialPlayersChipsHint:
           "Press Enter, Space, or comma to add a chip. Backspace at the start removes the last chip. Click \u00D7 on a chip to remove it.",
-        allowlistChipRemoveAria: "Remove {name} from the allowlist",
-        allowlistRequiredError:
-          "Add at least one nickname to the allowlist, or turn the allowlist off.",
+        initialPlayersChipRemoveAria: "Remove {name} from the initial-players list",
+        initialPlayersRequiredError:
+          "Auto-register is off, so add at least one nickname to pre-register, or turn auto-register back on.",
         labelRankingSubject: "Who do you want to rank in the standings?",
         optionRankingSubjectTeam: "Teams (default)",
         optionRankingSubjectPlayer: "Individual players",
@@ -140,10 +136,10 @@
           tieBreakersTitle: "How standings are ordered",
           tieBreakersBody:
             "The first menu is the main sort: higher on the list means better in the table.\n\nUse the next two only when two rows are still tied. Leave them blank if you don\u2019t need extra rules.\n\nYou can\u2019t repeat the same stat twice; duplicates are dropped when the league is saved.\n\nA simple starting point is matches won, then wins minus losses, then something based on games—tweak to match how your group likes to read the table.",
-          requireAllowlistAria: "Help: allowlist",
-          requireAllowlistTitle: "Allowlist",
-          requireAllowlistBody:
-            "By default anyone can be added to a league the first time they appear in a match. Switching this on flips the league to \u201callowlist required\u201d mode.\n\nOpen (default): Submit any match with any nickname — the player is registered automatically.\n\nAllowlist required: Before a match is recorded, every nickname in it must already be on the host\u2019s approved list. The bot will reject the submission and tell you which names are missing.\n\nUse this when you want to control exactly who is allowed to play — for example a members-only club or a closed tournament.",
+          autoRegisterPlayersOnMatchAria: "Help: auto-register players on match",
+          autoRegisterPlayersOnMatchTitle: "Auto-register new players on match",
+          autoRegisterPlayersOnMatchBody:
+            "Controls what happens when a match is submitted with a nickname that isn\u2019t on the league\u2019s roster yet.\n\nOn (default): The bot creates a Player record for the new nickname automatically and accepts the match. Great for open leagues where anyone can show up and play.\n\nOff: The bot rejects the match and tells you which names are missing. Only players that you (or the create-league bootstrap) added to the roster up front can be on a match. Use this for closed groups — members-only clubs, invite-only tournaments — where you want to control exactly who can play.",
         },
         submit: "Create league",
         successH2: "League created",
@@ -195,14 +191,14 @@
           "We couldn’t load that information right now. Try again in a moment, or ask for something else.",
         unexpectedChat:
           "The chat service didn’t respond as expected. Check your setup or try again later.",
-        notInAllowlist:
-          "One or more players are not on this league’s allowlist. Ask the host to add them before recording this match.",
+        rosterMembershipRequired:
+          "One or more players are not on this league’s roster. Ask the host to add them before recording this match.",
       },
       chat: {
         panelStandings: "Standings",
         panelMatchHistory: "Match history",
         panelRoster: "Roster",
-        panelAllowlist: "Allowlist",
+        panelRosterAdmin: "Roster (admin)",
         panelHelp: "Supported commands",
         panelDetails: "Details",
         helpEmpty: "No commands available.",
@@ -222,8 +218,8 @@
         formScoreTeam2: "Team 2",
         fieldMethod: "Method",
         fieldUrl: "URL",
-        fieldAllowlistNicknames: "Allowlist nicknames",
-        fieldAllowlistNickname: "Allowlist nickname",
+        fieldNicknames: "Player nicknames",
+        fieldNickname: "Player nickname",
         emDash: "—",
         changesSaved: "Changes were saved.",
         noDetails: "No additional details to show.",
@@ -300,15 +296,13 @@
         intentDeleteMatchEx1: "delete the match between Alice/Bob and Charlie/Diana",
         intentDeleteTeamDesc: "Delete a team with no matches.",
         intentDeleteTeamEx1: "delete the team Alice and Bob",
-        intentGetAllowlistDesc: "Show the league's allowlist.",
-        intentGetAllowlistEx1: "show me the allowlist",
-        intentGetAllowlistEx2: "who is allowed to play in this league?",
-        intentAddAllowlistEntriesDesc: "Add nicknames to the allowlist.",
-        intentAddAllowlistEntriesEx1: "add Alex and Daniel to the allowlist",
-        intentAddAllowlistEntriesEx2: "allow Jason to play",
-        intentRemoveAllowlistEntryDesc: "Remove one nickname from the allowlist.",
-        intentRemoveAllowlistEntryEx1: "remove Michael from the allowlist",
-        intentRemoveAllowlistEntryEx2: "drop Ryan from the allowlist",
+        intentAddPlayersToRosterDesc: "Pre-register one or more players on the league roster.",
+        intentAddPlayersToRosterEx1: "add Alex and Daniel to the roster",
+        intentAddPlayersToRosterEx2: "register Jason as a player",
+        intentRemovePlayerFromRosterDesc:
+          "Remove one player from the roster (only if they have no teams and no matches).",
+        intentRemovePlayerFromRosterEx1: "remove Michael from the roster",
+        intentRemovePlayerFromRosterEx2: "drop Ryan from the league",
         groupPlayerCommands: "Player commands",
         groupAdminCommands: "Admin commands",
         supportedCommands: "Supported commands",
@@ -360,21 +354,23 @@
         noLeagueHtml: 'No league specified. <a href="/">Go to home</a>.',
         requestFailed: "Request failed.",
         headerTitleLoading: "Loading league title…",
-        allowlistPanelTitle: "Allowlist",
-        allowlistPanelEmpty: "No allowlist entries defined yet.",
-        allowlistPanelLoading: "Loading allowlist…",
-        allowlistPanelError: "Could not load allowlist.",
-        allowlistAddPlaceholder: "e.g. alice, bob, charlie",
-        allowlistAddButton: "Add",
-        allowlistAddingButton: "Adding…",
-        allowlistAlreadyExists: "One or more nicknames are already in the allowlist.",
-        allowlistRemoveAria: "Remove",
-        allowlistRemovingAria: "Removing…",
-        allowlistAddSuccess: "Added to allowlist.",
-        allowlistRemoveSuccess: "Removed from allowlist.",
-        notInAllowlistHeadline:
-          "{names} are not in this league's allowlist. Use '{atHint}' in chat to search for the player.",
-        notInAllowlistAddButton: "+ Add to allowlist",
+        rosterAdminPanelTitle: "Roster (admin)",
+        rosterAdminPanelEmpty: "No players on the roster yet.",
+        rosterAdminPanelLoading: "Loading roster…",
+        rosterAdminPanelError: "Could not load roster.",
+        rosterAdminAddPlaceholder: "e.g. alice, bob, charlie",
+        rosterAdminAddButton: "Add",
+        rosterAdminAddingButton: "Adding…",
+        rosterAdminAlreadyExists: "One or more nicknames are already on the roster.",
+        rosterAdminRemoveAria: "Remove",
+        rosterAdminRemovingAria: "Removing…",
+        rosterAdminAddSuccess: "Added to roster.",
+        rosterAdminRemoveSuccess: "Removed from roster.",
+        rosterAdminRemoveBlockedByParticipation:
+          "Can\u2019t remove this player: they already belong to a team or appear in a match. Delete those first.",
+        rosterMembershipRequiredHeadline:
+          "{names} are not on this league's roster. Use '{atHint}' in chat to search for the player.",
+        rosterMembershipAddButton: "+ Add to roster",
       },
     },
     ko: {
@@ -457,21 +453,17 @@
         labelOneTeamPerPlayer: "한 사람이 여러 팀에 들어갈 수 있나요?",
         optionOTPPTrue: "아니요 — 한 사람은 팀 하나에만 소속돼요(기본)",
         optionOTPPFalse: "예 — 한 사람이 여러 팀에 속할 수 있어요",
-        labelRequireAllowlist: "허용 목록",
-        requireAllowlistCheckboxLabel:
-          "허용 목록 사용 — 아래에 추가한 닉네임만 이 리그에서 경기할 수 있어요",
-        optionRequireAllowlistFalse: "끔 — 첫 경기에 나타나면 자동 등록(기본)",
-        optionRequireAllowlistTrue: "켬 — 허용 목록 필수",
-        requireAllowlistHint:
-          "켜면 허용 목록에 없는 닉네임이 포함된 경기 제출이 거부됩니다.",
-        allowlistChipsPlaceholder:
+        labelAutoRegisterPlayersOnMatch: "경기 제출 시 새 선수 자동 등록",
+        autoRegisterPlayersOnMatchHint:
+          "켜짐(기본): 경기에 처음 등장하는 닉네임은 자동으로 선수로 등록돼요. 끄면 미리 등록된 명단의 선수만 경기에 들어갈 수 있어요.",
+        initialPlayersChipsPlaceholder:
           "닉네임을 입력하고 Enter, Space, 또는 쉼표를 누르면 칩으로 추가돼요",
-        allowlistChipsAria: "허용 목록 입력",
-        allowlistChipsHint:
+        initialPlayersChipsAria: "사전 등록 선수 입력",
+        initialPlayersChipsHint:
           "Enter, Space, 쉼표로 칩을 추가하세요. 입력창이 비어 있을 때 백스페이스를 누르면 마지막 칩이 사라져요. 칩의 \u00D7를 클릭하면 개별 삭제됩니다.",
-        allowlistChipRemoveAria: "{name}을(를) 허용 목록에서 제거",
-        allowlistRequiredError:
-          "허용 목록에 닉네임을 한 명 이상 추가하거나, 허용 목록을 꺼 주세요.",
+        initialPlayersChipRemoveAria: "{name}을(를) 사전 등록 명단에서 제거",
+        initialPlayersRequiredError:
+          "자동 등록이 꺼져 있어요. 사전 등록할 닉네임을 한 명 이상 추가하거나, 자동 등록을 다시 켜 주세요.",
         labelRankingSubject: "순위표에서 무엇을 비교할까요?",
         optionRankingSubjectTeam: "팀(기본)",
         optionRankingSubjectPlayer: "개인(플레이어)",
@@ -505,10 +497,10 @@
           tieBreakersTitle: "순위를 어떻게 정렬할까요",
           tieBreakersBody:
             "첫 번째 메뉴가 기본 정렬이에요. 위에 있을수록 순위가 더 좋다는 뜻으로 쓰여요.\n\n여전히 동점이면 두 번째, 그다음 세 번째로 가르죠. 필요 없으면 비워 두세요.\n\n같은 지표를 두 번 고를 수는 없고, 저장할 때 중복은 빠져요.\n\n많은 리그는 승수 → 승패 차 → 게임 관련 숫자 순으로 시작해요. 그룹 취향에 맞게 조정하면 돼요.",
-          requireAllowlistAria: "도움말: 허용 목록",
-          requireAllowlistTitle: "허용 목록",
-          requireAllowlistBody:
-            "기본값은 경기에 처음 등장하는 닉네임이 자동으로 등록돼요. 이 옵션을 켜면 리그가 \u201c허용 목록 필수\u201d 모드로 전환돼요.\n\n열린 리그(기본): 어떤 닉네임이든 경기에 등장하면 자동으로 등록됩니다.\n\n허용 목록 필수: 경기를 기록하려면 모든 닉네임이 주최자의 허용 목록에 미리 있어야 해요. 봇이 목록에 없는 이름을 알려주며 제출을 거부해요.\n\n멤버십 기반 클럽이나 초청 토너먼트처럼 참가자를 직접 관리하고 싶을 때 사용하세요.",
+          autoRegisterPlayersOnMatchAria: "도움말: 경기 제출 시 자동 등록",
+          autoRegisterPlayersOnMatchTitle: "경기 제출 시 새 선수 자동 등록",
+          autoRegisterPlayersOnMatchBody:
+            "리그 명단에 없는 닉네임으로 경기가 제출됐을 때의 동작을 정해요.\n\n켜짐(기본): 새 닉네임을 자동으로 선수로 등록하고 경기를 받아들여요. 누구나 와서 뛸 수 있는 열린 리그에 잘 맞아요.\n\n꺼짐: 명단에 없는 이름이 포함된 경기는 거부되고, 어떤 이름이 빠졌는지 알려줘요. 호스트가 미리 명단에 추가한 선수만 경기에 들어갈 수 있어요. 멤버십 클럽이나 초청 대회처럼 참가자를 정확히 통제하고 싶을 때 사용하세요.",
         },
         submit: "리그 만들기",
         successH2: "리그가 생성되었습니다",
@@ -555,14 +547,14 @@
         loadInfo: "지금은 정보를 불러올 수 없습니다. 잠시 후 다시 시도하거나 다른 질문을 해 보세요.",
         unexpectedChat:
           "채팅 서비스가 예상대로 응답하지 않습니다. 설정을 확인하거나 나중에 다시 시도하세요.",
-        notInAllowlist:
-          "한 명 이상의 플레이어가 이 리그의 허용 목록에 없습니다. 경기를 기록하기 전에 주최자에게 추가를 요청하세요.",
+        rosterMembershipRequired:
+          "한 명 이상의 플레이어가 이 리그의 명단에 없습니다. 경기를 기록하기 전에 주최자에게 추가를 요청하세요.",
       },
       chat: {
         panelStandings: "순위",
         panelMatchHistory: "경기 기록",
         panelRoster: "명단",
-        panelAllowlist: "허용 목록",
+        panelRosterAdmin: "명단 (관리자)",
         panelHelp: "지원 명령",
         panelDetails: "세부 정보",
         helpEmpty: "사용 가능한 명령이 없습니다.",
@@ -582,8 +574,8 @@
         formScoreTeam2: "팀 2",
         fieldMethod: "메서드",
         fieldUrl: "URL",
-        fieldAllowlistNicknames: "허용 목록 닉네임",
-        fieldAllowlistNickname: "허용 목록 닉네임",
+        fieldNicknames: "선수 닉네임",
+        fieldNickname: "선수 닉네임",
         emDash: "—",
         changesSaved: "저장되었습니다.",
         noDetails: "추가로 표시할 세부 정보가 없습니다.",
@@ -659,15 +651,13 @@
         intentDeleteMatchEx1: "앨리스/밥 vs 찰리/다이애나 경기 삭제",
         intentDeleteTeamDesc: "경기 없는 팀 삭제.",
         intentDeleteTeamEx1: "앨리스와 밥 팀 삭제",
-        intentGetAllowlistDesc: "리그 허용 목록을 보여줍니다.",
-        intentGetAllowlistEx1: "허용 목록 보여줘",
-        intentGetAllowlistEx2: "이 리그에 누가 참가할 수 있어?",
-        intentAddAllowlistEntriesDesc: "닉네임을 허용 목록에 추가합니다.",
-        intentAddAllowlistEntriesEx1: "Alex와 Daniel을 허용 목록에 추가해줘",
-        intentAddAllowlistEntriesEx2: "Jason 참가 허용해줘",
-        intentRemoveAllowlistEntryDesc: "허용 목록에서 닉네임 하나를 제거합니다.",
-        intentRemoveAllowlistEntryEx1: "Michael을 허용 목록에서 제거해줘",
-        intentRemoveAllowlistEntryEx2: "Ryan을 허용 목록에서 빼줘",
+        intentAddPlayersToRosterDesc: "선수를 리그 명단에 미리 등록합니다.",
+        intentAddPlayersToRosterEx1: "Alex와 Daniel을 명단에 추가해줘",
+        intentAddPlayersToRosterEx2: "Jason을 선수로 등록해줘",
+        intentRemovePlayerFromRosterDesc:
+          "명단에서 선수 한 명을 제거합니다(팀과 경기 기록이 모두 없을 때만 가능).",
+        intentRemovePlayerFromRosterEx1: "Michael을 명단에서 제거해줘",
+        intentRemovePlayerFromRosterEx2: "Ryan을 리그에서 빼줘",
         groupPlayerCommands: "플레이어 명령",
         groupAdminCommands: "관리자 명령",
         supportedCommands: "지원 명령",
@@ -718,21 +708,23 @@
         noLeagueHtml: '리그가 지정되지 않았습니다. <a href="/">홈으로</a>.',
         requestFailed: "요청이 실패했습니다.",
         headerTitleLoading: "리그 제목 불러오는 중…",
-        allowlistPanelTitle: "허용 목록",
-        allowlistPanelEmpty: "아직 허용 목록 항목이 없습니다.",
-        allowlistPanelLoading: "허용 목록 불러오는 중…",
-        allowlistPanelError: "허용 목록을 불러올 수 없습니다.",
-        allowlistAddPlaceholder: "예: alice, bob, charlie",
-        allowlistAddButton: "추가",
-        allowlistAddingButton: "추가 중…",
-        allowlistAlreadyExists: "이미 허용 목록에 있는 닉네임이 포함되어 있습니다.",
-        allowlistRemoveAria: "제거",
-        allowlistRemovingAria: "제거 중…",
-        allowlistAddSuccess: "허용 목록에 추가되었습니다.",
-        allowlistRemoveSuccess: "허용 목록에서 제거되었습니다.",
-        notInAllowlistHeadline:
-          "{names}은(는) 이 리그의 허용 목록에 없습니다. 경기를 기록하기 전에 주최자에게 추가를 요청하세요. 채팅에서 '{atHint}'를 입력하면 플레이어를 찾을 수 있습니다.",
-        notInAllowlistAddButton: "+ 허용 목록에 추가",
+        rosterAdminPanelTitle: "명단 (관리자)",
+        rosterAdminPanelEmpty: "아직 명단에 선수가 없습니다.",
+        rosterAdminPanelLoading: "명단 불러오는 중…",
+        rosterAdminPanelError: "명단을 불러올 수 없습니다.",
+        rosterAdminAddPlaceholder: "예: alice, bob, charlie",
+        rosterAdminAddButton: "추가",
+        rosterAdminAddingButton: "추가 중…",
+        rosterAdminAlreadyExists: "이미 명단에 있는 닉네임이 포함되어 있습니다.",
+        rosterAdminRemoveAria: "제거",
+        rosterAdminRemovingAria: "제거 중…",
+        rosterAdminAddSuccess: "명단에 추가되었습니다.",
+        rosterAdminRemoveSuccess: "명단에서 제거되었습니다.",
+        rosterAdminRemoveBlockedByParticipation:
+          "이 선수는 이미 팀에 속해 있거나 경기에 등장해서 명단에서 제거할 수 없어요. 먼저 해당 팀이나 경기를 정리해 주세요.",
+        rosterMembershipRequiredHeadline:
+          "{names}은(는) 이 리그 명단에 없습니다. 경기를 기록하기 전에 주최자에게 추가를 요청하세요. 채팅에서 '{atHint}'를 입력하면 플레이어를 찾을 수 있습니다.",
+        rosterMembershipAddButton: "+ 명단에 추가",
       },
     },
   };

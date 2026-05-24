@@ -7,7 +7,6 @@
     GET_MATCH_HISTORY: true,
     GET_MATCH_HISTORY_BY_PLAYER: true,
     GET_ROSTER: true,
-    GET_ALLOWLIST: true,
     HELP: true,
   };
 
@@ -17,8 +16,8 @@
     EDIT_MATCH_SCORE: true,
     DELETE_MATCH: true,
     DELETE_TEAM: true,
-    ADD_ALLOWLIST_ENTRIES: true,
-    REMOVE_ALLOWLIST_ENTRY: true,
+    ADD_PLAYERS_TO_ROSTER: true,
+    REMOVE_PLAYER_FROM_ROSTER: true,
   };
 
   function escapeHtml(s) {
@@ -39,7 +38,6 @@
       return tr("panelMatchHistory");
     }
     if (dataType === "GET_ROSTER") return tr("panelRoster");
-    if (dataType === "GET_ALLOWLIST") return tr("panelAllowlist") || tr("allowlistPanelTitle") || "Allowlist";
     if (dataType === "HELP") return tr("panelHelp");
     var human = String(dataType || "")
       .replace(/^GET_/, "")
@@ -66,8 +64,8 @@
       team2_score: tr("fieldTeam2Score"),
       method: tr("fieldMethod"),
       url: tr("fieldUrl"),
-      nicknames: tr("fieldAllowlistNicknames") || "Allowlist nicknames",
-      nickname: tr("fieldAllowlistNickname") || "Allowlist nickname",
+      nicknames: tr("fieldNicknames") || "Player nicknames",
+      nickname: tr("fieldNickname") || "Player nickname",
     };
     if (byKey[key]) return byKey[key];
     return key
@@ -278,17 +276,19 @@
     }
   }
 
-  /** GET /leagues/{id}/allowlist — host-only panel data. */
-  async function fetchAllowlistFromApi(leagueId, hostToken) {
+  /** GET /leagues/{id}/roster — host-only panel data.
+   *
+   * In v6 the roster IS the player list (the `allowlist_entries` side table
+   * was dropped). Pre-registered players that have not yet played show up
+   * in the same `players` array — they simply do not appear in `teams`. */
+  async function fetchRosterPlayersFromApi(leagueId) {
     var base = backendMainBase();
     if (!base || !leagueId) {
       return { ok: false, error: "missing_config_or_league" };
     }
-    var url = base + "/leagues/" + encodeURIComponent(leagueId) + "/allowlist";
-    var headers = {};
-    if (hostToken) headers["X-Host-Token"] = hostToken;
+    var url = base + "/leagues/" + encodeURIComponent(leagueId) + "/roster";
     try {
-      var res = await fetch(url, { headers: headers });
+      var res = await fetch(url);
       var text = await res.text();
       if (!res.ok) {
         return { ok: false, error: "http", status: res.status, body: text };
@@ -296,53 +296,55 @@
       var data = JSON.parse(text);
       return {
         ok: true,
-        allowlist: Array.isArray(data.allowlist) ? data.allowlist : [],
+        players: Array.isArray(data.players) ? data.players : [],
       };
     } catch (e) {
       return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };
     }
   }
 
-  function renderAllowlistPanelHtml(state) {
-    var entries = (state && state.allowlist) || [];
+  function renderRosterAdminPanelHtml(state) {
+    var entries = (state && state.players) || [];
     var isLoading = state && state.loading;
     var errorMsg = state && state.error;
     var count = entries.length;
 
     var heading =
-      '<summary class="allowlist-summary" aria-expanded="false">' +
-      escapeHtml(tr("allowlistPanelTitle") || "Allowlist") +
-      ' <span class="allowlist-count">(' + count + ')</span>' +
+      '<summary class="roster-admin-summary" aria-expanded="false">' +
+      escapeHtml(tr("rosterAdminPanelTitle") || "Roster") +
+      ' <span class="roster-admin-count">(' + count + ')</span>' +
       "</summary>";
 
     var bodyHtml;
     if (isLoading) {
       bodyHtml =
         '<p class="hint">' +
-        escapeHtml(tr("allowlistPanelLoading") || "Loading allowlist\u2026") +
+        escapeHtml(tr("rosterAdminPanelLoading") || "Loading roster\u2026") +
         "</p>";
     } else if (errorMsg) {
       bodyHtml =
-        '<p class="hint allowlist-error">' +
-        escapeHtml(tr("allowlistPanelError") || "Could not load allowlist.") +
+        '<p class="hint roster-admin-error">' +
+        escapeHtml(tr("rosterAdminPanelError") || "Could not load roster.") +
         "</p>";
     } else if (!entries.length) {
       bodyHtml =
         '<p class="hint">' +
-        escapeHtml(tr("allowlistPanelEmpty") || "No allowlist entries defined yet.") +
+        escapeHtml(tr("rosterAdminPanelEmpty") || "No players on the roster yet.") +
         "</p>";
     } else {
       var rows = entries
         .map(function (entry) {
           return (
-            '<li class="allowlist-item">' +
-            '<span class="allowlist-name">' +
+            '<li class="roster-admin-item">' +
+            '<span class="roster-admin-name">' +
             escapeHtml(entry.nickname || "") +
             "</span>" +
-            '<button type="button" class="btn-remove-allowlist" data-allowlist-entry-id="' +
-            escapeAttr(String(entry.allowlist_entry_id || "")) +
+            '<button type="button" class="btn-remove-roster-player" data-player-id="' +
+            escapeAttr(String(entry.player_id || "")) +
+            '" data-player-nickname="' +
+            escapeAttr(String(entry.nickname || "")) +
             '" aria-label="' +
-            escapeAttr(tr("allowlistRemoveAria") || "Remove") +
+            escapeAttr(tr("rosterAdminRemoveAria") || "Remove") +
             " " +
             escapeAttr(entry.nickname || "") +
             '">\u00d7</button>' +
@@ -350,21 +352,21 @@
           );
         })
         .join("");
-      bodyHtml = '<ul class="allowlist-list">' + rows + "</ul>";
+      bodyHtml = '<ul class="roster-admin-list">' + rows + "</ul>";
     }
 
     var addRow =
-      '<div class="allowlist-add-row">' +
-      '<input type="text" class="allowlist-add-input" placeholder="' +
-      escapeAttr(tr("allowlistAddPlaceholder") || "e.g. alice, bob, charlie") +
+      '<div class="roster-admin-add-row">' +
+      '<input type="text" class="roster-admin-add-input" placeholder="' +
+      escapeAttr(tr("rosterAdminAddPlaceholder") || "e.g. alice, bob, charlie") +
       '" />' +
-      '<button type="button" class="btn-secondary allowlist-add-btn">' +
-      escapeHtml(tr("allowlistAddButton") || "Add") +
+      '<button type="button" class="btn-secondary roster-admin-add-btn">' +
+      escapeHtml(tr("rosterAdminAddButton") || "Add") +
       "</button>" +
       "</div>" +
-      '<div class="allowlist-inline-msg" hidden></div>';
+      '<div class="roster-admin-inline-msg" hidden></div>';
 
-    return heading + '<div class="allowlist-body">' + bodyHtml + addRow + "</div>";
+    return heading + '<div class="roster-admin-body">' + bodyHtml + addRow + "</div>";
   }
 
   function leagueApiJsonErrorCode(text) {
@@ -1034,27 +1036,6 @@
     return h;
   }
 
-  function renderAllowlistList(data) {
-    var entries = data.allowlist || [];
-    if (!entries.length) {
-      return (
-        "<p class=\"hint\">" +
-        escapeHtml(tr("allowlistPanelEmpty") || "No allowlist entries defined yet.") +
-        "</p>"
-      );
-    }
-    var items = entries
-      .map(function (entry) {
-        return "<li class=\"roster-item\">" + escapeHtml(entry.nickname || "") + "</li>";
-      })
-      .join("");
-    return (
-      '<div class="roster-block"><ul class="roster-list roster-list-players">' +
-      items +
-      "</ul></div>"
-    );
-  }
-
   function renderReadPanelFilterNote(data) {
     var name = data && data.player_name;
     if (name == null || String(name).trim() === "") return "";
@@ -1137,7 +1118,6 @@
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
       inner = renderMatches(data);
     } else if (dataType === "GET_ROSTER") inner = renderRoster(data);
-    else if (dataType === "GET_ALLOWLIST") inner = renderAllowlistList(data);
     else if (dataType === "HELP") inner = renderHelpPanel(data, !!isAdmin);
     else inner = renderFallbackData(data);
     return (
@@ -1414,14 +1394,6 @@
           tr("intentGetRosterEx3") || "list all teams",
         ],
       },
-      {
-        name: "GET_ALLOWLIST",
-        desc: tr("intentGetAllowlistDesc") || "Show the league's allowlist.",
-        examples: [
-          tr("intentGetAllowlistEx1") || "show me the allowlist",
-          tr("intentGetAllowlistEx2") || "who is allowed to play in this league?",
-        ],
-      },
     ];
   }
 
@@ -1457,19 +1429,23 @@
         examples: [tr("intentDeleteTeamEx1") || "delete the team Alice and Bob"],
       },
       {
-        name: "ADD_ALLOWLIST_ENTRIES",
-        desc: tr("intentAddAllowlistEntriesDesc") || "Add nicknames to the allowlist.",
+        name: "ADD_PLAYERS_TO_ROSTER",
+        desc:
+          tr("intentAddPlayersToRosterDesc") ||
+          "Pre-register one or more players on the roster.",
         examples: [
-          tr("intentAddAllowlistEntriesEx1") || "add Alex and Daniel to the allowlist",
-          tr("intentAddAllowlistEntriesEx2") || "allow Jason to play",
+          tr("intentAddPlayersToRosterEx1") || "add Alex and Daniel to the roster",
+          tr("intentAddPlayersToRosterEx2") || "allow Jason to play",
         ],
       },
       {
-        name: "REMOVE_ALLOWLIST_ENTRY",
-        desc: tr("intentRemoveAllowlistEntryDesc") || "Remove one nickname from the allowlist.",
+        name: "REMOVE_PLAYER_FROM_ROSTER",
+        desc:
+          tr("intentRemovePlayerFromRosterDesc") ||
+          "Remove one pre-registered player from the roster.",
         examples: [
-          tr("intentRemoveAllowlistEntryEx1") || "remove Michael from the allowlist",
-          tr("intentRemoveAllowlistEntryEx2") || "drop Ryan from the allowlist",
+          tr("intentRemovePlayerFromRosterEx1") || "remove Michael from the roster",
+          tr("intentRemovePlayerFromRosterEx2") || "drop Ryan from the roster",
         ],
       },
     ];
@@ -1757,8 +1733,8 @@
       "</header>" +
       renderIntentHelper(isAdmin) +
       (isAdmin
-        ? '<details id="allowlist-panel" class="allowlist-panel">' +
-          renderAllowlistPanelHtml({ loading: true }) +
+        ? '<details id="roster-admin-panel" class="roster-admin-panel">' +
+          renderRosterAdminPanelHtml({ loading: true }) +
           "</details>"
         : "") +
       '<main class="chat-main is-empty">' +
@@ -1835,16 +1811,15 @@
     /** Latest roster from main API; refreshed when this chat view mounts.
      * `rules` is the LeagueRules config returned by GET /roster — used by
      * `renderMatchSubmitRosterNotes` to suppress the partner-conflict
-     * warning when `one_team_per_player === false`. `allowlist` is the
-     * league's host-curated allowlist (loaded in parallel with the roster)
-     * and is merged into the @-mention popover so users can also pick names
-     * that have been pre-declared but haven't played yet. */
+     * warning when `one_team_per_player === false`. In v6 the roster IS
+     * the player list (the `allowlist_entries` side table was retired);
+     * the same `players` array already includes pre-registered nicknames
+     * that have not yet played, so there is no separate fetch / union. */
     var leagueRoster = {
       status: "loading",
       players: [],
       teams: [],
       rules: null,
-      allowlist: [],
       fetchedAt: null,
     };
 
@@ -1890,56 +1865,48 @@
         });
     }
 
-    function refreshAllowlistForMentions() {
-      fetchAllowlistFromApi(route.leagueId, route.hostToken)
-        .then(function (result) {
-          leagueRoster.allowlist = result.ok
-            ? result.allowlist || []
-            : [];
-          updateMentionUI();
-        })
-        .catch(function (err) {
-          console.warn("[TLCHAT] Allowlist fetch failed:", err);
-          leagueRoster.allowlist = [];
-        });
-    }
-
     refreshLeagueRoster();
-    refreshAllowlistForMentions();
 
-    // ── Allowlist panel (host/admin only) ─────────────────────────────
+    // ── Roster admin panel (host/admin only) ──────────────────────────
+    //
+    // Replaces the v5 "Allowlist" admin panel. Uses the same
+    // `GET /leagues/{id}/roster` endpoint as the main roster view, and
+    // POSTs / DELETEs against `/admin/leagues/{id}/players` for pre-
+    // registration writes. Roster players that have actively played a
+    // match cannot be hard-deleted; the backend returns 409
+    // `PlayerHasParticipationError` which we render verbatim.
 
-    var allowlistPanel = document.getElementById("allowlist-panel");
+    var rosterAdminPanel = document.getElementById("roster-admin-panel");
 
-    function refreshAllowlistPanel() {
-      if (!allowlistPanel) return;
-      fetchAllowlistFromApi(route.leagueId, route.hostToken).then(function (result) {
+    function refreshRosterAdminPanel() {
+      if (!rosterAdminPanel) return;
+      fetchRosterPlayersFromApi(route.leagueId).then(function (result) {
         var state = result.ok
-          ? { allowlist: result.allowlist }
-          : { allowlist: [], error: true };
-        allowlistPanel.innerHTML = renderAllowlistPanelHtml(state);
-        bindAllowlistPanelEvents(state.allowlist || []);
+          ? { players: result.players }
+          : { players: [], error: true };
+        rosterAdminPanel.innerHTML = renderRosterAdminPanelHtml(state);
+        bindRosterAdminPanelEvents();
       });
     }
 
-    function bindAllowlistPanelEvents(entries) {
-      if (!allowlistPanel) return;
+    function bindRosterAdminPanelEvents() {
+      if (!rosterAdminPanel) return;
 
-      var inlineMsg = allowlistPanel.querySelector(".allowlist-inline-msg");
+      var inlineMsg = rosterAdminPanel.querySelector(".roster-admin-inline-msg");
 
       function showMsg(text, isError) {
         if (!inlineMsg) return;
         inlineMsg.textContent = text;
         inlineMsg.hidden = false;
         inlineMsg.className =
-          "allowlist-inline-msg" + (isError ? " allowlist-msg-error" : " allowlist-msg-ok");
+          "roster-admin-inline-msg" + (isError ? " roster-admin-msg-error" : " roster-admin-msg-ok");
         setTimeout(function () {
           inlineMsg.hidden = true;
         }, 4000);
       }
 
-      var addBtn = allowlistPanel.querySelector(".allowlist-add-btn");
-      var addInput = allowlistPanel.querySelector(".allowlist-add-input");
+      var addBtn = rosterAdminPanel.querySelector(".roster-admin-add-btn");
+      var addInput = rosterAdminPanel.querySelector(".roster-admin-add-input");
 
       if (addBtn && addInput) {
         addBtn.addEventListener("click", async function () {
@@ -1952,10 +1919,10 @@
           if (!nicknames.length) return;
 
           addBtn.disabled = true;
-          addBtn.textContent = tr("allowlistAddingButton") || "Adding\u2026";
+          addBtn.textContent = tr("rosterAdminAddingButton") || "Adding\u2026";
 
           var base = backendMainBase();
-          var url = base + "/admin/leagues/" + encodeURIComponent(route.leagueId) + "/allowlist";
+          var url = base + "/admin/leagues/" + encodeURIComponent(route.leagueId) + "/players";
           try {
             var res = await fetch(url, {
               method: "POST",
@@ -1968,88 +1935,102 @@
             var txt = await res.text();
             if (res.ok) {
               addInput.value = "";
-              showMsg(tr("allowlistAddSuccess") || "Added to allowlist.", false);
-              refreshAllowlistPanel();
+              showMsg(tr("rosterAdminAddSuccess") || "Added to roster.", false);
+              refreshRosterAdminPanel();
+              refreshLeagueRoster();
             } else if (
               res.status === 409 &&
-              leagueApiJsonErrorCode(txt) === "AllowlistNicknameAlreadyExistsError"
+              leagueApiJsonErrorCode(txt) === "NicknameAlreadyInUseError"
             ) {
               showMsg(
-                tr("allowlistAlreadyExists") || "One or more nicknames are already in the allowlist.",
+                tr("rosterAdminAlreadyExists") || "One or more nicknames are already on the roster.",
                 true
               );
               addBtn.disabled = false;
-              addBtn.textContent = tr("allowlistAddButton") || "Add";
+              addBtn.textContent = tr("rosterAdminAddButton") || "Add";
             } else {
               showMsg(friendlyMessageFromTechnicalError(txt), true);
               addBtn.disabled = false;
-              addBtn.textContent = tr("allowlistAddButton") || "Add";
+              addBtn.textContent = tr("rosterAdminAddButton") || "Add";
             }
           } catch (e) {
             showMsg(friendlyMessageFromTechnicalError(String(e)), true);
             addBtn.disabled = false;
-            addBtn.textContent = tr("allowlistAddButton") || "Add";
+            addBtn.textContent = tr("rosterAdminAddButton") || "Add";
           }
         });
       }
 
-      allowlistPanel.querySelectorAll(".btn-remove-allowlist").forEach(function (btn) {
+      rosterAdminPanel.querySelectorAll(".btn-remove-roster-player").forEach(function (btn) {
         btn.addEventListener("click", async function () {
-          var entryId = btn.getAttribute("data-allowlist-entry-id");
-          if (!entryId) return;
-          var prevLabel = btn.textContent;
+          var playerId = btn.getAttribute("data-player-id");
+          var nickname = btn.getAttribute("data-player-nickname") || "";
+          if (!playerId) return;
           btn.disabled = true;
-          btn.setAttribute("aria-label", tr("allowlistRemovingAria") || "Removing\u2026");
+          btn.setAttribute(
+            "aria-label",
+            tr("rosterAdminRemovingAria") || "Removing\u2026"
+          );
 
           var base = backendMainBase();
           var url =
             base +
             "/admin/leagues/" +
             encodeURIComponent(route.leagueId) +
-            "/allowlist/" +
-            encodeURIComponent(entryId);
+            "/players/" +
+            encodeURIComponent(playerId);
           try {
             var res = await fetch(url, {
               method: "DELETE",
               headers: { "X-Host-Token": route.hostToken || "" },
             });
             if (res.ok) {
-              showMsg(tr("allowlistRemoveSuccess") || "Removed from allowlist.", false);
-              refreshAllowlistPanel();
+              showMsg(tr("rosterAdminRemoveSuccess") || "Removed from roster.", false);
+              refreshRosterAdminPanel();
+              refreshLeagueRoster();
             } else {
               var txt = await res.text();
-              showMsg(friendlyMessageFromTechnicalError(txt), true);
+              if (
+                res.status === 409 &&
+                leagueApiJsonErrorCode(txt) === "PlayerHasParticipationError"
+              ) {
+                showMsg(
+                  tr("rosterAdminHasParticipation", { name: nickname }) ||
+                    nickname +
+                      " has matches recorded and can't be removed. Delete the matches first.",
+                  true
+                );
+              } else {
+                showMsg(friendlyMessageFromTechnicalError(txt), true);
+              }
               btn.disabled = false;
-              btn.setAttribute("aria-label", tr("allowlistRemoveAria") || "Remove");
+              btn.setAttribute("aria-label", tr("rosterAdminRemoveAria") || "Remove");
             }
           } catch (e) {
             showMsg(friendlyMessageFromTechnicalError(String(e)), true);
             btn.disabled = false;
-            btn.setAttribute("aria-label", prevLabel);
+            btn.setAttribute("aria-label", tr("rosterAdminRemoveAria") || "Remove");
           }
         });
       });
     }
 
-    if (allowlistPanel) {
-      // Render loading state immediately visible when the panel is first opened
-      allowlistPanel.addEventListener("toggle", function () {
-        if (allowlistPanel.open) {
-          refreshAllowlistPanel();
+    if (rosterAdminPanel) {
+      rosterAdminPanel.addEventListener("toggle", function () {
+        if (rosterAdminPanel.open) {
+          refreshRosterAdminPanel();
         }
       });
-      // Bind the initial (loading) state so the add row is functional right away
-      bindAllowlistPanelEvents([]);
+      bindRosterAdminPanelEvents();
     }
 
-    /** Pre-fill the allowlist panel add-input and open the panel. */
-    function openAllowlistPanelWithNicknames(nicknames) {
-      if (!allowlistPanel) return;
-      allowlistPanel.open = true;
-      refreshAllowlistPanel();
-      // After the DOM refreshes, set the add-input value
+    /** Pre-fill the roster-admin add-input and open the panel. */
+    function openRosterAdminPanelWithNicknames(nicknames) {
+      if (!rosterAdminPanel) return;
+      rosterAdminPanel.open = true;
+      refreshRosterAdminPanel();
       setTimeout(function () {
-        var addInput = allowlistPanel.querySelector(".allowlist-add-input");
+        var addInput = rosterAdminPanel.querySelector(".roster-admin-add-input");
         if (addInput && nicknames && nicknames.length) {
           addInput.value = nicknames.join(", ");
           addInput.focus();
@@ -2076,14 +2057,14 @@
     }
 
     /**
-     * Returns the union of roster nicknames and allowlist nicknames,
-     * deduplicated case-insensitively via `normalizeMatchNickname`.
-     * Roster entries take precedence on conflict so the picked text matches
-     * the registered casing.
+     * Returns the roster nicknames as mention candidates, deduplicated
+     * case-insensitively via `normalizeMatchNickname`. In v6 the roster
+     * IS the player list (the `allowlist_entries` side table was retired),
+     * so there is no separate allowlist union to merge in — pre-registered
+     * nicknames already live in `leagueRoster.players`.
      */
     function combinedMentionCandidates() {
       var roster = leagueRoster.players || [];
-      var allowlist = leagueRoster.allowlist || [];
       var seen = {};
       var out = [];
       function push(entry) {
@@ -2095,7 +2076,6 @@
         out.push({ nickname: nick });
       }
       roster.forEach(push);
-      allowlist.forEach(push);
       return out;
     }
 
@@ -2124,8 +2104,7 @@
      * nickname, sort by name, keyboard navigation, mousedown-to-pick)
      * but is scoped to a single text input and triggered on focus/typing
      * instead of an `@` sigil. Shares the candidate source
-     * (`combinedMentionCandidates`) so the roster + allowlist union stays
-     * a single concept.
+     * (`combinedMentionCandidates`) so the roster stays a single concept.
      */
     function bindNickAutocomplete(input, popover) {
       var list = [];
@@ -2786,7 +2765,7 @@
             (errLine || "(no detail in body)") +
             (txt && txt.length ? " | body: " + (txt.length > 800 ? txt.slice(0, 800) + "…" : txt) : "");
 
-          var notInAllowlistResult =
+          var rosterMembershipResult =
             isMatchCreationCall(method, url) &&
             res.status === 422
               ? (function () {
@@ -2795,37 +2774,37 @@
                     var parsed = tryParseJson(txt);
                     return ufe.fromMatchSubmissionError(res.status, parsed);
                   }
-                  return { isNotInAllowlist: false };
+                  return { isRosterMembershipRequired: false };
                 })()
-              : { isNotInAllowlist: false };
+              : { isRosterMembershipRequired: false };
 
-          if (notInAllowlistResult.isNotInAllowlist) {
-            var missing = notInAllowlistResult.missing_nicknames || [];
+          if (rosterMembershipResult.isRosterMembershipRequired) {
+            var missing = rosterMembershipResult.missing_nicknames || [];
             var calloutHtml =
               '<div class="response-callout response-callout-clarify">' +
-              escapeHtml(notInAllowlistResult.headline || "") +
+              escapeHtml(rosterMembershipResult.headline || "") +
               "</div>";
             if (route.hostToken && missing.length) {
-              var addBtnLabel = tr("notInAllowlistAddButton") || "+ Add to allowlist";
+              var addBtnLabel = tr("rosterMembershipAddButton") || "+ Add to roster";
               calloutHtml +=
-                '<button type="button" class="btn-secondary allowlist-add-missing" style="margin-top:0.5rem">' +
+                '<button type="button" class="btn-secondary roster-admin-add-missing" style="margin-top:0.5rem">' +
                 escapeHtml(addBtnLabel) +
                 "</button>";
             }
             removeLoadingBubble(loadingNode);
             loadingNode = null;
-            var notInAllowlistWrap = appendAssistant(calloutHtml, "msg-error");
+            var rosterErrWrap = appendAssistant(calloutHtml, "msg-error");
             if (route.hostToken && missing.length) {
-              var addMissingBtn = notInAllowlistWrap && notInAllowlistWrap.querySelector(".allowlist-add-missing");
+              var addMissingBtn = rosterErrWrap && rosterErrWrap.querySelector(".roster-admin-add-missing");
               if (addMissingBtn) {
                 addMissingBtn.addEventListener("click", function () {
-                  openAllowlistPanelWithNicknames(missing);
+                  openRosterAdminPanelWithNicknames(missing);
                 });
               }
             }
             conversationHistory.push({
               role: "assistant",
-              content: notInAllowlistResult.headline || "",
+              content: rosterMembershipResult.headline || "",
             });
           } else {
           var failedMatchCreate =
@@ -2868,7 +2847,7 @@
             loadingNode = null;
             appendErrorTechnical(technical, "League API error");
           }
-          } // close notInAllowlistResult.isNotInAllowlist else block
+          } // close rosterMembershipResult.isRosterMembershipRequired else block
         }
       } catch (e) {
         removeLoadingBubble(loadingNode);

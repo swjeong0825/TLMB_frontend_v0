@@ -1352,19 +1352,19 @@ table.data th.standings-metric-rank {
   margin: 0;
 }
 
-.allowlist-field {
+.roster-field {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
   font-size: 0.8rem;
 }
 
-.allowlist-field > .field-label-with-help label {
+.roster-field > .field-label-with-help label {
   font-size: inherit;
   display: inline;
 }
 
-.allowlist-toggle-input {
+.roster-toggle-input {
   width: auto;
   margin: 0;
   accent-color: var(--accent);
@@ -1372,7 +1372,7 @@ table.data th.standings-metric-rank {
   flex-shrink: 0;
 }
 
-.allowlist-label-row label[for="require-allowlist-toggle"] {
+.roster-label-row label[for="auto-register-toggle"] {
   cursor: pointer;
 }
 

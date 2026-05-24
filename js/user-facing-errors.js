@@ -187,26 +187,26 @@
   }
 
   /**
-   * Structured handler for HTTP 422 NotInAllowlistError from the backend.
+   * Structured handler for HTTP 422 RosterMembershipRequiredError from the backend.
    *
-   * Returns { isNotInAllowlist: true, headline: string, missing_nicknames: string[] }
-   * when the body matches, otherwise returns { isNotInAllowlist: false }.
+   * Returns { isRosterMembershipRequired: true, headline, missing_nicknames }
+   * when the body matches, otherwise { isRosterMembershipRequired: false }.
    *
-   * IMPORTANT: reads missing_nicknames from the structured JSON body — never
-   * parses the `detail` string, per the backend contract in 20_allowlist.md.
+   * IMPORTANT: reads `missing_nicknames` from the structured JSON body —
+   * never parses the `detail` string, per the backend response-shape contract.
    *
    * @param {number} status HTTP status code
    * @param {object|null} jsonBody parsed response body (or null)
-   * @returns {{ isNotInAllowlist: boolean, headline?: string, missing_nicknames?: string[] }}
+   * @returns {{ isRosterMembershipRequired: boolean, headline?: string, missing_nicknames?: string[] }}
    */
   function fromMatchSubmissionError(status, jsonBody) {
     if (
       status !== 422 ||
       !jsonBody ||
       typeof jsonBody !== "object" ||
-      jsonBody.error !== "NotInAllowlistError"
+      jsonBody.error !== "RosterMembershipRequiredError"
     ) {
-      return { isNotInAllowlist: false };
+      return { isRosterMembershipRequired: false };
     }
 
     var missing = Array.isArray(jsonBody.missing_nicknames)
@@ -223,21 +223,25 @@
     var I = global.TLCHAT_I18N;
     var headline =
       I && typeof I.t === "function"
-        ? I.t("chat.notInAllowlistHeadline", { names: names, atHint: atHint })
+        ? I.t("chat.rosterMembershipRequiredHeadline", { names: names, atHint: atHint })
         : names +
-          " are not in this league's allowlist. use \"" +
+          " are not on this league's roster. use \"" +
           atHint +
           '" to search the player.';
 
-    if (!headline || headline === "chat.notInAllowlistHeadline") {
+    if (!headline || headline === "chat.rosterMembershipRequiredHeadline") {
       headline =
         names +
-        " are not in this league\u2019s allowlist. use \"" +
+        " are not on this league\u2019s roster. use \"" +
         atHint +
         '" to search the player.';
     }
 
-    return { isNotInAllowlist: true, headline: headline, missing_nicknames: missing };
+    return {
+      isRosterMembershipRequired: true,
+      headline: headline,
+      missing_nicknames: missing,
+    };
   }
 
   var api = { fromTechnical: fromTechnical, fromMatchSubmissionError: fromMatchSubmissionError };

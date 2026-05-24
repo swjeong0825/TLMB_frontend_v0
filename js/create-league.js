@@ -63,8 +63,8 @@
     return picked;
   }
 
-  function readAllowlistChips(form) {
-    var wrap = form.querySelector("[data-allowlist-chips]");
+  function readInitialPlayersChips(form) {
+    var wrap = form.querySelector("[data-initial-players-chips]");
     if (!wrap) return [];
     var nodes = wrap.querySelectorAll(".chip[data-chip-name]");
     var out = [];
@@ -82,8 +82,9 @@
     if (desc) payload.description = desc;
 
     var details = form.querySelector("details.create-league-advanced");
-    var requireAllowlist = !!(
-      form.require_allowlist && form.require_allowlist.checked
+    var autoRegister = !!(
+      form.auto_register_players_on_match &&
+      form.auto_register_players_on_match.checked
     );
 
     if (details && details.open) {
@@ -99,17 +100,18 @@
       var tieBreakers = collectTieBreakers(form);
       if (!tieBreakers.length) tieBreakers = ["matches_won"];
       payload.rules = {
-        version: 5,
+        version: 6,
         match_pair_idempotency: mpi,
         one_team_per_player: otpp,
         ranking_subject: subject,
         tie_breakers: tieBreakers,
-        require_allowlist: requireAllowlist,
+        auto_register_players_on_match: autoRegister,
       };
     }
 
-    if (requireAllowlist) {
-      payload.allowlist = readAllowlistChips(form);
+    var initialPlayers = readInitialPlayersChips(form);
+    if (initialPlayers.length > 0) {
+      payload.initial_players = initialPlayers;
     }
     return payload;
   }
@@ -134,7 +136,13 @@
     else el.removeAttribute("aria-hidden");
   }
 
-  var HELP_KEYS = { matchPair: true, oneTeamPerPlayer: true, rankingSubject: true, tieBreakers: true, requireAllowlist: true };
+  var HELP_KEYS = {
+    matchPair: true,
+    oneTeamPerPlayer: true,
+    rankingSubject: true,
+    tieBreakers: true,
+    autoRegisterPlayersOnMatch: true,
+  };
 
   function fillHelpModalBody(container, text) {
     while (container.firstChild) container.removeChild(container.firstChild);
@@ -183,7 +191,7 @@
     if (I && typeof I.t === "function") {
       remove.setAttribute(
         "aria-label",
-        I.t("createLeague.allowlistChipRemoveAria", { name: name })
+        I.t("createLeague.initialPlayersChipRemoveAria", { name: name })
       );
     } else {
       remove.setAttribute("aria-label", "Remove " + name);
@@ -216,46 +224,13 @@
     return added;
   }
 
-  function setAllowlistChipsEnabled(wrap, enabled) {
+  function setupInitialPlayersChips(form) {
+    var wrap = form.querySelector("[data-initial-players-chips]");
     if (!wrap) return;
-    wrap.setAttribute("data-enabled", enabled ? "true" : "false");
-    wrap.setAttribute("aria-disabled", enabled ? "false" : "true");
     var field = wrap.querySelector(".chips-input-field");
-    if (field) {
-      field.disabled = !enabled;
-      if (!enabled) {
-        try {
-          field.blur();
-        } catch (_e) {
-          /* ignore */
-        }
-      }
-    }
-  }
-
-  function setupAllowlistToggle(form) {
-    var toggle = form.querySelector('input[name="require_allowlist"]');
-    var wrap = form.querySelector("[data-allowlist-chips]");
-    if (!toggle || !wrap) return;
-    var field = wrap.querySelector(".chips-input-field");
-
-    setAllowlistChipsEnabled(wrap, !!toggle.checked);
-
-    toggle.addEventListener("change", function () {
-      setAllowlistChipsEnabled(wrap, !!toggle.checked);
-      if (toggle.checked && field) {
-        try {
-          field.focus();
-        } catch (_e) {
-          /* ignore */
-        }
-      }
-    });
-
     if (!field) return;
 
     wrap.addEventListener("click", function (ev) {
-      if (wrap.getAttribute("data-enabled") !== "true") return;
       if (ev.target.closest && ev.target.closest(".chip")) return;
       try {
         field.focus();
@@ -267,15 +242,13 @@
     wrap.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-chip-remove]");
       if (!btn) return;
-      if (wrap.getAttribute("data-enabled") !== "true") return;
       var chip = btn.closest(".chip");
       if (chip) chip.parentNode.removeChild(chip);
     });
 
     field.addEventListener("keydown", function (ev) {
-      if (wrap.getAttribute("data-enabled") !== "true") return;
       var key = ev.key;
-      if (key === "Enter" || key === " " || key === "," ) {
+      if (key === "Enter" || key === " " || key === ",") {
         if (field.value && field.value.trim().length > 0) {
           ev.preventDefault();
           if (commitChipFromText(wrap, field, field.value)) {
@@ -299,7 +272,6 @@
     });
 
     field.addEventListener("paste", function (ev) {
-      if (wrap.getAttribute("data-enabled") !== "true") return;
       var data = ev.clipboardData && ev.clipboardData.getData
         ? ev.clipboardData.getData("text")
         : "";
@@ -310,7 +282,6 @@
     });
 
     field.addEventListener("blur", function () {
-      if (wrap.getAttribute("data-enabled") !== "true") return;
       if (field.value && field.value.trim().length > 0) {
         if (commitChipFromText(wrap, field, field.value)) {
           field.value = "";
@@ -319,8 +290,8 @@
     });
   }
 
-  function clearAllowlistUi(form) {
-    var wrap = form.querySelector("[data-allowlist-chips]");
+  function clearInitialPlayersUi(form) {
+    var wrap = form.querySelector("[data-initial-players-chips]");
     if (!wrap) return;
     var chips = wrap.querySelectorAll(".chip[data-chip-name]");
     for (var i = 0; i < chips.length; i++) {
@@ -328,9 +299,8 @@
     }
     var field = wrap.querySelector(".chips-input-field");
     if (field) field.value = "";
-    var toggle = form.querySelector('input[name="require_allowlist"]');
-    if (toggle) toggle.checked = false;
-    setAllowlistChipsEnabled(wrap, false);
+    var toggle = form.querySelector('input[name="auto_register_players_on_match"]');
+    if (toggle) toggle.checked = true;
   }
 
   function copyText(text) {
@@ -428,7 +398,7 @@
       });
     }
 
-    setupAllowlistToggle(form);
+    setupInitialPlayersChips(form);
 
     document.body.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-copy-target]");
@@ -476,14 +446,18 @@
         setHidden(errEl, false);
         return;
       }
+      // With `auto_register_players_on_match=false`, matches submitted with
+      // an unknown nickname are rejected. Seeding `initial_players` at
+      // create time is the most common way to bootstrap the roster, but
+      // it's not required (the host can always add players after the fact).
       if (
-        form.require_allowlist &&
-        form.require_allowlist.checked &&
-        (!payload.allowlist || payload.allowlist.length === 0)
+        form.auto_register_players_on_match &&
+        !form.auto_register_players_on_match.checked &&
+        (!payload.initial_players || payload.initial_players.length === 0)
       ) {
-        errEl.textContent = t("allowlistRequiredError");
+        errEl.textContent = t("initialPlayersRequiredError");
         setHidden(errEl, false);
-        var wrap = form.querySelector("[data-allowlist-chips]");
+        var wrap = form.querySelector("[data-initial-players-chips]");
         var field = wrap && wrap.querySelector(".chips-input-field");
         if (field) {
           try {
@@ -541,7 +515,7 @@
             linkAdmin.href = origin ? new URL(adminUrl, origin).href : adminUrl;
 
             form.reset();
-            clearAllowlistUi(form);
+            clearInitialPlayersUi(form);
             var adv = form.querySelector("details.create-league-advanced");
             if (adv) adv.open = false;
 
