@@ -730,38 +730,37 @@
     },
   };
 
-  // Metrics not in tie_breakers appear in this order after tie-breaker columns.
-  var STANDINGS_METRIC_BASE_ORDER = [
+  // Non-tie-breaker metrics follow W/L/D/Played; `matches_played` is rendered there.
+  var STANDINGS_SUPPLEMENTARY_METRIC_ORDER = [
     "matches_won",
     "match_diff",
     "games_won",
     "games_lost",
     "games_diff",
     "win_pct",
-    "matches_played",
   ];
 
-  function orderedStandingsMetricKeys(tieBreakers) {
+  function partitionStandingsMetricKeys(tieBreakers) {
     var tb = Array.isArray(tieBreakers) ? tieBreakers : [];
-    var first = [];
+    var rankKeys = [];
     var seen = {};
     var i;
     for (i = 0; i < tb.length; i++) {
       var m = tb[i];
       if (METRIC_COLUMN[m] && !seen[m]) {
         seen[m] = true;
-        first.push(m);
+        rankKeys.push(m);
       }
     }
-    var rest = [];
-    for (i = 0; i < STANDINGS_METRIC_BASE_ORDER.length; i++) {
-      var key = STANDINGS_METRIC_BASE_ORDER[i];
+    var suppKeys = [];
+    for (i = 0; i < STANDINGS_SUPPLEMENTARY_METRIC_ORDER.length; i++) {
+      var key = STANDINGS_SUPPLEMENTARY_METRIC_ORDER[i];
       if (!seen[key]) {
         seen[key] = true;
-        rest.push(key);
+        suppKeys.push(key);
       }
     }
-    return first.concat(rest);
+    return { rankKeys: rankKeys, suppKeys: suppKeys };
   }
 
   function rankingMetricSet(tieBreakers) {
@@ -794,30 +793,46 @@
       subjectKind === "player"
         ? escapeHtml(tr("tablePlayer") || "Player")
         : escapeHtml(tr("tableTeam") || "Team");
-    var metricKeys = orderedStandingsMetricKeys(data.tie_breakers);
+    var parts = partitionStandingsMetricKeys(data.tie_breakers);
+    var rankKeys = parts.rankKeys;
+    var suppKeys = parts.suppKeys;
     var rankMetrics = rankingMetricSet(data.tie_breakers);
+    var showPlayedColumn = !rankMetrics.matches_played;
     var h =
       "<div class=\"standings-table-wrap\"><table class=\"data standings-table\"><thead><tr><th>" +
       escapeHtml(tr("tableRank") || "Rank") +
       "</th><th>" +
       subjectHeader +
-      "</th><th>" +
+      "</th>";
+    var hi;
+    for (hi = 0; hi < rankKeys.length; hi++) {
+      var rk = rankKeys[hi];
+      var rankColDef = METRIC_COLUMN[rk];
+      var rankHdr = escapeHtml(tr(rankColDef.headerKey) || rankColDef.headerFallback);
+      h += "<th class=\"standings-metric-rank\"><strong>" + rankHdr + "</strong></th>";
+    }
+    h +=
+      "<th>" +
       escapeHtml(tr("tableW") || "W") +
       "</th><th>" +
       escapeHtml(tr("tableL") || "L") +
       "</th><th>" +
       escapeHtml(tr("tableD") || "D") +
       "</th>";
-    var hi;
-    for (hi = 0; hi < metricKeys.length; hi++) {
-      var mk = metricKeys[hi];
-      var colDef = METRIC_COLUMN[mk];
-      var hdr = escapeHtml(tr(colDef.headerKey) || colDef.headerFallback);
-      if (rankMetrics[mk]) {
-        h += "<th class=\"standings-metric-rank\"><strong>" + hdr + "</strong></th>";
-      } else {
-        h += "<th>" + hdr + "</th>";
-      }
+    if (showPlayedColumn) {
+      var playedColDef = METRIC_COLUMN.matches_played;
+      h +=
+        "<th>" +
+        escapeHtml(tr(playedColDef.headerKey) || playedColDef.headerFallback) +
+        "</th>";
+    }
+    for (hi = 0; hi < suppKeys.length; hi++) {
+      var sk = suppKeys[hi];
+      var suppColDef = METRIC_COLUMN[sk];
+      h +=
+        "<th>" +
+        escapeHtml(tr(suppColDef.headerKey) || suppColDef.headerFallback) +
+        "</th>";
     }
     h += "</tr></thead><tbody>";
     rows.forEach(function (r) {
@@ -833,23 +848,34 @@
         escapeHtml(r.rank) +
         "</td><td>" +
         subjectLabel +
-        "</td><td>" +
+        "</td>";
+      var ci;
+      for (ci = 0; ci < rankKeys.length; ci++) {
+        var rck = rankKeys[ci];
+        var rcdef = METRIC_COLUMN[rck];
+        h +=
+          "<td class=\"standings-metric-rank\"><strong>" +
+          escapeHtml(formatMetricValue(rcdef, r)) +
+          "</strong></td>";
+      }
+      h +=
+        "<td>" +
         escapeHtml(r.wins) +
         "</td><td>" +
         escapeHtml(r.losses) +
         "</td><td>" +
         escapeHtml(r.draws == null ? 0 : r.draws) +
         "</td>";
-      var ci;
-      for (ci = 0; ci < metricKeys.length; ci++) {
-        var ck = metricKeys[ci];
-        var cdef = METRIC_COLUMN[ck];
-        var cell = escapeHtml(formatMetricValue(cdef, r));
-        if (rankMetrics[ck]) {
-          h += "<td class=\"standings-metric-rank\"><strong>" + cell + "</strong></td>";
-        } else {
-          h += "<td>" + cell + "</td>";
-        }
+      if (showPlayedColumn) {
+        h +=
+          "<td>" +
+          escapeHtml(formatMetricValue(METRIC_COLUMN.matches_played, r)) +
+          "</td>";
+      }
+      for (ci = 0; ci < suppKeys.length; ci++) {
+        var sck = suppKeys[ci];
+        var scdef = METRIC_COLUMN[sck];
+        h += "<td>" + escapeHtml(formatMetricValue(scdef, r)) + "</td>";
       }
       h += "</tr>";
     });
