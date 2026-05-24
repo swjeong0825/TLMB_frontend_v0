@@ -27,7 +27,7 @@
         language: "Language",
       },
       home: {
-        h1: "Tennis League Management Bot",
+        h1: "Local Match Tracker",
         intro1: "Vanilla client for the chat-to-intent server. Open a league-specific URL to start chatting.",
         intro2: "Chat API base URL is configured in",
         pagesHeading: "Pages",
@@ -400,7 +400,7 @@
         language: "언어",
       },
       home: {
-        h1: "테니스 리그 관리 봇",
+        h1: "로컬 매치 트래커",
         intro1:
           "채팅-의도(chat-to-intent) 서버용 바닐라 클라이언트입니다. 리그 전용 URL을 열어 채팅을 시작하세요.",
         intro2: "채팅 API 기본 URL은 다음 파일에서 설정합니다:",
