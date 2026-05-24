@@ -77,8 +77,11 @@
 
   function buildPayload(form) {
     var title = (form.title.value || "").trim();
+    var hostEmail = (form.host_email && form.host_email.value || "")
+      .trim()
+      .toLowerCase();
     var desc = (form.description.value || "").trim();
-    var payload = { title: title };
+    var payload = { title: title, host_email: hostEmail };
     if (desc) payload.description = desc;
 
     var autoRegister = !!(
@@ -439,6 +442,24 @@
       if (!payload.title) {
         errEl.textContent = t("enterTitle");
         setHidden(errEl, false);
+        return;
+      }
+      if (!payload.host_email) {
+        errEl.textContent = t("enterHostEmail");
+        setHidden(errEl, false);
+        if (form.host_email) {
+          try { form.host_email.focus(); } catch (_e) { /* ignore */ }
+        }
+        return;
+      }
+      // Cheap structural check before hitting the backend; full RFC
+      // validation lives server-side in Pydantic EmailStr.
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.host_email)) {
+        errEl.textContent = t("invalidHostEmail");
+        setHidden(errEl, false);
+        if (form.host_email) {
+          try { form.host_email.focus(); } catch (_e) { /* ignore */ }
+        }
         return;
       }
       // With `auto_register_players_on_match=false`, matches submitted with

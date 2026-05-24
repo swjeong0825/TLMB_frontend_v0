@@ -253,6 +253,37 @@
     }
   }
 
+  /** GET /admin/leagues/{id} — host contact email (admin URL + token only). */
+  async function fetchLeagueAdminInfo(leagueId, hostToken) {
+    var base = backendMainBase();
+    if (!base || !leagueId || !hostToken) {
+      return { ok: false, error: "missing_config_or_auth" };
+    }
+    var url = base + "/admin/leagues/" + encodeURIComponent(leagueId);
+    try {
+      var res = await fetch(url, {
+        headers: { Accept: "application/json", "X-Host-Token": hostToken },
+      });
+      var text = await res.text();
+      if (!res.ok) {
+        return { ok: false, error: "http", status: res.status, body: text };
+      }
+      var data = JSON.parse(text);
+      var hostEmail =
+        data && typeof data.host_email === "string" ? data.host_email.trim() : "";
+      if (!hostEmail) {
+        return { ok: false, error: "missing_host_email" };
+      }
+      return { ok: true, host_email: hostEmail };
+    } catch (e) {
+      return {
+        ok: false,
+        error: "parse",
+        message: e && e.message ? e.message : String(e),
+      };
+    }
+  }
+
   /** GET /leagues/{id}/matches — full history, same origin as roster (no host token). */
   async function fetchLeagueMatchHistory(leagueId) {
     var base = backendMainBase();
@@ -1814,8 +1845,13 @@
         ? window.TLCHAT_I18N.renderLocaleDropdown({ compact: true })
         : "";
     var metaHtml = isAdmin
-      ? '<div class="meta">' +
-        escapeHtml(tr("metaHostToken") || "Host token in URL") +
+      ? '<div class="meta" id="chat-admin-meta">' +
+        '<div class="meta-host-email" id="chat-host-email-row" hidden>' +
+        '<span class="meta-host-email-label">' +
+        escapeHtml(tr("metaHostEmailLabel") || "Host email:") +
+        "</span> " +
+        '<span class="meta-host-email-value" id="chat-host-email-value"></span>' +
+        "</div>" +
         "</div>"
       : "";
     var cached =
@@ -2000,6 +2036,27 @@
     }
 
     refreshLeagueRoster();
+
+    function refreshAdminHostEmail() {
+      if (!route.hostToken) return;
+      fetchLeagueAdminInfo(route.leagueId, route.hostToken)
+        .then(function (result) {
+          var row = document.getElementById("chat-host-email-row");
+          var valueEl = document.getElementById("chat-host-email-value");
+          if (!row || !valueEl) return;
+          if (result.ok && result.host_email) {
+            valueEl.textContent = result.host_email;
+            row.hidden = false;
+          } else {
+            console.warn("[TLCHAT] Host email fetch failed:", result);
+          }
+        })
+        .catch(function (err) {
+          console.warn("[TLCHAT] Host email fetch threw:", err);
+        });
+    }
+
+    refreshAdminHostEmail();
 
     // ── Roster admin panel (host/admin only) ──────────────────────────
     //
