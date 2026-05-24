@@ -1108,6 +1108,15 @@ table.data th.standings-metric-rank {
   background: rgba(61, 154, 106, 0.15);
 }
 
+.btn-match-delete {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-match-delete:hover:not(:disabled) {
+  background: rgba(201, 76, 76, 0.15);
+}
+
 .match-picker-edit-row > td {
   padding: 0.25rem 0 0.65rem;
   border-bottom: 1px solid var(--border);
@@ -1138,22 +1147,55 @@ table.data th.standings-metric-rank {
   position: relative;
 }
 
-.match-update-wrap {
+.match-update-wrap,
+.match-delete-wrap {
   position: relative;
   display: inline-block;
 }
 
-.match-update-wrap--disabled {
+/* Small gap so Update and Delete don't touch each other in the
+   per-row Actions cell. Margin on the second wrap keeps the
+   single-button case (no Delete column on synthetic rows) unaffected. */
+.match-update-wrap + .match-delete-wrap {
+  margin-left: 0.4rem;
+}
+
+.match-update-wrap--disabled,
+.match-delete-wrap--disabled {
   cursor: help;
 }
 
-.match-update-wrap--disabled .btn-match-update:disabled {
+.match-update-wrap--disabled .btn-match-update:disabled,
+.match-delete-wrap--disabled .btn-match-delete:disabled {
   pointer-events: none;
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.match-update-tip {
+/* The Confirm-delete button in the modal uses --danger tint so the
+   destructive action reads distinctly. Cancel keeps neutral styling. */
+.match-delete-modal-confirm {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.match-delete-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.match-delete-modal-warning {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.match-update-tip,
+.match-delete-tip {
   position: absolute;
   z-index: 20;
   right: 0;
@@ -1182,7 +1224,11 @@ table.data th.standings-metric-rank {
 .match-update-wrap--disabled:hover .match-update-tip,
 .match-update-wrap--disabled:focus .match-update-tip,
 .match-update-wrap--disabled:focus-within .match-update-tip,
-.match-update-wrap--disabled.match-update-wrap--tip-open .match-update-tip {
+.match-update-wrap--disabled.match-update-wrap--tip-open .match-update-tip,
+.match-delete-wrap--disabled:hover .match-delete-tip,
+.match-delete-wrap--disabled:focus .match-delete-tip,
+.match-delete-wrap--disabled:focus-within .match-delete-tip,
+.match-delete-wrap--disabled.match-delete-wrap--tip-open .match-delete-tip {
   opacity: 1;
   visibility: visible;
 }

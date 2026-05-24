@@ -46,6 +46,29 @@
       typeof secs === "number" && isFinite(secs) && secs >= 0 ? secs : null;
   }
 
+  /**
+   * Module-scoped cache of the league's player-delete window (seconds).
+   *
+   * Mirrors `_playerEditWindowSeconds`. Surfaced by
+   * `GET /leagues/{id}/roster.player_match_delete_window_seconds` and
+   * refreshed by `mountChat()` after the roster loads. Used by
+   * `renderMatches()` to compute whether the per-row "Delete" button
+   * is still enabled for a non-admin caller. Tuned independently
+   * from the edit window because deletes are irreversible (default
+   * 600s vs 3600s for edits). Defaults to null until the roster
+   * comes back; treat null as "unknown -> assume enabled" so we
+   * don't flash a disabled button on slow networks (the backend
+   * still enforces the gate authoritatively on submit).
+   */
+  var _playerMatchDeleteWindowSeconds = null;
+  function getPlayerMatchDeleteWindowSeconds() {
+    return _playerMatchDeleteWindowSeconds;
+  }
+  function setPlayerMatchDeleteWindowSeconds(secs) {
+    _playerMatchDeleteWindowSeconds =
+      typeof secs === "number" && isFinite(secs) && secs >= 0 ? secs : null;
+  }
+
   function tr(key, params) {
     var I = window.TLCHAT_I18N;
     if (!I || typeof I.t !== "function") return "";
@@ -276,6 +299,10 @@
         data && typeof data.player_score_edit_window_seconds === "number"
           ? data.player_score_edit_window_seconds
           : null;
+      var deleteWindowSecs =
+        data && typeof data.player_match_delete_window_seconds === "number"
+          ? data.player_match_delete_window_seconds
+          : null;
       return {
         ok: true,
         title: leagueTitle,
@@ -283,6 +310,7 @@
         players: Array.isArray(data.players) ? data.players : [],
         teams: Array.isArray(data.teams) ? data.teams : [],
         player_score_edit_window_seconds: windowSecs,
+        player_match_delete_window_seconds: deleteWindowSecs,
       };
     } catch (e) {
       return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };
@@ -558,6 +586,21 @@
    */
   function isMatchEditCall(method, url) {
     if (method !== "PATCH" || typeof url !== "string") return false;
+    var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
+    return /\/matches\/[^/]+$/.test(withoutQuery);
+  }
+
+  /**
+   * Match DELETE detector. Mirrors `isMatchEditCall` but for the
+   * per-row Delete button flow. Covers both the player route
+   * (`DELETE /leagues/{lid}/matches/{mid}`) and the admin route
+   * (`DELETE /admin/leagues/{lid}/matches/{mid}`). The 204 success
+   * branch keys off this helper to remove the row in place and
+   * render a localised "match deleted" callout rather than running
+   * the generic `humanSuccessFromHttpBody` fallback.
+   */
+  function isMatchDeleteCall(method, url) {
+    if (method !== "DELETE" || typeof url !== "string") return false;
     var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
     return /\/matches\/[^/]+$/.test(withoutQuery);
   }
@@ -1174,6 +1217,73 @@
     );
   }
 
+  /**
+   * Returns the Delete-button HTML for a single match row, OR an empty
+   * string when no Delete button should be rendered (e.g. the row has
+   * no `match_id` so we can't build a DELETE URL).
+   *
+   * Mirrors `renderMatchRowUpdateAction` exactly — same behaviour
+   * matrix, same disabled+tooltip pattern. The only differences are
+   * the window value consulted (`getPlayerMatchDeleteWindowSeconds`)
+   * and the wrapper / button CSS class so the click handler in
+   * `bindMatchRowDeleteButtons` can find them independently of the
+   * Update buttons.
+   */
+  function renderMatchRowDeleteAction(match, isAdmin) {
+    if (!match || !match.match_id) return "";
+    var btnLabel = tr("deleteButton") || "Delete";
+    var matchId = String(match.match_id);
+    var windowSecs = getPlayerMatchDeleteWindowSeconds();
+
+    var disabled = false;
+    if (!isAdmin) {
+      if (!match.created_at) {
+        disabled = true;
+      } else if (windowSecs != null) {
+        var ageMs = Date.now() - Date.parse(String(match.created_at));
+        if (!isFinite(ageMs) || ageMs / 1000 > windowSecs) {
+          disabled = true;
+        }
+      }
+    }
+
+    if (!disabled) {
+      return (
+        '<span class="match-delete-wrap">' +
+        '<button type="button" class="btn-secondary btn-edit-row btn-match-delete"' +
+        ' data-delete-match-id="' + escapeAttr(matchId) + '"' +
+        ' aria-label="' + escapeAttr(btnLabel) + '">' +
+        escapeHtml(btnLabel) +
+        "</button>" +
+        "</span>"
+      );
+    }
+
+    var minutes =
+      windowSecs != null ? Math.max(1, Math.round(windowSecs / 60)) : null;
+    var tooltipMsg =
+      minutes != null
+        ? tr("deleteButtonDisabledTooltip", { minutes: String(minutes) })
+        : tr("deleteButtonDisabledTooltipUnknownWindow") ||
+          "This match can no longer be deleted by players. Please ask your tennis group host.";
+    if (!tooltipMsg) {
+      tooltipMsg =
+        "This match can no longer be deleted by players. Please ask your tennis group host.";
+    }
+
+    return (
+      '<span class="match-delete-wrap match-delete-wrap--disabled" tabindex="0">' +
+      '<button type="button" class="btn-secondary btn-edit-row btn-match-delete" disabled' +
+      ' aria-label="' + escapeAttr(btnLabel) + '">' +
+      escapeHtml(btnLabel) +
+      "</button>" +
+      '<span class="match-delete-tip" role="tooltip">' +
+      escapeHtml(tooltipMsg) +
+      "</span>" +
+      "</span>"
+    );
+  }
+
   function renderMatches(data, isAdmin) {
     var rows = data.matches || [];
     if (!rows.length) {
@@ -1239,6 +1349,7 @@
         (hasAnyId
           ? "<td class=\"col-actions match-row-actions\">" +
             renderMatchRowUpdateAction(m, !!isAdmin) +
+            renderMatchRowDeleteAction(m, !!isAdmin) +
             "</td>"
           : "") +
         "</tr>";
@@ -2221,6 +2332,12 @@
             // (not LeagueRules) since it's a deployment knob, not a
             // per-league rule.
             setPlayerEditWindowSeconds(result.player_score_edit_window_seconds);
+            // Same idea for the per-row Delete button. Tuned
+            // independently of the edit window because deletes are
+            // irreversible.
+            setPlayerMatchDeleteWindowSeconds(
+              result.player_match_delete_window_seconds
+            );
             if (result.title != null && String(result.title).trim() !== "") {
               rememberLeagueTitle(route.leagueId, result.title);
             }
@@ -3132,6 +3249,7 @@
         if (ok) {
           var matchCreation = isMatchCreationCall(method, url);
           var matchEdit = !matchCreation && isMatchEditCall(method, url);
+          var matchDelete = !matchCreation && !matchEdit && isMatchDeleteCall(method, url);
           if (matchCreation) {
             refreshLeagueRoster();
             var matchRecordedLine = tr("matchRecorded") || "Match recorded.";
@@ -3173,6 +3291,7 @@
                 )
             );
             bindMatchRowUpdateButtons(submitOkWrap);
+            bindMatchRowDeleteButtons(submitOkWrap);
             conversationHistory.push({
               role: "assistant",
               content: matchRecordedLine,
@@ -3248,9 +3367,49 @@
                 )
             );
             bindMatchRowUpdateButtons(editOkWrap);
+            bindMatchRowDeleteButtons(editOkWrap);
             conversationHistory.push({
               role: "assistant",
               content: matchUpdatedLine,
+            });
+          } else if (matchDelete) {
+            // Match-delete (DELETE) success. AGENTS.md hard rule: never
+            // surface technical IDs in user-visible UI. The backend's
+            // 204 response carries no body, so there's no ID-leak
+            // risk, but we still avoid the generic
+            // `humanSuccessFromHttpBody` path so the user sees a
+            // specific "Match deleted." callout instead of the
+            // generic "Changes saved." one. We also remove the row
+            // in place across every assistant bubble that rendered
+            // it (history panel, post-create success, duplicate
+            // recovery), so the user gets immediate visual feedback
+            // without a refetch.
+            var deletedMatchId = extractMatchIdFromEditUrl(url);
+            if (deletedMatchId) {
+              var allRows = document.querySelectorAll(
+                '#messages [data-match-row-id="' +
+                  cssEscapeAttrValue(deletedMatchId) +
+                  '"]'
+              );
+              allRows.forEach(function (row) {
+                if (row && row.parentNode) {
+                  row.parentNode.removeChild(row);
+                }
+              });
+            }
+            var matchDeletedLine = tr("matchDeleted") || "Match deleted.";
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
+            appendAssistant(
+              '<div class="response-callout response-callout-success"><strong>' +
+                escapeHtml(tr("done") || "Done.") +
+                "</strong> " +
+                escapeHtml(matchDeletedLine) +
+                "</div>"
+            );
+            conversationHistory.push({
+              role: "assistant",
+              content: matchDeletedLine,
             });
           } else {
             var successLine = humanSuccessFromHttpBody(txt);
@@ -3327,6 +3486,12 @@
           var matchEditWindowExpired =
             res.status === 422 &&
             leagueApiJsonErrorCode(txt) === "MatchEditWindowExpiredError";
+          // Same shape for the delete window: a non-admin deleting a
+          // too-old match gets a localised "this can no longer be
+          // deleted" callout rather than a raw 422.
+          var matchDeleteWindowExpired =
+            res.status === 422 &&
+            leagueApiJsonErrorCode(txt) === "MatchDeleteWindowExpiredError";
           if (matchEditWindowExpired) {
             var expiredMsg =
               tr("matchEditWindowExpired") ||
@@ -3342,6 +3507,22 @@
             conversationHistory.push({
               role: "assistant",
               content: expiredMsg,
+            });
+          } else if (matchDeleteWindowExpired) {
+            var deleteExpiredMsg =
+              tr("matchDeleteWindowExpired") ||
+              "This match can no longer be deleted (window expired).";
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
+            appendAssistant(
+              '<div class="response-callout response-callout-clarify"><strong>' +
+                escapeHtml(deleteExpiredMsg) +
+                "</strong></div>",
+              "msg-error"
+            );
+            conversationHistory.push({
+              role: "assistant",
+              content: deleteExpiredMsg,
             });
           } else {
           var failedMatchCreate =
@@ -3373,6 +3554,7 @@
                   renderReadPanel("GET_MATCH_HISTORY", { matches: [existingRow] }, !!route.hostToken)
               );
               bindMatchRowUpdateButtons(dupWrap);
+              bindMatchRowDeleteButtons(dupWrap);
             } else {
               appendAssistant(calloutHtml);
             }
@@ -3646,6 +3828,201 @@
       });
     }
 
+    /**
+     * Bind per-row Delete buttons rendered by `renderMatches()` to a
+     * modal confirm flow. First click opens a dialog with an
+     * irreversible warning; Confirm fires DELETE through
+     * `submitBackendAction` (host-token wiring, window-expired branch,
+     * success plumbing). Cancel / backdrop / Escape close without
+     * deleting.
+     *
+     * Mirrors `bindMatchRowUpdateButtons` in structure and is called
+     * at every site that already calls that one.
+     */
+    var deleteConfirmModalEl = null;
+    var deleteConfirmPending = null;
+
+    function ensureDeleteConfirmModal() {
+      if (deleteConfirmModalEl) return deleteConfirmModalEl;
+
+      var modal = document.createElement("div");
+      modal.id = "match-delete-confirm-modal";
+      modal.className = "help-modal match-delete-modal";
+      modal.hidden = true;
+      modal.innerHTML =
+        '<div class="help-modal-backdrop" tabindex="-1" aria-hidden="true"></div>' +
+        '<div class="help-modal-card" role="dialog" aria-modal="true"' +
+        ' aria-labelledby="match-delete-modal-title">' +
+        '<div class="help-modal-header">' +
+        '<h2 id="match-delete-modal-title" class="help-modal-title"></h2>' +
+        '<button type="button" class="help-modal-close match-delete-modal-close"' +
+        ' aria-label="' +
+        escapeAttr(tr("deleteConfirmModalCloseAria") || "Close") +
+        '">&times;</button>' +
+        "</div>" +
+        '<div class="help-modal-body">' +
+        '<p class="match-delete-modal-warning"></p>' +
+        "</div>" +
+        '<div class="match-delete-modal-actions">' +
+        '<button type="button" class="btn-secondary match-delete-modal-cancel">' +
+        escapeHtml(tr("cancel") || "Cancel") +
+        "</button>" +
+        '<button type="button" class="btn-secondary match-delete-modal-confirm">' +
+        escapeHtml(tr("deleteConfirmAction") || "Confirm delete") +
+        "</button>" +
+        "</div>" +
+        "</div>";
+      document.body.appendChild(modal);
+
+      var backdrop = modal.querySelector(".help-modal-backdrop");
+      var closeBtn = modal.querySelector(".match-delete-modal-close");
+      var cancelBtn = modal.querySelector(".match-delete-modal-cancel");
+      var confirmBtn = modal.querySelector(".match-delete-modal-confirm");
+
+      function closeDeleteConfirmModal() {
+        if (!modal || modal.hidden) return;
+        modal.hidden = true;
+        document.body.style.overflow = "";
+        var focusEl =
+          deleteConfirmPending && deleteConfirmPending.returnFocus
+            ? deleteConfirmPending.returnFocus
+            : null;
+        deleteConfirmPending = null;
+        if (focusEl && typeof focusEl.focus === "function") {
+          try {
+            focusEl.focus();
+          } catch (_e) {
+            /* ignore */
+          }
+        }
+      }
+
+      function refreshDeleteConfirmModalCopy() {
+        var titleEl = modal.querySelector("#match-delete-modal-title");
+        var warningEl = modal.querySelector(".match-delete-modal-warning");
+        if (titleEl) {
+          titleEl.textContent =
+            tr("deleteConfirmModalTitle") || "Delete this match?";
+        }
+        if (warningEl) {
+          warningEl.textContent =
+            tr("deleteConfirmModalWarning") ||
+            "This action cannot be undone. The match will be permanently removed from league history and standings.";
+        }
+        if (closeBtn) {
+          closeBtn.setAttribute(
+            "aria-label",
+            tr("deleteConfirmModalCloseAria") || "Close"
+          );
+        }
+        if (cancelBtn) {
+          cancelBtn.textContent = tr("cancel") || "Cancel";
+        }
+        if (confirmBtn) {
+          confirmBtn.textContent =
+            tr("deleteConfirmAction") || "Confirm delete";
+        }
+      }
+
+      function openDeleteConfirmModal(deleteBtn, url) {
+        refreshDeleteConfirmModalCopy();
+        var cellWrap = deleteBtn.closest(".match-delete-wrap");
+        deleteConfirmPending = {
+          url: url,
+          anchorEl: cellWrap || deleteBtn,
+          returnFocus: deleteBtn,
+        };
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        if (cancelBtn && typeof cancelBtn.focus === "function") {
+          cancelBtn.focus();
+        }
+      }
+
+      backdrop.addEventListener("click", closeDeleteConfirmModal);
+      closeBtn.addEventListener("click", closeDeleteConfirmModal);
+      cancelBtn.addEventListener("click", closeDeleteConfirmModal);
+      confirmBtn.addEventListener("click", function () {
+        var pending = deleteConfirmPending;
+        if (!pending || !pending.url) return;
+        confirmBtn.disabled = true;
+        cancelBtn.disabled = true;
+        closeDeleteConfirmModal();
+        submitBackendAction(pending.anchorEl, "DELETE", pending.url, {});
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+      });
+
+      document.addEventListener("keydown", function (ev) {
+        if (!modal.hidden && ev.key === "Escape") {
+          ev.preventDefault();
+          closeDeleteConfirmModal();
+        }
+      });
+
+      deleteConfirmModalEl = modal;
+      deleteConfirmModalEl._openDeleteConfirmModal = openDeleteConfirmModal;
+      return deleteConfirmModalEl;
+    }
+
+    function bindMatchRowDeleteButtons(wrap) {
+      if (!wrap) return;
+      var panel = wrap.querySelector(".data-panel") || wrap;
+      var btns = panel.querySelectorAll(".btn-match-delete[data-delete-match-id]");
+      if (!btns.length && !panel.querySelectorAll(".match-delete-wrap--disabled").length) {
+        return;
+      }
+
+      var leagueId = route.leagueId;
+      var base = backendMainBase();
+      // Per-role URL routing for match deletes. Mirrors the Update
+      // button. An admin-page click on Delete is admin work and must
+      // hit the admin route; the player route is reserved for
+      // unauthenticated player calls (which the backend gates by the
+      // player-delete window). See
+      // `.cursor/rules/frontend-vanilla-conventions.mdc`.
+      var isAdminSession = !!route.hostToken;
+      var matchDeletePrefix = isAdminSession ? "/admin/leagues/" : "/leagues/";
+      var modalApi = ensureDeleteConfirmModal();
+      var openDeleteConfirmModal = modalApi._openDeleteConfirmModal;
+
+      function attachDeleteClick(deleteBtn) {
+        if (!deleteBtn || deleteBtn.disabled) return;
+        deleteBtn.addEventListener("click", function () {
+          var id = deleteBtn.getAttribute("data-delete-match-id");
+          if (!id) return;
+          var url =
+            base +
+            matchDeletePrefix +
+            encodeURIComponent(leagueId) +
+            "/matches/" +
+            encodeURIComponent(id);
+          openDeleteConfirmModal(deleteBtn, url);
+        });
+      }
+
+      btns.forEach(attachDeleteClick);
+
+      // Touch support for disabled buttons — mirrors the
+      // match-update-wrap--disabled handler above. Toggling
+      // --tip-open on the wrap forces the tooltip visible on tap.
+      var disabledWraps = panel.querySelectorAll(
+        ".match-delete-wrap--disabled"
+      );
+      disabledWraps.forEach(function (w) {
+        w.addEventListener("click", function (e) {
+          e.stopPropagation();
+          panel
+            .querySelectorAll(".match-delete-wrap--tip-open")
+            .forEach(function (other) {
+              if (other !== w)
+                other.classList.remove("match-delete-wrap--tip-open");
+            });
+          w.classList.toggle("match-delete-wrap--tip-open");
+        });
+      });
+    }
+
     /** Escape only the chars that break a quoted attribute filter ("..."). */
     function cssEscapeAttrValue(v) {
       return String(v == null ? "" : v).replace(/(["\\])/g, "\\$1");
@@ -3685,6 +4062,7 @@
           resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
         ) {
           bindMatchRowUpdateButtons(readWrap);
+          bindMatchRowDeleteButtons(readWrap);
         }
         return;
       }

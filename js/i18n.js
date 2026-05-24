@@ -267,6 +267,20 @@
           "This match can no longer be updated by players. Please ask your tennis group host to update it.",
         matchEditWindowExpired:
           "This match can no longer be edited — the player edit window has expired. Ask your group host to update it.",
+        deleteButton: "Delete",
+        deleteButtonDisabledTooltip:
+          "This match can no longer be deleted by players because it was recorded more than {minutes} minutes ago. Please ask your tennis group host to delete it.",
+        deleteButtonDisabledTooltipUnknownWindow:
+          "This match can no longer be deleted by players. Please ask your tennis group host to delete it.",
+        deleteConfirmAction: "Confirm delete",
+        deleteConfirmModalTitle: "Delete this match?",
+        deleteConfirmModalWarning:
+          "This action cannot be undone. The match will be permanently removed from league history and standings.",
+        deleteConfirmModalCloseAria: "Close",
+        cancel: "Cancel",
+        matchDeleted: "Match deleted.",
+        matchDeleteWindowExpired:
+          "This match can no longer be deleted — the player delete window has expired. Ask your group host to delete it.",
         vs: "vs",
         filterFor: "Showing results for {name}.",
         assistantForPlayer: "{title} for {name}",
@@ -644,6 +658,20 @@
           "이 경기는 더 이상 선수가 수정할 수 없습니다. 그룹 호스트에게 수정을 요청하세요.",
         matchEditWindowExpired:
           "수정 가능 시간이 지나 더 이상 이 경기를 수정할 수 없습니다. 그룹 호스트에게 수정을 요청하세요.",
+        deleteButton: "삭제",
+        deleteButtonDisabledTooltip:
+          "이 경기는 기록된 지 {minutes}분이 지나 더 이상 선수가 삭제할 수 없습니다. 그룹 호스트에게 삭제를 요청하세요.",
+        deleteButtonDisabledTooltipUnknownWindow:
+          "이 경기는 더 이상 선수가 삭제할 수 없습니다. 그룹 호스트에게 삭제를 요청하세요.",
+        deleteConfirmAction: "삭제 확인",
+        deleteConfirmModalTitle: "이 경기를 삭제할까요?",
+        deleteConfirmModalWarning:
+          "되돌릴 수 없습니다. 경기가 리그 기록과 순위에서 영구적으로 제거됩니다.",
+        deleteConfirmModalCloseAria: "닫기",
+        cancel: "취소",
+        matchDeleted: "경기가 삭제되었습니다.",
+        matchDeleteWindowExpired:
+          "삭제 가능 시간이 지나 더 이상 이 경기를 삭제할 수 없습니다. 그룹 호스트에게 삭제를 요청하세요.",
         vs: "vs",
         filterFor: "{name}에 대한 결과를 표시합니다.",
         assistantForPlayer: "{name} — {title}",
