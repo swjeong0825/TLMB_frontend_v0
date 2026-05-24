@@ -1118,6 +1118,75 @@ table.data th.standings-metric-rank {
   margin-top: 0.35rem;
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+ * Per-row "Update" button on match history panels.
+ *
+ * Shape and behavior mirror `.roster-remove-wrap` so we get a single
+ * hover/focus/touch tooltip pattern for "this action is disabled, here
+ * is why" across the whole UI. The wrap is the positioned anchor for
+ * the absolute tooltip; the tooltip only becomes visible on hover,
+ * focus, focus-within, or the JS-toggled --tip-open class (touch).
+ * ───────────────────────────────────────────────────────────────────── */
+
+.col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.match-row-actions {
+  position: relative;
+}
+
+.match-update-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.match-update-wrap--disabled {
+  cursor: help;
+}
+
+.match-update-wrap--disabled .btn-match-update:disabled {
+  pointer-events: none;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.match-update-tip {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  width: max-content;
+  max-width: min(20rem, 80vw);
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  box-sizing: border-box;
+}
+
+.match-update-wrap--disabled:hover .match-update-tip,
+.match-update-wrap--disabled:focus .match-update-tip,
+.match-update-wrap--disabled:focus-within .match-update-tip,
+.match-update-wrap--disabled.match-update-wrap--tip-open .match-update-tip {
+  opacity: 1;
+  visibility: visible;
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--muted);

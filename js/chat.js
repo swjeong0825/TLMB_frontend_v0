@@ -26,6 +26,26 @@
     return d.innerHTML;
   }
 
+  /**
+   * Module-scoped cache of the league's player-edit window (seconds).
+   *
+   * Surfaced by `GET /leagues/{id}/roster.player_score_edit_window_seconds`
+   * and refreshed by `mountChat()` after the roster loads. Used by
+   * `renderMatches()` to compute whether the per-row "Update" button is
+   * still enabled for a non-admin caller. Defaults to null until the
+   * roster comes back; treat null as "unknown → assume enabled" so we
+   * don't flash a disabled button on slow networks (the backend still
+   * enforces the gate authoritatively on submit).
+   */
+  var _playerEditWindowSeconds = null;
+  function getPlayerEditWindowSeconds() {
+    return _playerEditWindowSeconds;
+  }
+  function setPlayerEditWindowSeconds(secs) {
+    _playerEditWindowSeconds =
+      typeof secs === "number" && isFinite(secs) && secs >= 0 ? secs : null;
+  }
+
   function tr(key, params) {
     var I = window.TLCHAT_I18N;
     if (!I || typeof I.t !== "function") return "";
@@ -132,6 +152,17 @@
       if (typeof o.message === "string" && o.message.trim()) return o.message.trim();
       var d = humanDetailFromHttpBody(text);
       if (d) return d;
+      // Anti-leak: a JSON success body with no human-readable
+      // `message` / `detail` field is almost always ID-shaped
+      // (e.g. `{match_id, team_id}`). Returning the raw stringified
+      // body would dump those IDs into a "Done." callout, which
+      // violates the "Never surface technical IDs in user-visible
+      // UI" rule in `frontend/AGENTS.md`. Fall back to the localised
+      // generic success line instead. If a future endpoint genuinely
+      // needs to show structured success data, route it through a
+      // bespoke renderer (mirror `isMatchCreationCall` /
+      // `isMatchEditCall`) — do **not** weaken this fallback.
+      return tr("changesSaved") || "Changes were saved.";
     }
     var plain = (text || "").trim();
     if (!plain) return tr("changesSaved") || "Changes were saved.";
@@ -241,12 +272,17 @@
       var data = JSON.parse(text);
       var leagueTitle =
         data && typeof data.title === "string" ? data.title.trim() : "";
+      var windowSecs =
+        data && typeof data.player_score_edit_window_seconds === "number"
+          ? data.player_score_edit_window_seconds
+          : null;
       return {
         ok: true,
         title: leagueTitle,
         rules: data && typeof data.rules === "object" && data.rules !== null ? data.rules : null,
         players: Array.isArray(data.players) ? data.players : [],
         teams: Array.isArray(data.teams) ? data.teams : [],
+        player_score_edit_window_seconds: windowSecs,
       };
     } catch (e) {
       return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };
@@ -510,6 +546,29 @@
     return /\/matches$/.test(withoutQuery);
   }
 
+  /**
+   * Match-score-edit PATCH detector. Covers both the player route
+   * (`/leagues/{lid}/matches/{mid}`) and the admin route
+   * (`/admin/leagues/{lid}/matches/{mid}`); both endpoints share
+   * `EditMatchScoreResponse`, which is ID-shaped — see AGENTS.md
+   * "Never surface technical IDs in user-visible UI". The submit
+   * success branch keys off this helper to render a localised
+   * callout + a synthetic single-row history panel instead of the
+   * raw response body.
+   */
+  function isMatchEditCall(method, url) {
+    if (method !== "PATCH" || typeof url !== "string") return false;
+    var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
+    return /\/matches\/[^/]+$/.test(withoutQuery);
+  }
+
+  function extractMatchIdFromEditUrl(url) {
+    if (typeof url !== "string") return "";
+    var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
+    var m = withoutQuery.match(/\/matches\/([^/]+)$/);
+    return m ? decodeURIComponent(m[1]) : "";
+  }
+
   function responseLooksLikeStaticHtml(text) {
     var t = (text || "").slice(0, 500);
     return /^\s*</.test(t) && (/<!DOCTYPE/i.test(t) || /<html[\s>]/i.test(t));
@@ -525,8 +584,37 @@
     );
   }
 
+  /**
+   * Returns true when the request must require `X-Host-Token` —
+   * i.e. the URL targets an `/admin/` route. The frontend will refuse
+   * to submit these without a token in scope.
+   */
   function needsHostTokenForUrl(url) {
     return typeof url === "string" && url.indexOf("/admin/") !== -1;
+  }
+
+  /**
+   * Returns true when we *should attach* `X-Host-Token` to the
+   * outgoing request.
+   *
+   * Contract: the token is attached iff the URL targets an `/admin/*`
+   * route. Player routes never receive the token — by design, so the
+   * "admin work hits admin URL, player work hits player URL" rule
+   * stays crisp (no silently-promoted player requests). The frontend
+   * is responsible for routing admin-page write actions to the
+   * `/admin/` URL in the first place; this helper just decides
+   * whether to add the header to a URL someone has already built.
+   *
+   * Kept as a separate function from `needsHostTokenForUrl` (which is
+   * a guard that refuses to submit when the token is missing) because
+   * "should attach" and "must have" are conceptually different — the
+   * guard is enforced before submit, this helper runs at the moment
+   * headers are built.
+   */
+  function shouldAttachHostTokenForUrl(url, hostToken) {
+    if (!hostToken) return false;
+    if (typeof url !== "string" || !url) return false;
+    return url.indexOf("/admin/") !== -1;
   }
 
   /** Aligns with backend PlayerNickname: trim + lowercase. */
@@ -1011,11 +1099,91 @@
     return h + "</tbody></table></div>";
   }
 
-  function renderMatches(data) {
+  /**
+   * Returns the Actions-cell HTML for a single match row, OR an empty
+   * string when no Update button should be rendered (e.g. the row has
+   * no `match_id` so we can't build a PATCH URL).
+   *
+   * Behaviour matrix:
+   *   admin  | within window | -> Update enabled
+   *   admin  | past window   | -> Update enabled (admin bypasses)
+   *   player | within window | -> Update enabled
+   *   player | past window   | -> Update DISABLED + tooltip
+   *   anyone | no created_at | -> Update DISABLED (server can't compute age,
+   *                               so be conservative; admin would also need
+   *                               created_at to confirm the row anyway)
+   *   anyone | window unknown| -> Update enabled (server is the source of
+   *                               truth on submit, so be permissive on UI
+   *                               while the roster fetch is in flight)
+   */
+  function renderMatchRowUpdateAction(match, isAdmin) {
+    if (!match || !match.match_id) return "";
+    var btnLabel = tr("updateButton") || "Update";
+    var matchId = String(match.match_id);
+    var windowSecs = getPlayerEditWindowSeconds();
+
+    var disabled = false;
+    if (!isAdmin) {
+      if (!match.created_at) {
+        disabled = true;
+      } else if (windowSecs != null) {
+        var ageMs = Date.now() - Date.parse(String(match.created_at));
+        if (!isFinite(ageMs) || ageMs / 1000 > windowSecs) {
+          disabled = true;
+        }
+      }
+    }
+
+    if (!disabled) {
+      return (
+        '<span class="match-update-wrap">' +
+        '<button type="button" class="btn-secondary btn-edit-row btn-match-update"' +
+        ' data-update-match-id="' + escapeAttr(matchId) + '"' +
+        ' aria-label="' + escapeAttr(btnLabel) + '">' +
+        escapeHtml(btnLabel) +
+        "</button>" +
+        "</span>"
+      );
+    }
+
+    // Disabled path: build the tooltip text from i18n + minutes derived
+    // from windowSecs. The {minutes} template lets the locale string
+    // place the number naturally in either language.
+    var minutes =
+      windowSecs != null ? Math.max(1, Math.round(windowSecs / 60)) : null;
+    var tooltipMsg =
+      minutes != null
+        ? tr("updateButtonDisabledTooltip", { minutes: String(minutes) })
+        : tr("updateButtonDisabledTooltipUnknownWindow") ||
+          "This match can no longer be updated by players. Please ask your tennis group host.";
+    if (!tooltipMsg) {
+      tooltipMsg =
+        "This match can no longer be updated by players. Please ask your tennis group host.";
+    }
+
+    return (
+      '<span class="match-update-wrap match-update-wrap--disabled" tabindex="0">' +
+      '<button type="button" class="btn-secondary btn-edit-row btn-match-update" disabled' +
+      ' aria-label="' + escapeAttr(btnLabel) + '">' +
+      escapeHtml(btnLabel) +
+      "</button>" +
+      '<span class="match-update-tip" role="tooltip">' +
+      escapeHtml(tooltipMsg) +
+      "</span>" +
+      "</span>"
+    );
+  }
+
+  function renderMatches(data, isAdmin) {
     var rows = data.matches || [];
     if (!rows.length) {
       return "<p class=\"hint\">" + escapeHtml(tr("matchesEmpty") || "No matches recorded.") + "</p>";
     }
+    // We only render the Actions column when at least one row carries a
+    // `match_id`. Older call sites that pass synthetic rows without ids
+    // (e.g. the previous post-submit success branch) thus keep their
+    // existing 3-column shape.
+    var hasAnyId = rows.some(function (m) { return m && m.match_id; });
     var h =
       "<table class=\"data\"><thead><tr><th>" +
       escapeHtml(tr("tableTeams") || "Teams") +
@@ -1023,13 +1191,39 @@
       escapeHtml(tr("tableScore") || "Score") +
       "</th><th>" +
       escapeHtml(tr("tableWhen") || "When") +
-      "</th></tr></thead><tbody>";
+      "</th>" +
+      (hasAnyId
+        ? "<th class=\"col-actions\">" +
+          escapeHtml(tr("tableActions") || "Actions") +
+          "</th>"
+        : "") +
+      "</tr></thead><tbody>";
     rows.forEach(function (m) {
       var t1 = escapeHtml(m.team1_player1_nickname) + " + " + escapeHtml(m.team1_player2_nickname);
       var t2 = escapeHtml(m.team2_player1_nickname) + " + " + escapeHtml(m.team2_player2_nickname);
       var when = m.created_at ? formatWhen(m.created_at) : escapeHtml(tr("emDash") || "—");
+      var matchId = m.match_id ? String(m.match_id) : "";
+      // Stash the row's domain payload as data-* so a successful
+      // PATCH can rebuild the row's synthetic match record without
+      // re-fetching history or surfacing the response body (which is
+      // ID-shaped — see AGENTS.md "Never surface technical IDs in
+      // user-visible UI"). Only attached when we have a match_id;
+      // synthetic rows without ids stay 3-column and never offer
+      // Update, so they don't need the metadata.
+      var rowDataAttrs = matchId
+        ? " data-match-row-id=\"" + escapeAttr(matchId) + "\"" +
+          (m.created_at
+            ? " data-match-created-at=\"" + escapeAttr(String(m.created_at)) + "\""
+            : "") +
+          " data-team1-p1=\"" + escapeAttr(m.team1_player1_nickname || "") + "\"" +
+          " data-team1-p2=\"" + escapeAttr(m.team1_player2_nickname || "") + "\"" +
+          " data-team2-p1=\"" + escapeAttr(m.team2_player1_nickname || "") + "\"" +
+          " data-team2-p2=\"" + escapeAttr(m.team2_player2_nickname || "") + "\""
+        : "";
       h +=
-        "<tr><td>" +
+        "<tr class=\"match-row\"" +
+        rowDataAttrs +
+        "><td>" +
         t1 +
         " " +
         escapeHtml(tr("vs") || "vs") +
@@ -1041,7 +1235,13 @@
         escapeHtml(m.team2_score) +
         "</td><td>" +
         when +
-        "</td></tr>";
+        "</td>" +
+        (hasAnyId
+          ? "<td class=\"col-actions match-row-actions\">" +
+            renderMatchRowUpdateAction(m, !!isAdmin) +
+            "</td>"
+          : "") +
+        "</tr>";
     });
     return h + "</tbody></table>";
   }
@@ -1106,10 +1306,23 @@
           ? formatWhen(m.created_at)
           : escapeHtml(tr("emDash") || "—");
         var matchId = m.match_id || "";
+        // Same row-payload attrs as renderMatches so a post-PATCH
+        // success can reconstruct the row from this picker without
+        // surfacing IDs from the response. See "No technical IDs in
+        // user-visible UI" in AGENTS.md.
+        var pickerRowAttrs =
+          ' data-match-row-id="' + escapeAttr(matchId) + '"' +
+          (m.created_at
+            ? ' data-match-created-at="' + escapeAttr(String(m.created_at)) + '"'
+            : "") +
+          ' data-team1-p1="' + escapeAttr(m.team1_player1_nickname || "") + '"' +
+          ' data-team1-p2="' + escapeAttr(m.team1_player2_nickname || "") + '"' +
+          ' data-team2-p1="' + escapeAttr(m.team2_player1_nickname || "") + '"' +
+          ' data-team2-p2="' + escapeAttr(m.team2_player2_nickname || "") + '"';
         return (
-          '<tr class="match-picker-row" data-match-row-id="' +
-          escapeAttr(matchId) +
-          '">' +
+          '<tr class="match-picker-row"' +
+          pickerRowAttrs +
+          ">" +
           "<td>" +
           t1 +
           " " +
@@ -1281,7 +1494,7 @@
       inner = renderStandings(data);
     } else if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
-      inner = renderMatches(data);
+      inner = renderMatches(data, !!isAdmin);
     } else if (dataType === "GET_ROSTER") inner = renderRoster(data, !!isAdmin);
     else if (dataType === "HELP") inner = renderHelpPanel(data, !!isAdmin);
     else inner = renderFallbackData(data);
@@ -2003,6 +2216,11 @@
             leagueRoster.rules = result.rules || null;
             leagueRoster.status = "ok";
             leagueRoster.fetchedAt = Date.now();
+            // Cache the server-config player-edit window for the
+            // per-row Update button gate. Surfaced via GET /roster
+            // (not LeagueRules) since it's a deployment knob, not a
+            // per-league rule.
+            setPlayerEditWindowSeconds(result.player_score_edit_window_seconds);
             if (result.title != null && String(result.title).trim() !== "") {
               rememberLeagueTitle(route.leagueId, result.title);
             }
@@ -2889,7 +3107,15 @@
       if (hasJsonBody) {
         headers["Content-Type"] = "application/json";
       }
-      if (needsToken && route.hostToken) headers["X-Host-Token"] = route.hostToken;
+      // Attach the host token only when the URL targets an /admin/
+      // route. By the routing contract (see
+      // `.cursor/rules/frontend-vanilla-conventions.mdc` "Admin-page
+      // write actions target /admin/* URLs"), every admin action
+      // already builds an /admin/ URL upstream, so this is sufficient
+      // and avoids accidentally promoting a player-route call.
+      if (shouldAttachHostTokenForUrl(url, route.hostToken)) {
+        headers["X-Host-Token"] = route.hostToken;
+      }
 
       var btn = cardEl.querySelector("[data-submit-write]");
       if (btn) btn.disabled = true;
@@ -2905,6 +3131,7 @@
         var ok = res.ok;
         if (ok) {
           var matchCreation = isMatchCreationCall(method, url);
+          var matchEdit = !matchCreation && isMatchEditCall(method, url);
           if (matchCreation) {
             refreshLeagueRoster();
             var matchRecordedLine = tr("matchRecorded") || "Match recorded.";
@@ -2918,20 +3145,26 @@
             // straight from the form values the user just submitted, with the
             // same trim+lowercase normalization the backend applies, so the
             // row visually matches existing server-rendered history rows.
+            // `match_id` and `created_at` come from the server response so
+            // the per-row Update button can target a real URL and the
+            // window-gate math uses the DB-authoritative timestamp (not
+            // an unreliable client clock).
+            var serverResp = tryParseJson(txt) || {};
             var t1 = Array.isArray(payload.team1_nicknames) ? payload.team1_nicknames : [];
             var t2 = Array.isArray(payload.team2_nicknames) ? payload.team2_nicknames : [];
             var newMatchRecord = {
+              match_id: serverResp.match_id || null,
               team1_player1_nickname: normalizeMatchNickname(t1[0]),
               team1_player2_nickname: normalizeMatchNickname(t1[1]),
               team2_player1_nickname: normalizeMatchNickname(t2[0]),
               team2_player2_nickname: normalizeMatchNickname(t2[1]),
               team1_score: payload.team1_score,
               team2_score: payload.team2_score,
-              created_at: new Date().toISOString(),
+              created_at: serverResp.created_at || new Date().toISOString(),
             };
             removeLoadingBubble(loadingNode);
             loadingNode = null;
-            appendAssistant(
+            var submitOkWrap = appendAssistant(
               calloutHtml +
                 renderReadPanel(
                   "GET_MATCH_HISTORY",
@@ -2939,9 +3172,85 @@
                   !!route.hostToken
                 )
             );
+            bindMatchRowUpdateButtons(submitOkWrap);
             conversationHistory.push({
               role: "assistant",
               content: matchRecordedLine,
+            });
+          } else if (matchEdit) {
+            // Match-score-edit (PATCH) success. AGENTS.md hard rule:
+            // never surface technical IDs in user-visible UI. The
+            // backend's `EditMatchScoreResponse` is `{match_id,
+            // team1_score, team2_score}` — ID-shaped, never directly
+            // shown. Instead, reuse the post-create success UI: a
+            // localised callout + a single-row history panel built
+            // from (a) the new scores from the response/payload and
+            // (b) the row's domain payload (nicknames, created_at)
+            // recovered from the data-* attributes we stash on every
+            // .match-row / .match-picker-row in the page.
+            var editServerResp = tryParseJson(txt) || {};
+            var editedMatchId =
+              extractMatchIdFromEditUrl(url) ||
+              (editServerResp.match_id ? String(editServerResp.match_id) : "");
+            var newT1Score =
+              editServerResp.team1_score != null
+                ? String(editServerResp.team1_score)
+                : String(payload.team1_score == null ? "" : payload.team1_score);
+            var newT2Score =
+              editServerResp.team2_score != null
+                ? String(editServerResp.team2_score)
+                : String(payload.team2_score == null ? "" : payload.team2_score);
+            var origRow = editedMatchId
+              ? document.querySelector(
+                  '#messages [data-match-row-id="' +
+                    cssEscapeAttrValue(editedMatchId) +
+                    '"]'
+                )
+              : null;
+            var editedMatchRecord = {
+              match_id: editedMatchId || null,
+              team1_player1_nickname: origRow
+                ? origRow.getAttribute("data-team1-p1") || ""
+                : "",
+              team1_player2_nickname: origRow
+                ? origRow.getAttribute("data-team1-p2") || ""
+                : "",
+              team2_player1_nickname: origRow
+                ? origRow.getAttribute("data-team2-p1") || ""
+                : "",
+              team2_player2_nickname: origRow
+                ? origRow.getAttribute("data-team2-p2") || ""
+                : "",
+              team1_score: newT1Score,
+              team2_score: newT2Score,
+              // PATCH preserves created_at on the DB side; reuse the
+              // existing timestamp so the per-row Update button's
+              // window math stays consistent with the next history
+              // fetch. Falls back to "now" only if the row was
+              // somehow rendered without it (defensive — never expected).
+              created_at:
+                (origRow && origRow.getAttribute("data-match-created-at")) ||
+                new Date().toISOString(),
+            };
+            var matchUpdatedLine = tr("matchScoreUpdated") || "Match score updated.";
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
+            var editOkWrap = appendAssistant(
+              '<div class="response-callout response-callout-success"><strong>' +
+                escapeHtml(tr("done") || "Done.") +
+                "</strong> " +
+                escapeHtml(matchUpdatedLine) +
+                "</div>" +
+                renderReadPanel(
+                  "GET_MATCH_HISTORY",
+                  { matches: [editedMatchRecord] },
+                  !!route.hostToken
+                )
+            );
+            bindMatchRowUpdateButtons(editOkWrap);
+            conversationHistory.push({
+              role: "assistant",
+              content: matchUpdatedLine,
             });
           } else {
             var successLine = humanSuccessFromHttpBody(txt);
@@ -3010,6 +3319,31 @@
               content: rosterMembershipResult.headline || "",
             });
           } else {
+          // Player-edit window expired: backend returns 422 with
+          // error="MatchEditWindowExpiredError" when a non-admin tries
+          // to edit a too-old match. Surface a friendly explanation
+          // instead of the raw 422 technical line; no history refetch
+          // is needed because the row is already on screen.
+          var matchEditWindowExpired =
+            res.status === 422 &&
+            leagueApiJsonErrorCode(txt) === "MatchEditWindowExpiredError";
+          if (matchEditWindowExpired) {
+            var expiredMsg =
+              tr("matchEditWindowExpired") ||
+              "This match can no longer be edited (window expired).";
+            removeLoadingBubble(loadingNode);
+            loadingNode = null;
+            appendAssistant(
+              '<div class="response-callout response-callout-clarify"><strong>' +
+                escapeHtml(expiredMsg) +
+                "</strong></div>",
+              "msg-error"
+            );
+            conversationHistory.push({
+              role: "assistant",
+              content: expiredMsg,
+            });
+          } else {
           var failedMatchCreate =
             isMatchCreationCall(method, url) &&
             res.status === 409 &&
@@ -3034,10 +3368,11 @@
             removeLoadingBubble(loadingNode);
             loadingNode = null;
             if (existingRow) {
-              appendAssistant(
+              var dupWrap = appendAssistant(
                 calloutHtml +
                   renderReadPanel("GET_MATCH_HISTORY", { matches: [existingRow] }, !!route.hostToken)
               );
+              bindMatchRowUpdateButtons(dupWrap);
             } else {
               appendAssistant(calloutHtml);
             }
@@ -3050,6 +3385,7 @@
             loadingNode = null;
             appendErrorTechnical(technical, "League API error");
           }
+          } // close matchEditWindowExpired else block
           } // close rosterMembershipResult.isRosterMembershipRequired else block
         }
       } catch (e) {
@@ -3105,12 +3441,55 @@
       panel.querySelectorAll("[data-edit-match-id]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           var id = btn.getAttribute("data-edit-match-id");
-          toggleEditMatchScoreForm(panel, id, matchById[id], urlTemplate, method, bodySchema);
+          var url = urlTemplate.replace(
+            "{match_id}",
+            encodeURIComponent(String(id))
+          );
+          toggleEditMatchScoreForm(
+            panel,
+            id,
+            matchById[id],
+            url,
+            method,
+            bodySchema,
+            4 /* picker table has 4 columns */
+          );
         });
       });
     }
 
-    function toggleEditMatchScoreForm(panel, matchId, match, urlTemplate, method, bodySchema) {
+    /**
+     * Reusable inline edit-score form mounter.
+     *
+     * Originally only fired from `renderEditMatchScorePickerMessage`
+     * (the `EDIT_MATCH_SCORE` picker table). Now also fired from every
+     * per-row Update button in `renderMatches()` (post-submit success
+     * row, duplicate-match recovery row, full GET_MATCH_HISTORY).
+     *
+     * Args:
+     *   panel       DOM element that contains the anchor row (a
+     *               table/wrap; the form is inserted as a sibling
+     *               row immediately after the anchor).
+     *   matchId     UUID string used to find the anchor row by
+     *               `data-match-row-id` AND to interpolate into url.
+     *   match       Plain object carrying at least `team1_score` and
+     *               `team2_score` so the form prefills the current
+     *               values. Pass null/undefined to bail.
+     *   url         Fully-resolved PATCH URL (no `{match_id}`
+     *               placeholder remaining). Caller decides whether to
+     *               point at the player or admin endpoint; the route
+     *               handles X-Host-Token attachment via
+     *               `needsHostTokenForUrl`.
+     *   method      HTTP verb, almost always "PATCH".
+     *   bodySchema  `{field: {type, required}}` map driving the form
+     *               render. For the score-edit flow this is the
+     *               2-field score schema.
+     *   colspan     Column span for the inserted form row's <td>;
+     *               varies by table (picker has 4 cols, match
+     *               history has 3 or 4 depending on whether Actions
+     *               is rendered).
+     */
+    function toggleEditMatchScoreForm(panel, matchId, match, url, method, bodySchema, colspan) {
       var existing = panel.querySelector(".match-picker-edit-row[data-edit-row-id]");
       if (existing) {
         var existingId = existing.getAttribute("data-edit-row-id");
@@ -3119,7 +3498,7 @@
       }
       if (!match) return;
       var anchor = panel.querySelector(
-        '.match-picker-row[data-match-row-id="' + cssEscapeAttrValue(matchId) + '"]'
+        '[data-match-row-id="' + cssEscapeAttrValue(matchId) + '"]'
       );
       if (!anchor) return;
 
@@ -3139,11 +3518,12 @@
         };
       });
 
+      var cs = typeof colspan === "number" && colspan > 0 ? colspan : 4;
       var formRow = document.createElement("tr");
       formRow.className = "match-picker-edit-row";
       formRow.setAttribute("data-edit-row-id", matchId);
       formRow.innerHTML =
-        '<td colspan="4">' +
+        '<td colspan="' + cs + '">' +
         '<div class="action-card match-picker-edit-card">' +
         renderWriteForm(bodySpec) +
         '<button type="button" class="btn-secondary" data-submit-write>' +
@@ -3155,14 +3535,115 @@
 
       var card = formRow.querySelector(".match-picker-edit-card");
       var submitBtn = card.querySelector("[data-submit-write]");
-      var url = urlTemplate.replace(
-        "{match_id}",
-        encodeURIComponent(String(matchId))
-      );
       submitBtn.addEventListener("click", function () {
         submitBackendAction(card, method, url, bodySpec);
       });
       bindActionCardAutocomplete(card);
+    }
+
+    /**
+     * Default body schema for the score-edit form. Used by both the
+     * EDIT_MATCH_SCORE picker (which usually receives the same schema
+     * from the chat server) and the per-row Update button on any match
+     * history panel. Centralised so we don't accidentally drift between
+     * the two call paths.
+     */
+    var DEFAULT_EDIT_MATCH_SCORE_BODY_SCHEMA = {
+      team1_score: { type: "string", required: true },
+      team2_score: { type: "string", required: true },
+    };
+
+    /**
+     * Bind per-row Update buttons rendered by `renderMatches()` to the
+     * inline edit form. Called by every place that mounts a match
+     * history panel: the chat-response dispatcher, the post-submit
+     * success branch, and the duplicate-match recovery branch.
+     *
+     * `wrap` is the DOM node returned by `appendAssistant(...)`.
+     */
+    function bindMatchRowUpdateButtons(wrap) {
+      if (!wrap) return;
+      var panel = wrap.querySelector(".data-panel") || wrap;
+      var btns = panel.querySelectorAll(".btn-match-update[data-update-match-id]");
+      if (!btns.length) return;
+
+      // Index the rendered rows by match_id so we can extract the
+      // current scores when the user opens the form (the row's DOM is
+      // the source of truth; no need to keep a parallel JS cache).
+      function rowDataForMatchId(id) {
+        var row = panel.querySelector(
+          '.match-row[data-match-row-id="' + cssEscapeAttrValue(id) + '"]'
+        );
+        if (!row) return null;
+        var scoreCell = row.querySelectorAll("td")[1];
+        if (!scoreCell) return null;
+        var parts = scoreCell.textContent.split("\u2013"); // en-dash
+        if (parts.length !== 2) parts = scoreCell.textContent.split("-");
+        return {
+          team1_score: (parts[0] || "").trim(),
+          team2_score: (parts[1] || "").trim(),
+        };
+      }
+
+      var leagueId = route.leagueId;
+      var base = backendMainBase();
+      // Per-role URL routing for match-score edits. An admin-page
+      // click on Update is admin work and must hit the admin route;
+      // the player route is reserved for unauthenticated player
+      // submissions (which the backend gates by the player-edit
+      // window). See `.cursor/rules/frontend-vanilla-conventions.mdc`
+      // "Admin-page write actions target /admin/* URLs".
+      var isAdminSession = !!route.hostToken;
+      var matchEditPrefix = isAdminSession ? "/admin/leagues/" : "/leagues/";
+
+      btns.forEach(function (btn) {
+        if (btn.disabled) return;
+        btn.addEventListener("click", function () {
+          var id = btn.getAttribute("data-update-match-id");
+          if (!id) return;
+          var match = rowDataForMatchId(id);
+          if (!match) return;
+          var url =
+            base +
+            matchEditPrefix +
+            encodeURIComponent(leagueId) +
+            "/matches/" +
+            encodeURIComponent(id);
+          // Match history table has 3 or 4 columns; renderMatches
+          // adds Actions only when at least one row has an id (which
+          // is true here, otherwise we wouldn't have a button to
+          // click). Colspan = 4 covers it.
+          toggleEditMatchScoreForm(
+            panel.querySelector("table.data") || panel,
+            id,
+            match,
+            url,
+            "PATCH",
+            DEFAULT_EDIT_MATCH_SCORE_BODY_SCHEMA,
+            4
+          );
+        });
+      });
+
+      // Touch support for disabled buttons (modeled on the
+      // roster-remove-tip pattern). Toggling --tip-open on the wrap
+      // forces the tooltip visible on tap; tapping elsewhere closes it.
+      var disabledWraps = panel.querySelectorAll(
+        ".match-update-wrap--disabled"
+      );
+      disabledWraps.forEach(function (w) {
+        w.addEventListener("click", function (e) {
+          e.stopPropagation();
+          // Close other open tips first so only one is visible at a time.
+          panel
+            .querySelectorAll(".match-update-wrap--tip-open")
+            .forEach(function (other) {
+              if (other !== w)
+                other.classList.remove("match-update-wrap--tip-open");
+            });
+          w.classList.toggle("match-update-wrap--tip-open");
+        });
+      });
     }
 
     /** Escape only the chars that break a quoted attribute filter ("..."). */
@@ -3198,7 +3679,13 @@
 
       if (READ_TYPES[resp.data_type]) {
         parts.push(renderReadPanel(resp.data_type, resp.data || {}, !!route.hostToken));
-        appendAssistant(parts.join(""));
+        var readWrap = appendAssistant(parts.join(""));
+        if (
+          resp.data_type === "GET_MATCH_HISTORY" ||
+          resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
+        ) {
+          bindMatchRowUpdateButtons(readWrap);
+        }
         return;
       }
 

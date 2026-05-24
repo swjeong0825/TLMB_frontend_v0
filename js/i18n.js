@@ -259,6 +259,14 @@
         tableTeams: "Teams",
         tableScore: "Score",
         tableWhen: "When",
+        tableActions: "Actions",
+        updateButton: "Update",
+        updateButtonDisabledTooltip:
+          "This match can no longer be updated by players because it was recorded more than {minutes} minutes ago. Please ask your tennis group host to update it.",
+        updateButtonDisabledTooltipUnknownWindow:
+          "This match can no longer be updated by players. Please ask your tennis group host to update it.",
+        matchEditWindowExpired:
+          "This match can no longer be edited — the player edit window has expired. Ask your group host to update it.",
         vs: "vs",
         filterFor: "Showing results for {name}.",
         assistantForPlayer: "{title} for {name}",
@@ -349,6 +357,7 @@
         done: "Done.",
         actionCompleted: "Action completed:",
         matchRecorded: "Match recorded.",
+        matchScoreUpdated: "Match score updated.",
         matchAlreadyExists: "Match already exists. Record Not Saved",
         submitToLeague: "Submit to league API",
         adminUrlWarn:
@@ -627,6 +636,14 @@
         tableTeams: "팀",
         tableScore: "점수",
         tableWhen: "일시",
+        tableActions: "동작",
+        updateButton: "수정",
+        updateButtonDisabledTooltip:
+          "이 경기는 기록된 지 {minutes}분이 지나 더 이상 선수가 수정할 수 없습니다. 그룹 호스트에게 수정을 요청하세요.",
+        updateButtonDisabledTooltipUnknownWindow:
+          "이 경기는 더 이상 선수가 수정할 수 없습니다. 그룹 호스트에게 수정을 요청하세요.",
+        matchEditWindowExpired:
+          "수정 가능 시간이 지나 더 이상 이 경기를 수정할 수 없습니다. 그룹 호스트에게 수정을 요청하세요.",
         vs: "vs",
         filterFor: "{name}에 대한 결과를 표시합니다.",
         assistantForPlayer: "{name} — {title}",
@@ -715,6 +732,7 @@
         done: "완료.",
         actionCompleted: "작업 완료:",
         matchRecorded: "경기가 기록되었습니다.",
+        matchScoreUpdated: "경기 점수가 수정되었습니다.",
         matchAlreadyExists: "해당 팀들의 경기가 이미 있습니다.",
         submitToLeague: "리그 API로 전송",
         adminUrlWarn:
