@@ -805,6 +805,8 @@
       escapeHtml(tr("tableW") || "W") +
       "</th><th>" +
       escapeHtml(tr("tableL") || "L") +
+      "</th><th>" +
+      escapeHtml(tr("tableD") || "D") +
       "</th>";
     var hi;
     for (hi = 0; hi < metricKeys.length; hi++) {
@@ -835,6 +837,8 @@
         escapeHtml(r.wins) +
         "</td><td>" +
         escapeHtml(r.losses) +
+        "</td><td>" +
+        escapeHtml(r.draws == null ? 0 : r.draws) +
         "</td>";
       var ci;
       for (ci = 0; ci < metricKeys.length; ci++) {
