@@ -95,7 +95,8 @@
                 </button>
               </span>
               <select name="match_pair_idempotency">
-                <option value="once_per_league" selected data-i18n="createLeague.optionOncePerLeague"></option>
+                <option value="once_per_day" selected data-i18n="createLeague.optionOncePerDay"></option>
+                <option value="once_per_league" data-i18n="createLeague.optionOncePerLeague"></option>
                 <option value="none" data-i18n="createLeague.optionAllowMultiple"></option>
               </select>
             </label>
@@ -154,6 +155,21 @@
                 maxlength="2000"
                 data-i18n-placeholder="createLeague.placeholderDescription"
               ></textarea>
+            </label>
+            <label>
+              <span class="field-label-with-help">
+                <span data-i18n="createLeague.labelLeagueTimezone"></span>
+                <button
+                  type="button"
+                  class="help-icon"
+                  data-help-key="leagueTimezone"
+                  aria-haspopup="dialog"
+                  data-i18n-aria-label="createLeague.help.leagueTimezoneAria"
+                >
+                  ?
+                </button>
+              </span>
+              <select name="league_timezone" data-league-timezone-select></select>
             </label>
             <div class="roster-field">
               <span class="field-label-with-help roster-label-row">

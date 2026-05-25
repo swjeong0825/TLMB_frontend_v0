@@ -17,6 +17,46 @@
     return u.replace(/\/$/, "");
   }
 
+  var DEFAULT_LEAGUE_TIMEZONE = "America/Los_Angeles";
+  var LEAGUE_TIMEZONE_OPTIONS = [
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Chicago",
+    "America/New_York",
+    "America/Phoenix",
+    "America/Anchorage",
+    "Pacific/Honolulu",
+    "Asia/Seoul",
+    "UTC",
+  ];
+
+  function browserTimezone() {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return tz || DEFAULT_LEAGUE_TIMEZONE;
+    } catch (_e) {
+      return DEFAULT_LEAGUE_TIMEZONE;
+    }
+  }
+
+  function setupLeagueTimezoneSelect(form) {
+    var select = form.querySelector("[data-league-timezone-select]");
+    if (!select) return;
+
+    var preferred = browserTimezone();
+    var options = LEAGUE_TIMEZONE_OPTIONS.slice();
+    if (options.indexOf(preferred) === -1) options.unshift(preferred);
+
+    while (select.firstChild) select.removeChild(select.firstChild);
+    for (var i = 0; i < options.length; i++) {
+      var opt = document.createElement("option");
+      opt.value = options[i];
+      opt.textContent = options[i];
+      select.appendChild(opt);
+    }
+    select.value = preferred;
+  }
+
   function technicalFromResponse(status, bodyText) {
     var t = String(status || "") + " " + String(bodyText || "");
     try {
@@ -98,8 +138,13 @@
     );
     var tieBreakers = collectTieBreakers(form);
     if (!tieBreakers.length) tieBreakers = ["games_won"];
+    var leagueTimezone =
+      form.league_timezone && form.league_timezone.value
+        ? form.league_timezone.value
+        : DEFAULT_LEAGUE_TIMEZONE;
+    payload.league_timezone = leagueTimezone;
     payload.rules = {
-      version: 6,
+      version: 7,
       match_pair_idempotency: mpi,
       one_team_per_player: otpp,
       ranking_subject: subject,
@@ -136,6 +181,7 @@
 
   var HELP_KEYS = {
     matchPair: true,
+    leagueTimezone: true,
     oneTeamPerPlayer: true,
     rankingSubject: true,
     tieBreakers: true,
@@ -396,6 +442,7 @@
       });
     }
 
+    setupLeagueTimezoneSelect(form);
     setupInitialPlayersChips(form);
 
     document.body.addEventListener("click", function (ev) {

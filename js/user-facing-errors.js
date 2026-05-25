@@ -95,6 +95,9 @@
       low.indexOf("duplicateteampairmatcherror") !== -1 ||
       low.indexOf("a match between these two teams already exists") !== -1
     ) {
+      if (low.indexOf("already exists today") !== -1) {
+        return t("errors.duplicateMatchToday") || genericMessage();
+      }
       return t("errors.duplicateMatch") || genericMessage();
     }
 

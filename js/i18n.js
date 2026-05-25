@@ -81,10 +81,12 @@
         placeholderDescription: "Shown to organisers; optional.",
         advancedSummary: "Advanced options",
         advancedHint:
-          "Optional description, one-team-only restriction, auto-register behaviour, and extra tie-breaker columns.",
-        labelMatchPair: "Allow Rematches",
-        optionOncePerLeague: "No — just one match per pair of teams (recommended)",
-        optionAllowMultiple: "Yes — the same two teams can play multiple matches",
+          "Optional description, league timezone, one-team-only restriction, auto-register behaviour, and extra tie-breaker columns.",
+        labelMatchPair: "Rematch rule",
+        optionOncePerDay: "Once per day — recommended",
+        optionOncePerLeague: "Once per league",
+        optionAllowMultiple: "Unlimited rematches",
+        labelLeagueTimezone: "League timezone",
         oneTeamPerPlayer: "One team per player",
         labelOneTeamPerPlayer: "Can a player be on more than one team?",
         labelOneTeamPerPlayerToggle: "One team per player",
@@ -124,7 +126,11 @@
           matchPairAria: "Help: same two teams playing more than once",
           matchPairTitle: "Same two teams, more than one match?",
           matchPairBody:
-            "By default, each pair of teams plays one match in your league. Choosing \u201cYes\u201d lets the same two teams play again and have every result count in the table.\n\nNo (recommended): The bot won\u2019t record a second match between the same two teams. If you meant to fix a score, edit the match you already entered.\n\nYes: You can log as many matches between the same pair as you need.\n\nPick this when you create the league. Changing it later, after results exist, can get confusing.",
+            "By default, the same two teams can play once per league day. That keeps accidental double-submits out while still allowing a rematch tomorrow.\n\nOnce per day (recommended): one match per pair of teams on each league-local calendar day.\n\nOnce per league: the same two teams can only have one match for the whole league.\n\nUnlimited rematches: every submitted match counts.",
+          leagueTimezoneAria: "Help: league timezone",
+          leagueTimezoneTitle: "Which day does a match belong to?",
+          leagueTimezoneBody:
+            "The once-per-day rematch rule uses this timezone to decide where each calendar day starts and ends.\n\nBy default, the form picks your browser timezone. Existing and omitted values default to America/Los_Angeles.",
           oneTeamPerPlayerAria: "Help: players on multiple teams",
           oneTeamPerPlayerTitle: "Can someone be on more than one team?",
           oneTeamPerPlayerBody:
@@ -177,8 +183,10 @@
           "We couldn’t find a match between those teams. Check the four nicknames, or browse the full match list for this league.",
         notFoundFallback:
           "We couldn’t find what you asked for. Double-check spelling and names, or try asking in another way.",
+        duplicateMatchToday:
+          "Those two teams already have a match today. Edit the existing result if you meant to change the score, or try again on another league day.",
         duplicateMatch:
-          "This league only allows one match per pair of teams, and those two teams already have a match. Edit the existing result if you meant to change the score, or use different players if it was a new matchup.",
+          "This league only allows one match per pair of teams, and those two teams already have a match in this league.",
         invalidLeagueRules:
           "Those choices don\u2019t fit together. Individual-player standings need people on several teams. Either allow players on multiple teams, or switch standings back to teams.",
         titleExists: "A league with this title already exists. Try a different name.",
@@ -372,7 +380,9 @@
         actionCompleted: "Action completed:",
         matchRecorded: "Match recorded.",
         matchScoreUpdated: "Match score updated.",
-        matchAlreadyExists: "Match already exists. Record Not Saved",
+        matchAlreadyExistsToday: "Those two teams already have a match today. Record not saved.",
+        matchAlreadyExistsInLeague: "Those two teams already have a match in this league. Record not saved.",
+        matchAlreadyExists: "Match already exists. Record not saved.",
         submitToLeague: "Submit to league API",
         adminUrlWarn:
           "This write targets an admin endpoint. Use the Admin URL with <code>X-Host-Token</code>.",
@@ -477,10 +487,12 @@
         placeholderDescription: "주최자에게 보입니다. 선택 사항입니다.",
         advancedSummary: "고급 옵션",
         advancedHint:
-          "선택 설명, 팀 소속 제한, 자동 등록 동작, 추가 동률 처리 기준입니다.",
-        labelMatchPair: "재경기 허용",
-        optionOncePerLeague: "아니요 — 팀 쌍당 경기는 한 번만(권장)",
-        optionAllowMultiple: "예 — 같은 두 팀이 여러 경기를 치를 수 있어요",
+          "선택 설명, 리그 시간대, 팀 소속 제한, 자동 등록 동작, 추가 동률 처리 기준입니다.",
+        labelMatchPair: "재경기 규칙",
+        optionOncePerDay: "하루에 한 번 — 권장",
+        optionOncePerLeague: "리그 전체에서 한 번",
+        optionAllowMultiple: "재경기 제한 없음",
+        labelLeagueTimezone: "리그 시간대",
         oneTeamPerPlayer: "플레이어당 팀 하나",
         labelOneTeamPerPlayer: "한 사람이 여러 팀에 들어갈 수 있나요?",
         labelOneTeamPerPlayerToggle: "플레이어당 팀 하나",
@@ -520,7 +532,11 @@
           matchPairAria: "도움말: 같은 두 팀의 재경기",
           matchPairTitle: "같은 두 팀, 여러 번 경기?",
           matchPairBody:
-            "기본값은 팀 한 쌍당 경기가 한 번이에요. \u201c예\u201d를 고르면 같은 두 팀이 다시 붙어도 결과가 표에 따로 쌓여요.\n\n아니요(권장): 이미 붙은 두 팀의 두 번째 경기는 기록되지 않아요. 점수만 고치려면 기존 경기를 수정하세요.\n\n예: 같은 조합으로 경기를 여러 번 남길 수 있어요.\n\n리그를 만들 때 정하는 편이 좋아요. 경기가 쌓인 뒤에 바꾸면 헷갈릴 수 있어요.",
+            "기본값은 같은 두 팀이 리그 날짜 기준으로 하루에 한 번만 경기할 수 있는 방식이에요. 실수로 두 번 제출하는 일은 막고, 다음 날 재경기는 허용합니다.\n\n하루에 한 번(권장): 리그 시간대의 같은 날짜에는 팀 쌍당 경기 하나만 기록돼요.\n\n리그 전체에서 한 번: 같은 두 팀은 리그 전체에서 한 경기만 기록돼요.\n\n재경기 제한 없음: 제출된 모든 경기가 순위표에 반영돼요.",
+          leagueTimezoneAria: "도움말: 리그 시간대",
+          leagueTimezoneTitle: "경기가 어느 날짜에 속하나요?",
+          leagueTimezoneBody:
+            "하루에 한 번 재경기 규칙은 이 시간대를 기준으로 날짜의 시작과 끝을 계산합니다.\n\n기본값은 브라우저 시간대입니다. 기존 리그나 값이 생략된 경우 America/Los_Angeles로 저장됩니다.",
           oneTeamPerPlayerAria: "도움말: 여러 팀에 속한 플레이어",
           oneTeamPerPlayerTitle: "한 사람이 여러 팀에 들어갈 수 있나요?",
           oneTeamPerPlayerBody:
@@ -571,8 +587,10 @@
           "해당 팀들 사이의 경기를 찾지 못했습니다. 네 닉네임을 확인하거나 이 리그의 전체 경기 목록을 찾아보세요.",
         notFoundFallback:
           "요청하신 내용을 찾지 못했습니다. 철자와 이름을 다시 확인하거나 다른 방식으로 질문해 보세요.",
+        duplicateMatchToday:
+          "오늘은 이미 이 두 팀의 경기가 기록되어 있어요. 점수만 바꾸려면 기존 결과를 수정하고, 다른 리그 날짜에 다시 기록하세요.",
         duplicateMatch:
-          "이 리그는 팀 쌍당 경기를 한 번만 허용하며, 해당 두 팀의 경기가 이미 있습니다. 점수만 바꾸려면 기존 결과를 수정하고, 새로운 대결이면 다른 선수 조합을 사용하세요.",
+          "이 리그는 팀 쌍당 경기를 한 번만 허용하며, 해당 두 팀의 경기가 리그에 이미 있습니다.",
         invalidLeagueRules:
           "이 조합은 함께 쓸 수 없어요. 개인 순위를 쓰려면 한 사람이 여러 팀에 들어갈 수 있어야 해요. 여러 팀을 허용하거나, 순위를 다시 \u201c팀\u201d으로 바꿔 보세요.",
         titleExists: "이미 같은 제목의 리그가 있습니다. 다른 이름을 사용해 보세요.",
@@ -761,7 +779,9 @@
         actionCompleted: "작업 완료:",
         matchRecorded: "경기가 기록되었습니다.",
         matchScoreUpdated: "경기 점수가 수정되었습니다.",
-        matchAlreadyExists: "해당 팀들의 경기가 이미 있습니다.",
+        matchAlreadyExistsToday: "오늘은 해당 두 팀의 경기가 이미 있습니다. 기록되지 않았습니다.",
+        matchAlreadyExistsInLeague: "이 리그에는 해당 두 팀의 경기가 이미 있습니다. 기록되지 않았습니다.",
+        matchAlreadyExists: "경기가 이미 있습니다. 기록되지 않았습니다.",
         submitToLeague: "리그 API로 전송",
         adminUrlWarn:
           "이 작업은 관리자 엔드포인트입니다. <code>X-Host-Token</code>이 있는 관리자 URL을 사용하세요.",

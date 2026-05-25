@@ -3536,7 +3536,14 @@
             var t1n = [normalizeMatchNickname(pt1[0]), normalizeMatchNickname(pt1[1])];
             var t2n = [normalizeMatchNickname(pt2[0]), normalizeMatchNickname(pt2[1])];
             var existingRow = hist.ok ? findMatchRecordForSubmittedPair(hist.matches, t1n, t2n) : null;
-            var shortMsg = tr("matchAlreadyExists") || "Match already exists. Record Not Saved";
+            var duplicateText = String(txt || "").toLowerCase();
+            var shortMsg =
+              duplicateText.indexOf("already exists today") !== -1
+                ? tr("matchAlreadyExistsToday")
+                : tr("matchAlreadyExistsInLeague");
+            if (!shortMsg) {
+              shortMsg = tr("matchAlreadyExists") || "Match already exists. Record not saved.";
+            }
             var calloutHtml =
               '<div class="response-callout response-callout-clarify"><strong>' +
               escapeHtml(shortMsg) +
