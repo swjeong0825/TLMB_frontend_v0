@@ -1314,6 +1314,29 @@ table.data th.standings-metric-rank {
   visibility: visible;
 }
 
+@media (max-width: 520px) {
+  .col-actions {
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .match-row-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .match-row-actions .btn-match-update,
+  .match-row-actions .btn-match-delete {
+    margin-top: 0;
+  }
+
+  .match-update-wrap + .match-delete-wrap {
+    margin-left: 0;
+  }
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--muted);
