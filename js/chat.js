@@ -130,7 +130,29 @@
   }
 
   function formatWhen(iso) {
-    return escapeHtml(formatWhenPlain(iso));
+    if (iso == null || iso === "") return escapeHtml(tr("emDash") || "—");
+    var t = Date.parse(String(iso));
+    if (isNaN(t)) return escapeHtml(String(iso));
+    var d = new Date(t);
+    var mm = d.getMonth() + 1;
+    var dd = d.getDate();
+    var yyyy = d.getFullYear();
+    var dateStr =
+      (mm < 10 ? "0" : "") + String(mm) + "/" +
+      (dd < 10 ? "0" : "") + String(dd) + "/" +
+      String(yyyy);
+    var timeStr;
+    try {
+      timeStr = d.toLocaleTimeString(undefined, { timeStyle: "short" });
+    } catch (e) {
+      timeStr = d.toTimeString().slice(0, 5);
+    }
+    return (
+      '<span class="match-when">' +
+      '<span class="match-when-date">' + escapeHtml(dateStr) + '</span>' +
+      '<span class="match-when-time">' + escapeHtml(timeStr) + '</span>' +
+      '</span>'
+    );
   }
 
   function matchDateGroupForCreatedAt(iso) {
@@ -1374,11 +1396,11 @@
     // existing 3-column shape.
     var hasAnyId = rows.some(function (m) { return m && m.match_id; });
     var h =
-      "<table class=\"data\"><thead><tr><th>" +
+      "<div class=\"match-history-table-wrap\"><table class=\"data match-history-table\"><thead><tr><th>" +
       escapeHtml(tr("tableTeams") || "Teams") +
       "</th><th>" +
       escapeHtml(tr("tableScore") || "Score") +
-      "</th><th>" +
+      "</th><th class=\"col-when\">" +
       escapeHtml(tr("tableWhen") || "When") +
       "</th>" +
       (hasAnyId
@@ -1390,8 +1412,18 @@
     var colCount = hasAnyId ? 4 : 3;
     var lastDateGroupKey = null;
     rows.forEach(function (m) {
-      var t1 = escapeHtml(m.team1_player1_nickname) + " + " + escapeHtml(m.team1_player2_nickname);
-      var t2 = escapeHtml(m.team2_player1_nickname) + " + " + escapeHtml(m.team2_player2_nickname);
+      var t1 =
+        '<span class="match-team match-team--1">' +
+        escapeHtml(m.team1_player1_nickname) +
+        ' <span class="match-team-plus">+</span> ' +
+        escapeHtml(m.team1_player2_nickname) +
+        "</span>";
+      var t2 =
+        '<span class="match-team match-team--2">' +
+        escapeHtml(m.team2_player1_nickname) +
+        ' <span class="match-team-plus">+</span> ' +
+        escapeHtml(m.team2_player2_nickname) +
+        "</span>";
       var when = m.created_at ? formatWhen(m.created_at) : escapeHtml(tr("emDash") || "—");
       var matchId = m.match_id ? String(m.match_id) : "";
       var dateGroup = matchDateGroupForCreatedAt(m.created_at);
@@ -1428,17 +1460,17 @@
       h +=
         "<tr class=\"match-row\"" +
         rowDataAttrs +
-        "><td>" +
+        "><td class=\"col-teams\"><span class=\"match-teams\">" +
         t1 +
-        " " +
+        '<span class="match-vs">' +
         escapeHtml(tr("vs") || "vs") +
-        " " +
+        "</span>" +
         t2 +
-        "</td><td>" +
+        "</span></td><td>" +
         escapeHtml(m.team1_score) +
         " – " +
         escapeHtml(m.team2_score) +
-        "</td><td>" +
+        "</td><td class=\"col-when\">" +
         when +
         "</td>" +
         (hasAnyId
@@ -1449,7 +1481,7 @@
           : "") +
         "</tr>";
     });
-    return h + "</tbody></table>";
+    return h + "</tbody></table></div>";
   }
 
   function removeEmptyMatchDateRows(tbody) {
@@ -1565,13 +1597,17 @@
     var rowsHtml = matches
       .map(function (m) {
         var t1 =
+          '<span class="match-team match-team--1">' +
           escapeHtml(m.team1_player1_nickname) +
-          " + " +
-          escapeHtml(m.team1_player2_nickname);
+          ' <span class="match-team-plus">+</span> ' +
+          escapeHtml(m.team1_player2_nickname) +
+          "</span>";
         var t2 =
+          '<span class="match-team match-team--2">' +
           escapeHtml(m.team2_player1_nickname) +
-          " + " +
-          escapeHtml(m.team2_player2_nickname);
+          ' <span class="match-team-plus">+</span> ' +
+          escapeHtml(m.team2_player2_nickname) +
+          "</span>";
         var when = m.created_at
           ? formatWhen(m.created_at)
           : escapeHtml(tr("emDash") || "—");
@@ -1593,19 +1629,19 @@
           '<tr class="match-picker-row"' +
           pickerRowAttrs +
           ">" +
-          "<td>" +
+          '<td class="col-teams"><span class="match-teams">' +
           t1 +
-          " " +
+          '<span class="match-vs">' +
           escapeHtml(tr("vs") || "vs") +
-          " " +
+          "</span>" +
           t2 +
-          "</td>" +
+          "</span></td>" +
           "<td>" +
           escapeHtml(m.team1_score) +
           " – " +
           escapeHtml(m.team2_score) +
           "</td>" +
-          "<td>" +
+          '<td class="col-when">' +
           when +
           "</td>" +
           '<td class="match-picker-actions">' +
