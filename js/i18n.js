@@ -289,6 +289,13 @@
         matchDeleted: "Match deleted.",
         matchDeleteWindowExpired:
           "This match can no longer be deleted — the player delete window has expired. Ask your group host to delete it.",
+        rematchConfirmAction: "Record rematch",
+        rematchConfirmModalTitle: "Record another match today?",
+        rematchConfirmModalWarning:
+          "These two teams already have a match recorded today. Continue only if this is a separate rematch.",
+        rematchConfirmModalExisting:
+          "Existing result: {teams} · {score} · {when}",
+        rematchConfirmModalCloseAria: "Close",
         vs: "vs",
         filterFor: "Showing results for {name}.",
         assistantForPlayer: "{title} for {name}",
@@ -690,6 +697,13 @@
         matchDeleted: "경기가 삭제되었습니다.",
         matchDeleteWindowExpired:
           "삭제 가능 시간이 지나 더 이상 이 경기를 삭제할 수 없습니다. 그룹 호스트에게 삭제를 요청하세요.",
+        rematchConfirmAction: "재경기 기록",
+        rematchConfirmModalTitle: "오늘 같은 팀끼리 한 경기를 더 기록할까요?",
+        rematchConfirmModalWarning:
+          "오늘 이미 이 두 팀의 경기가 기록되어 있어요. 별도의 재경기일 때만 계속하세요.",
+        rematchConfirmModalExisting:
+          "기존 결과: {teams} · {score} · {when}",
+        rematchConfirmModalCloseAria: "닫기",
         vs: "vs",
         filterFor: "{name}에 대한 결과를 표시합니다.",
         assistantForPlayer: "{name} — {title}",

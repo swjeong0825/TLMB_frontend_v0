@@ -1179,7 +1179,13 @@ table.data th.standings-metric-rank {
   color: var(--danger);
 }
 
-.match-delete-modal-actions {
+.same-day-rematch-modal-confirm {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.match-delete-modal-actions,
+.same-day-rematch-modal-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -1192,6 +1198,20 @@ table.data th.standings-metric-rank {
   font-size: 0.9rem;
   line-height: 1.5;
   color: var(--danger);
+}
+
+.same-day-rematch-modal-warning {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--warn);
+}
+
+.same-day-rematch-modal-detail {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
 .match-update-tip,
