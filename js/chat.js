@@ -133,6 +133,32 @@
     return escapeHtml(formatWhenPlain(iso));
   }
 
+  function matchDateGroupForCreatedAt(iso) {
+    if (iso == null || iso === "") {
+      return {
+        key: "missing",
+        label: tr("emDash") || "—",
+      };
+    }
+    var t = Date.parse(String(iso));
+    if (isNaN(t)) {
+      return {
+        key: "raw:" + String(iso),
+        label: String(iso),
+      };
+    }
+    var d = new Date(t);
+    var yyyy = String(d.getFullYear());
+    var mm = d.getMonth() + 1;
+    var dd = d.getDate();
+    var mmText = (mm < 10 ? "0" : "") + String(mm);
+    var ddText = (dd < 10 ? "0" : "") + String(dd);
+    return {
+      key: yyyy + "-" + mmText + "-" + ddText,
+      label: mmText + "-" + ddText + "-" + yyyy,
+    };
+  }
+
   function tryParseJson(text) {
     if (text == null || String(text).trim() === "") return null;
     try {
@@ -1361,11 +1387,27 @@
           "</th>"
         : "") +
       "</tr></thead><tbody>";
+    var colCount = hasAnyId ? 4 : 3;
+    var lastDateGroupKey = null;
     rows.forEach(function (m) {
       var t1 = escapeHtml(m.team1_player1_nickname) + " + " + escapeHtml(m.team1_player2_nickname);
       var t2 = escapeHtml(m.team2_player1_nickname) + " + " + escapeHtml(m.team2_player2_nickname);
       var when = m.created_at ? formatWhen(m.created_at) : escapeHtml(tr("emDash") || "—");
       var matchId = m.match_id ? String(m.match_id) : "";
+      var dateGroup = matchDateGroupForCreatedAt(m.created_at);
+      if (dateGroup.key !== lastDateGroupKey) {
+        h +=
+          '<tr class="match-date-row" data-date-group-key="' +
+          escapeAttr(dateGroup.key) +
+          '"><th scope="rowgroup" colspan="' +
+          String(colCount) +
+          '"><button type="button" class="match-date-toggle" aria-expanded="true" data-date-label="' +
+          escapeAttr(dateGroup.label) +
+          '"><span class="match-date-chevron" aria-hidden="true"></span><span class="match-date-heading">' +
+          escapeHtml(dateGroup.label) +
+          "</span></button></th></tr>";
+        lastDateGroupKey = dateGroup.key;
+      }
       // Stash the row's domain payload as data-* so a successful
       // PATCH can rebuild the row's synthetic match record without
       // re-fetching history or surfacing the response body (which is
@@ -1408,6 +1450,70 @@
         "</tr>";
     });
     return h + "</tbody></table>";
+  }
+
+  function removeEmptyMatchDateRows(tbody) {
+    if (!tbody) return;
+    tbody.querySelectorAll(".match-date-row").forEach(function (dateRow) {
+      var node = dateRow.nextElementSibling;
+      var hasMatchInGroup = false;
+      while (node && !node.classList.contains("match-date-row")) {
+        if (node.classList.contains("match-row")) {
+          hasMatchInGroup = true;
+          break;
+        }
+        node = node.nextElementSibling;
+      }
+      if (!hasMatchInGroup && dateRow.parentNode) {
+        dateRow.parentNode.removeChild(dateRow);
+      }
+    });
+  }
+
+  function matchDateToggleAriaLabel(dateLabel, collapsed) {
+    if (collapsed) {
+      return tr("matchDateShow", { date: dateLabel }) || "Show matches for " + dateLabel;
+    }
+    return tr("matchDateHide", { date: dateLabel }) || "Hide matches for " + dateLabel;
+  }
+
+  function setMatchDateGroupCollapsed(dateRow, collapsed) {
+    if (!dateRow) return;
+    dateRow.classList.toggle("match-date-row--collapsed", collapsed);
+    var btn = dateRow.querySelector(".match-date-toggle");
+    var dateLabel =
+      (btn && btn.getAttribute("data-date-label")) ||
+      (dateRow.querySelector(".match-date-heading") &&
+        dateRow.querySelector(".match-date-heading").textContent) ||
+      "";
+    if (btn) {
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.setAttribute("aria-label", matchDateToggleAriaLabel(dateLabel, collapsed));
+    }
+    var node = dateRow.nextElementSibling;
+    while (node && !node.classList.contains("match-date-row")) {
+      node.classList.toggle("match-date-group-hidden", collapsed);
+      node = node.nextElementSibling;
+    }
+  }
+
+  function bindMatchDateGroupToggles(wrap) {
+    if (!wrap) return;
+    var panel = wrap.querySelector(".data-panel") || wrap;
+    var dateRows = panel.querySelectorAll(".match-date-row");
+    if (!dateRows.length) return;
+    dateRows.forEach(function (dateRow, idx) {
+      setMatchDateGroupCollapsed(dateRow, idx > 0);
+      var btn = dateRow.querySelector(".match-date-toggle");
+      if (!btn || btn.getAttribute("data-date-bound") === "1") return;
+      btn.setAttribute("data-date-bound", "1");
+      btn.addEventListener("click", function () {
+        setMatchDateGroupCollapsed(
+          dateRow,
+          !dateRow.classList.contains("match-date-row--collapsed")
+        );
+      });
+    });
   }
 
   /**
@@ -3585,6 +3691,7 @@
                   !!route.hostToken
                 )
             );
+            bindMatchDateGroupToggles(submitOkWrap);
             bindMatchRowUpdateButtons(submitOkWrap);
             bindMatchRowDeleteButtons(submitOkWrap);
             conversationHistory.push({
@@ -3661,6 +3768,7 @@
                   !!route.hostToken
                 )
             );
+            bindMatchDateGroupToggles(editOkWrap);
             bindMatchRowUpdateButtons(editOkWrap);
             bindMatchRowDeleteButtons(editOkWrap);
             conversationHistory.push({
@@ -3686,10 +3794,16 @@
                   cssEscapeAttrValue(deletedMatchId) +
                   '"]'
               );
+              var affectedBodies = [];
               allRows.forEach(function (row) {
                 if (row && row.parentNode) {
-                  row.parentNode.removeChild(row);
+                  var parent = row.parentNode;
+                  affectedBodies.push(parent);
+                  parent.removeChild(row);
                 }
+              });
+              affectedBodies.forEach(function (tbody) {
+                removeEmptyMatchDateRows(tbody);
               });
             }
             var matchDeletedLine = tr("matchDeleted") || "Match deleted.";
@@ -3855,6 +3969,7 @@
                 calloutHtml +
                   renderReadPanel("GET_MATCH_HISTORY", { matches: [existingRow] }, !!route.hostToken)
               );
+              bindMatchDateGroupToggles(dupWrap);
               bindMatchRowUpdateButtons(dupWrap);
               bindMatchRowDeleteButtons(dupWrap);
             } else {
@@ -4363,6 +4478,7 @@
           resp.data_type === "GET_MATCH_HISTORY" ||
           resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
         ) {
+          bindMatchDateGroupToggles(readWrap);
           bindMatchRowUpdateButtons(readWrap);
           bindMatchRowDeleteButtons(readWrap);
         }
