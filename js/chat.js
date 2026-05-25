@@ -4700,6 +4700,27 @@
       { passive: true }
     );
 
+    /* Click-outside dismissal for the disabled Update/Delete tooltips on
+       match-history rows. The per-wrap click handlers in
+       bindMatchRowUpdateButtons / bindMatchRowDeleteButtons stop
+       propagation, so clicks inside a disabled wrap never reach this
+       listener — only true outside-clicks close the tip. */
+    document.addEventListener("click", function (e) {
+      var insideUpdate =
+        e.target.closest && e.target.closest(".match-update-wrap--disabled");
+      var insideDelete =
+        e.target.closest && e.target.closest(".match-delete-wrap--disabled");
+      if (insideUpdate || insideDelete) return;
+      document
+        .querySelectorAll(
+          ".match-update-wrap--tip-open, .match-delete-wrap--tip-open"
+        )
+        .forEach(function (el) {
+          el.classList.remove("match-update-wrap--tip-open");
+          el.classList.remove("match-delete-wrap--tip-open");
+        });
+    });
+
     /* Quick-action triggers (grid tiles plus sticky intent-helper bar):
        delegated from `app-root` via `.quick-action-trigger`. Sends the canned
        prompt through the chat pipeline unless `data-quick-action-mode`
