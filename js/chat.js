@@ -582,8 +582,7 @@
           '" aria-label="' +
           escapeAttr(btnLabel + " " + nickname) +
           '"'
-        : " disabled") +
-      ">";
+        : " disabled");
     var tipHtml =
       disabled && reason
         ? '<span class="roster-remove-tip"' +
@@ -604,6 +603,168 @@
       escapeHtml(btnLabel) +
       "</button>" +
       tipHtml +
+      "</span>"
+    );
+  }
+
+  function playerCanonicalNickname(player) {
+    return String((player && player.nickname) || "");
+  }
+
+  function playerAliases(player) {
+    var canonicalNorm = normalizeMatchNickname(playerCanonicalNickname(player));
+    var raw = Array.isArray(player && player.aliases) ? player.aliases : [];
+    var seen = {};
+    return raw
+      .map(function (a) { return String(a == null ? "" : a).trim(); })
+      .filter(function (alias) {
+        var norm = normalizeMatchNickname(alias);
+        if (!alias || !norm || norm === canonicalNorm || seen[norm]) return false;
+        seen[norm] = true;
+        return true;
+      });
+  }
+
+  function playerNicknameSearchNorms(player) {
+    var seen = {};
+    var out = [];
+    [playerCanonicalNickname(player)].concat(playerAliases(player)).forEach(function (name) {
+      var norm = normalizeMatchNickname(name);
+      if (!norm || seen[norm]) return;
+      seen[norm] = true;
+      out.push(norm);
+    });
+    return out;
+  }
+
+  function renderPlayerAliasChips(player, opts) {
+    opts = opts || {};
+    var isAdmin = !!opts.isAdmin;
+    var aliases = playerAliases(player);
+    if (!aliases.length) return "";
+    var playerId = player && player.player_id ? String(player.player_id) : "";
+    var nickname = playerCanonicalNickname(player);
+    var disabledTip =
+      tr("aliasRemoveDisabledAdminOnly") ||
+      "Removing aliases is available only in Admin mode.";
+    var removeText = tr("aliasRemoveButton") || "Remove alias";
+    var chips = aliases
+      .map(function (alias) {
+        var aliasNorm = normalizeMatchNickname(alias);
+        var aria =
+          tr("aliasChipRemoveAria", { alias: alias, name: nickname }) ||
+          "Remove alias " + alias + " from " + nickname;
+        var removeHtml;
+        if (isAdmin && playerId) {
+          removeHtml =
+            '<button type="button" class="alias-chip-remove btn-alias-remove"' +
+            ' data-player-id="' +
+            escapeAttr(playerId) +
+            '" data-player-nickname="' +
+            escapeAttr(nickname) +
+            '" data-alias="' +
+            escapeAttr(alias) +
+            '" aria-label="' +
+            escapeAttr(aria) +
+            '" title="' +
+            escapeAttr(removeText) +
+            '">×</button>';
+        } else {
+          var tipId =
+            "alias-remove-tip-" + (playerId || "player") + "-" + (aliasNorm || "alias");
+          removeHtml =
+            '<span class="alias-remove-wrap alias-remove-wrap--disabled" tabindex="0" aria-describedby="' +
+            escapeAttr(tipId) +
+            '">' +
+            '<button type="button" class="alias-chip-remove btn-alias-remove" disabled aria-label="' +
+            escapeAttr(aria) +
+            '">×</button>' +
+            '<span class="alias-tip" id="' +
+            escapeAttr(tipId) +
+            '" role="tooltip">' +
+            escapeHtml(disabledTip) +
+            "</span>" +
+            "</span>";
+        }
+        return (
+          '<span class="alias-chip">' +
+          '<span class="alias-chip-text">' +
+          escapeHtml(alias) +
+          "</span>" +
+          removeHtml +
+          "</span>"
+        );
+      })
+      .join("");
+    return '<span class="alias-chip-list">' + chips + "</span>";
+  }
+
+  function renderRosterPlayerName(player, opts) {
+    return (
+      '<span class="roster-player-name">' +
+      '<span class="roster-player-canonical">' +
+      escapeHtml(playerCanonicalNickname(player)) +
+      "</span>" +
+      renderPlayerAliasChips(player, opts) +
+      "</span>"
+    );
+  }
+
+  function renderRosterAliasAddButton(player, opts) {
+    opts = opts || {};
+    var isAdmin = !!opts.isAdmin;
+    var playerId = player && player.player_id ? String(player.player_id) : "";
+    var nickname = playerCanonicalNickname(player);
+    var label = tr("aliasAddButton") || "+ Alias";
+    var disabled = !isAdmin || !playerId;
+    var reason =
+      tr("aliasAddDisabledAdminOnly") ||
+      "Adding aliases is available only in Admin mode.";
+    var tipId = playerId ? "alias-add-tip-" + playerId : "alias-add-tip";
+    var wrapClass = "alias-add-wrap" + (disabled ? " alias-add-wrap--disabled" : "");
+    var wrapAttrs =
+      disabled && reason
+        ? ' tabindex="0" aria-describedby="' + escapeAttr(tipId) + '"'
+        : "";
+    var btnAttrs =
+      ' type="button" class="btn-secondary btn-alias-add"' +
+      (disabled
+        ? " disabled"
+        : ' data-player-id="' +
+          escapeAttr(playerId) +
+          '" data-player-nickname="' +
+          escapeAttr(nickname) +
+          '" aria-label="' +
+          escapeAttr(label + " " + nickname) +
+          '"');
+    var tipHtml =
+      disabled && reason
+        ? '<span class="alias-tip" id="' +
+          escapeAttr(tipId) +
+          '" role="tooltip">' +
+          escapeHtml(reason) +
+          "</span>"
+        : "";
+    return (
+      '<span class="' +
+      wrapClass +
+      '"' +
+      wrapAttrs +
+      "><button" +
+      btnAttrs +
+      ">" +
+      escapeHtml(label) +
+      "</button>" +
+      tipHtml +
+      "</span>"
+    );
+  }
+
+  function renderRosterPlayerActions(player, opts) {
+    return (
+      '<span class="roster-player-actions">' +
+      renderRosterAliasAddButton(player, opts) +
+      renderRosterPlayerRemoveButton(player, opts) +
       "</span>"
     );
   }
@@ -658,14 +819,19 @@
       var rows = entries
         .map(function (entry) {
           var nick = entry.nickname || "";
+          var searchNorms = playerNicknameSearchNorms(entry);
           return (
             '<li class="roster-admin-item roster-item-with-action" data-nick-norm="' +
             escapeAttr(normalizeMatchNickname(nick)) +
+            '" data-aliases-norm="' +
+            escapeAttr(searchNorms.slice(1).join(" ")) +
+            '" data-player-id="' +
+            escapeAttr(entry && entry.player_id ? String(entry.player_id) : "") +
+            '" data-player-nickname="' +
+            escapeAttr(nick) +
             '">' +
-            '<span class="roster-admin-name roster-player-name">' +
-            escapeHtml(nick) +
-            "</span>" +
-            renderRosterPlayerRemoveButton(entry, { isAdmin: !!isAdmin, teams: teams }) +
+            renderRosterPlayerName(entry, { isAdmin: !!isAdmin }) +
+            renderRosterPlayerActions(entry, { isAdmin: !!isAdmin, teams: teams }) +
             "</li>"
           );
         })
@@ -853,10 +1019,35 @@
   function rosterPlayerNormSet(players) {
     var set = Object.create(null);
     (players || []).forEach(function (p) {
-      var n = normalizeMatchNickname(p && p.nickname);
-      if (n) set[n] = true;
+      playerNicknameSearchNorms(p).forEach(function (n) {
+        if (n) set[n] = true;
+      });
     });
     return set;
+  }
+
+  function rosterCanonicalNormMap(players) {
+    var map = Object.create(null);
+    (players || []).forEach(function (p) {
+      var canonical = normalizeMatchNickname(p && p.nickname);
+      if (!canonical) return;
+      playerNicknameSearchNorms(p).forEach(function (n) {
+        if (n) map[n] = canonical;
+      });
+    });
+    return map;
+  }
+
+  function canonicalizeNicknameNorm(norm, canonicalMap) {
+    if (!norm) return "";
+    return (canonicalMap && canonicalMap[norm]) || norm;
+  }
+
+  function canonicalizedNickPair(normPair, canonicalMap) {
+    return [
+      canonicalizeNicknameNorm(normPair && normPair[0], canonicalMap),
+      canonicalizeNicknameNorm(normPair && normPair[1], canonicalMap),
+    ];
   }
 
   function rosterTeamPairKey(a, b) {
@@ -1009,12 +1200,15 @@
     var players = leagueRoster.players || [];
     var teams = leagueRoster.teams || [];
     var known = rosterPlayerNormSet(players);
+    var canonicalMap = rosterCanonicalNormMap(players);
     var pairKeys = rosterPairKeysFromTeams(teams);
     var allowMultipleTeamsPerPlayer =
       !!(leagueRoster.rules && leagueRoster.rules.one_team_per_player === false);
 
     var t1 = nickPairFromBodySpec(bodySpec, "team1_nicknames");
     var t2 = nickPairFromBodySpec(bodySpec, "team2_nicknames");
+    var t1CanonicalNorm = canonicalizedNickPair(t1.norm, canonicalMap);
+    var t2CanonicalNorm = canonicalizedNickPair(t2.norm, canonicalMap);
 
     var normToDisplay = Object.create(null);
     function rememberDisplay(norm, raw) {
@@ -1088,8 +1282,8 @@
       }
     }
 
-    analyzeSide(t1.raw, t1.norm);
-    analyzeSide(t2.raw, t2.norm);
+    analyzeSide(t1.raw, t1CanonicalNorm);
+    analyzeSide(t2.raw, t2CanonicalNorm);
 
     var chunks = [];
     if (newPlayerNormsOrder.length) {
@@ -1889,12 +2083,20 @@
         escapeHtml(tr("rosterHeadingPlayers") || "Players") +
         "</h4><ul class=\"roster-list roster-list-players\">";
       players.forEach(function (p) {
+        var nick = p.nickname || "";
+        var searchNorms = playerNicknameSearchNorms(p);
         h +=
-          '<li class="roster-item roster-item-with-action">' +
-          '<span class="roster-player-name">' +
-          escapeHtml(p.nickname) +
-          "</span>" +
-          renderRosterPlayerRemoveButton(p, { isAdmin: !!isAdmin, teams: teams }) +
+          '<li class="roster-item roster-item-with-action" data-nick-norm="' +
+          escapeAttr(normalizeMatchNickname(nick)) +
+          '" data-aliases-norm="' +
+          escapeAttr(searchNorms.slice(1).join(" ")) +
+          '" data-player-id="' +
+          escapeAttr(p && p.player_id ? String(p.player_id) : "") +
+          '" data-player-nickname="' +
+          escapeAttr(nick) +
+          '">' +
+          renderRosterPlayerName(p, { isAdmin: !!isAdmin }) +
+          renderRosterPlayerActions(p, { isAdmin: !!isAdmin, teams: teams }) +
           "</li>";
       });
       h += "</ul></div>";
@@ -2819,35 +3021,69 @@
     // either. Hard-deleting a player who has matches still surfaces
     // the backend's 409 `PlayerHasParticipationError`.
 
+    function rosterStateFromResult(result) {
+      return result && result.ok
+        ? { players: result.players, teams: result.teams }
+        : { players: [], teams: [], error: true };
+    }
+
+    function rerenderPlayersPanels(state) {
+      if (!messagesEl) return;
+      var panels = messagesEl.querySelectorAll(".players-panel");
+      if (!panels.length) return;
+      panels.forEach(function (panel) {
+        var isAdmin = panel.getAttribute("data-is-admin") === "1";
+        var prevInput = panel.querySelector(".roster-admin-add-input");
+        var savedValue = prevInput ? prevInput.value : "";
+        var dataPanel = panel.parentNode;
+        if (!dataPanel) return;
+        dataPanel.innerHTML =
+          "<h3>" +
+          escapeHtml(panelTitleForDataType("GET_PLAYERS")) +
+          "</h3>" +
+          renderPlayersPanelBody(state, isAdmin);
+        var freshPanel = dataPanel.querySelector(".players-panel");
+        if (freshPanel) {
+          var freshInput = freshPanel.querySelector(".roster-admin-add-input");
+          if (freshInput && savedValue) {
+            freshInput.value = savedValue;
+            freshInput.dispatchEvent(new Event("input"));
+          }
+          bindPlayersPanelEvents(freshPanel, isAdmin);
+        }
+      });
+    }
+
+    function rerenderRosterReadPanels(state) {
+      if (!messagesEl) return;
+      var panels = messagesEl.querySelectorAll('.data-panel[data-read-type="GET_ROSTER"]');
+      if (!panels.length) return;
+      panels.forEach(function (dataPanel) {
+        dataPanel.innerHTML = renderReadPanelBody("GET_ROSTER", state, !!route.hostToken);
+      });
+    }
+
+    function refreshRosterSurfaces() {
+      if (!messagesEl) return;
+      fetchLeagueRoster(route.leagueId).then(function (result) {
+        if (!result.ok) {
+          console.warn("[TLCHAT] Roster surface refresh failed:", result);
+          return;
+        }
+        applyLeagueRosterResult(result);
+        var state = rosterStateFromResult(result);
+        rerenderPlayersPanels(state);
+        rerenderRosterReadPanels(state);
+      });
+    }
+
     function refreshAllPlayersPanels() {
       if (!messagesEl) return;
       var panels = messagesEl.querySelectorAll(".players-panel");
       if (!panels.length) return;
       fetchLeagueRoster(route.leagueId).then(function (result) {
-        var state = result.ok
-          ? { players: result.players, teams: result.teams }
-          : { players: [], error: true };
-        panels.forEach(function (panel) {
-          var isAdmin = panel.getAttribute("data-is-admin") === "1";
-          var prevInput = panel.querySelector(".roster-admin-add-input");
-          var savedValue = prevInput ? prevInput.value : "";
-          var dataPanel = panel.parentNode;
-          if (!dataPanel) return;
-          dataPanel.innerHTML =
-            "<h3>" +
-            escapeHtml(panelTitleForDataType("GET_PLAYERS")) +
-            "</h3>" +
-            renderPlayersPanelBody(state, isAdmin);
-          var freshPanel = dataPanel.querySelector(".players-panel");
-          if (freshPanel) {
-            var freshInput = freshPanel.querySelector(".roster-admin-add-input");
-            if (freshInput && savedValue) {
-              freshInput.value = savedValue;
-              freshInput.dispatchEvent(new Event("input"));
-            }
-            bindPlayersPanelEvents(freshPanel, isAdmin);
-          }
-        });
+        if (result.ok) applyLeagueRosterResult(result);
+        rerenderPlayersPanels(rosterStateFromResult(result));
       });
     }
 
@@ -2871,8 +3107,7 @@
           headers: { "X-Host-Token": route.hostToken || "" },
         });
         if (res.ok) {
-          refreshAllPlayersPanels();
-          refreshLeagueRoster();
+          refreshRosterSurfaces();
           return true;
         }
         var txt = await res.text();
@@ -2897,6 +3132,182 @@
       }
     }
 
+    function showPlayersPanelMessage(panel, text, isError) {
+      var inlineMsg = panel && panel.querySelector(".roster-admin-inline-msg");
+      if (!inlineMsg) return false;
+      inlineMsg.textContent = text;
+      inlineMsg.hidden = false;
+      inlineMsg.className =
+        "roster-admin-inline-msg" +
+        (isError ? " roster-admin-msg-error" : " roster-admin-msg-ok");
+      setTimeout(function () {
+        inlineMsg.hidden = true;
+      }, 4000);
+      return true;
+    }
+
+    function showRosterWriteMessage(anchor, text, isError) {
+      var panel = anchor && anchor.closest && anchor.closest(".players-panel");
+      if (showPlayersPanelMessage(panel, text, isError)) return;
+      if (isError) {
+        appendErrorPlain(text);
+        return;
+      }
+      appendAssistant(
+        '<div class="response-callout response-callout-success"><strong>' +
+          escapeHtml(tr("done") || "Done.") +
+          "</strong> " +
+          escapeHtml(text) +
+          "</div>"
+      );
+    }
+
+    function aliasApiErrorMessage(status, text) {
+      var code = leagueApiJsonErrorCode(text);
+      if (status === 409 && code === "NicknameAlreadyInUseError") {
+        return tr("aliasAlreadyExists") || "That nickname is already in use.";
+      }
+      if (status === 422 && code === "CannotRemoveCanonicalNicknameError") {
+        return (
+          tr("aliasCannotRemoveCanonical") ||
+          "The canonical nickname cannot be removed as an alias."
+        );
+      }
+      if (status === 422 && code === "LastNicknameError") {
+        return (
+          tr("aliasLastNickname") ||
+          "A player must keep at least one nickname."
+        );
+      }
+      return friendlyMessageFromTechnicalError(text);
+    }
+
+    async function addAliasToPlayer(playerId, alias) {
+      var base = backendMainBase();
+      var url =
+        base +
+        "/admin/leagues/" +
+        encodeURIComponent(route.leagueId) +
+        "/players/" +
+        encodeURIComponent(playerId) +
+        "/aliases";
+      var res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Host-Token": route.hostToken || "",
+        },
+        body: JSON.stringify({ alias: alias }),
+      });
+      var txt = await res.text();
+      if (res.ok) return txt ? tryParseJson(txt) : {};
+      throw new Error(aliasApiErrorMessage(res.status, txt));
+    }
+
+    async function removeAliasFromPlayer(playerId, alias) {
+      var base = backendMainBase();
+      var url =
+        base +
+        "/admin/leagues/" +
+        encodeURIComponent(route.leagueId) +
+        "/players/" +
+        encodeURIComponent(playerId) +
+        "/aliases/" +
+        encodeURIComponent(alias);
+      var res = await fetch(url, {
+        method: "DELETE",
+        headers: { "X-Host-Token": route.hostToken || "" },
+      });
+      var txt = await res.text();
+      if (res.ok) return true;
+      throw new Error(aliasApiErrorMessage(res.status, txt));
+    }
+
+    function toggleAliasAddForm(row, playerId, nickname) {
+      if (!row || !playerId) return;
+      var next = row.nextElementSibling;
+      if (next && next.classList.contains("alias-add-form-row")) {
+        next.parentNode.removeChild(next);
+        return;
+      }
+      var scope = row.closest(".data-panel") || messagesEl;
+      if (scope) {
+        scope.querySelectorAll(".alias-add-form-row").forEach(function (el) {
+          el.parentNode.removeChild(el);
+        });
+      }
+      var formRow = document.createElement("li");
+      formRow.className = "alias-add-form-row";
+      formRow.innerHTML =
+        '<form class="alias-add-form">' +
+        '<input type="text" class="alias-add-input" placeholder="' +
+        escapeAttr(
+          tr("aliasAddInputPlaceholder", { name: nickname }) || "Alias nickname"
+        ) +
+        '" aria-label="' +
+        escapeAttr(
+          tr("aliasAddInputAria", { name: nickname }) || "Alias nickname"
+        ) +
+        '" />' +
+        '<button type="submit" class="btn-secondary alias-add-submit">' +
+        escapeHtml(tr("playersPanelAddButton") || "Add") +
+        "</button>" +
+        '<button type="button" class="btn-secondary alias-add-cancel">' +
+        escapeHtml(tr("aliasAddCancel") || "Cancel") +
+        "</button>" +
+        '<div class="alias-add-inline-msg" hidden></div>' +
+        "</form>";
+      row.parentNode.insertBefore(formRow, row.nextSibling);
+      var form = formRow.querySelector(".alias-add-form");
+      var inputEl = formRow.querySelector(".alias-add-input");
+      var submitBtn = formRow.querySelector(".alias-add-submit");
+      var cancelBtn = formRow.querySelector(".alias-add-cancel");
+      if (inputEl) inputEl.focus();
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", function () {
+          if (formRow.parentNode) formRow.parentNode.removeChild(formRow);
+        });
+      }
+      if (form) {
+        form.addEventListener("submit", async function (ev) {
+          ev.preventDefault();
+          var alias = inputEl ? String(inputEl.value || "").trim() : "";
+          if (!alias) return;
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = tr("aliasAddingButton") || "Adding…";
+          }
+          try {
+            await addAliasToPlayer(playerId, alias);
+            if (formRow.parentNode) formRow.parentNode.removeChild(formRow);
+            showRosterWriteMessage(
+              row,
+              tr("aliasAddSuccess", { alias: alias, name: nickname }) || "Alias added.",
+              false
+            );
+            refreshRosterSurfaces();
+          } catch (err) {
+            var msg =
+              err && err.message
+                ? err.message
+                : friendlyMessageFromTechnicalError(String(err));
+            var inline = formRow.querySelector(".alias-add-inline-msg");
+            if (inline) {
+              inline.textContent = msg;
+              inline.hidden = false;
+              inline.className = "alias-add-inline-msg roster-admin-msg-error";
+            } else {
+              showRosterWriteMessage(row, msg, true);
+            }
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = tr("playersPanelAddButton") || "Add";
+            }
+          }
+        });
+      }
+    }
+
     /**
      * Wires up search filter + Add button on a freshly rendered
      * `.players-panel` root. Per-row Remove buttons are intentionally
@@ -2908,17 +3319,8 @@
     function bindPlayersPanelEvents(panel, isAdmin) {
       if (!panel) return;
 
-      var inlineMsg = panel.querySelector(".roster-admin-inline-msg");
-
       function showMsg(text, isError) {
-        if (!inlineMsg) return;
-        inlineMsg.textContent = text;
-        inlineMsg.hidden = false;
-        inlineMsg.className =
-          "roster-admin-inline-msg" + (isError ? " roster-admin-msg-error" : " roster-admin-msg-ok");
-        setTimeout(function () {
-          inlineMsg.hidden = true;
-        }, 4000);
+        showPlayersPanelMessage(panel, text, isError);
       }
 
       var addBtn = panel.querySelector(".roster-admin-add-btn");
@@ -2942,7 +3344,11 @@
           var anyVisible = false;
           items.forEach(function (li) {
             var nick = li.getAttribute("data-nick-norm") || "";
-            var visible = !query || nick.indexOf(query) !== -1;
+            var aliases = li.getAttribute("data-aliases-norm") || "";
+            var visible =
+              !query ||
+              nick.indexOf(query) !== -1 ||
+              aliases.indexOf(query) !== -1;
             li.hidden = !visible;
             if (visible) anyVisible = true;
           });
@@ -2981,8 +3387,7 @@
             if (res.ok) {
               addInput.value = "";
               showMsg(tr("playersPanelAddSuccess") || "Added to roster.", false);
-              refreshAllPlayersPanels();
-              refreshLeagueRoster();
+              refreshRosterSurfaces();
             } else if (
               res.status === 409 &&
               leagueApiJsonErrorCode(txt) === "NicknameAlreadyInUseError"
@@ -3098,7 +3503,7 @@
         var norm = normalizeMatchNickname(nick);
         if (!norm || seen[norm]) return;
         seen[norm] = true;
-        out.push({ nickname: nick });
+        out.push({ nickname: nick, aliases: playerAliases(entry) });
       }
       roster.forEach(push);
       return out;
@@ -3117,7 +3522,10 @@
       }
       return candidates
         .filter(function (p) {
-          return normalizeMatchNickname(p.nickname).indexOf(q) !== -1;
+          if (normalizeMatchNickname(p.nickname).indexOf(q) !== -1) return true;
+          return playerAliases(p).some(function (alias) {
+            return normalizeMatchNickname(alias).indexOf(q) !== -1;
+          });
         })
         .sort(sortByName);
     }
@@ -3197,6 +3605,7 @@
         var cap = 80;
         var slice = matches.length > cap ? matches.slice(0, cap) : matches;
         list = slice;
+        var qNorm = normalizeMatchNickname(input.value || "");
         slice.forEach(function (p, i) {
           var nick = String((p && p.nickname) || "");
           var optId = popover.id + "-opt-" + i;
@@ -3205,7 +3614,28 @@
           div.className = "chat-mention-item" + (i === 0 ? " is-active" : "");
           div.setAttribute("role", "option");
           div.setAttribute("aria-selected", i === 0 ? "true" : "false");
-          div.textContent = nick;
+          // When the query matched only via aliases (canonical nickname does
+          // not contain the query substring), show "<nick> (<alias>, ...)"
+          // so it's obvious why this candidate appeared. Picking still
+          // inserts only the canonical nickname — that's what the backend
+          // accepts.
+          var aliasMatches = [];
+          if (qNorm && nick && normalizeMatchNickname(nick).indexOf(qNorm) === -1) {
+            var aliases = Array.isArray(p && p.aliases) ? p.aliases : [];
+            for (var j = 0; j < aliases.length; j++) {
+              var a = String(aliases[j] || "");
+              if (a && normalizeMatchNickname(a).indexOf(qNorm) !== -1) {
+                aliasMatches.push(a);
+              }
+            }
+          }
+          var label = aliasMatches.length
+            ? (tr("mentionAliasMatch", {
+                name: nick,
+                aliases: aliasMatches.join(", "),
+              }) || (nick + " (" + aliasMatches.join(", ") + ")"))
+            : nick;
+          div.textContent = label;
           div.addEventListener("mousedown", function (e) {
             e.preventDefault();
             applyPick(nick);
@@ -4050,12 +4480,15 @@
       var pt2 = Array.isArray(payload.team2_nicknames)
         ? payload.team2_nicknames
         : [];
-      var t1n = [normalizeMatchNickname(pt1[0]), normalizeMatchNickname(pt1[1])];
-      var t2n = [normalizeMatchNickname(pt2[0]), normalizeMatchNickname(pt2[1])];
-      if (!t1n[0] || !t1n[1] || !t2n[0] || !t2n[1]) return true;
+      var t1RawNorm = [normalizeMatchNickname(pt1[0]), normalizeMatchNickname(pt1[1])];
+      var t2RawNorm = [normalizeMatchNickname(pt2[0]), normalizeMatchNickname(pt2[1])];
+      if (!t1RawNorm[0] || !t1RawNorm[1] || !t2RawNorm[0] || !t2RawNorm[1]) return true;
 
       var rosterState = await ensureLeagueRosterForRematchConfirmation();
       if (!leagueAllowsUnrestrictedRematches(rosterState)) return true;
+      var canonicalMap = rosterCanonicalNormMap(rosterState.players);
+      var t1n = canonicalizedNickPair(t1RawNorm, canonicalMap);
+      var t2n = canonicalizedNickPair(t2RawNorm, canonicalMap);
 
       var hist = await fetchLeagueMatchHistory(route.leagueId);
       if (!hist.ok) {
@@ -4436,8 +4869,16 @@
             var hist = await fetchLeagueMatchHistory(route.leagueId);
             var pt1 = Array.isArray(payload.team1_nicknames) ? payload.team1_nicknames : [];
             var pt2 = Array.isArray(payload.team2_nicknames) ? payload.team2_nicknames : [];
-            var t1n = [normalizeMatchNickname(pt1[0]), normalizeMatchNickname(pt1[1])];
-            var t2n = [normalizeMatchNickname(pt2[0]), normalizeMatchNickname(pt2[1])];
+            var rosterStateForDuplicate = await ensureLeagueRosterForRematchConfirmation();
+            var duplicateCanonicalMap = rosterCanonicalNormMap(rosterStateForDuplicate.players);
+            var t1n = canonicalizedNickPair(
+              [normalizeMatchNickname(pt1[0]), normalizeMatchNickname(pt1[1])],
+              duplicateCanonicalMap
+            );
+            var t2n = canonicalizedNickPair(
+              [normalizeMatchNickname(pt2[0]), normalizeMatchNickname(pt2[1])],
+              duplicateCanonicalMap
+            );
             var existingRow = hist.ok ? findMatchRecordForSubmittedPair(hist.matches, t1n, t2n) : null;
             var duplicateText = String(txt || "").toLowerCase();
             var shortMsg =
@@ -5160,13 +5601,59 @@
       conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
     }
 
-    /* Roster remove from GET_ROSTER and Get Players chat panels (admin
-       only; player buttons are rendered disabled by
-       `renderRosterPlayerRemoveButton`). On 204 the success callout
-       lives on the same bubble and `removePlayerFromRoster` already
-       calls `refreshAllPlayersPanels()` so any open players panel
-       updates in place — we don't need a separate panel-refresh here. */
+    /* Roster alias/add/remove from GET_ROSTER and Get Players chat panels.
+       The button renderers own admin gating; this delegated listener owns
+       the write calls and refreshes every open roster surface after success. */
     messagesEl.addEventListener("click", async function (e) {
+      var aliasAddBtn =
+        e.target.closest && e.target.closest(".btn-alias-add:not(:disabled)");
+      if (aliasAddBtn && messagesEl.contains(aliasAddBtn)) {
+        var aliasRow = aliasAddBtn.closest(".roster-item, .roster-admin-item");
+        toggleAliasAddForm(
+          aliasRow,
+          aliasAddBtn.getAttribute("data-player-id"),
+          aliasAddBtn.getAttribute("data-player-nickname") || ""
+        );
+        return;
+      }
+
+      var aliasRemoveBtn =
+        e.target.closest && e.target.closest(".btn-alias-remove:not(:disabled)");
+      if (aliasRemoveBtn && messagesEl.contains(aliasRemoveBtn)) {
+        var alias = aliasRemoveBtn.getAttribute("data-alias") || "";
+        var playerIdForAlias = aliasRemoveBtn.getAttribute("data-player-id");
+        var nicknameForAlias =
+          aliasRemoveBtn.getAttribute("data-player-nickname") || "";
+        if (!playerIdForAlias || !alias) return;
+        var confirmText =
+          tr("aliasRemoveConfirm", { alias: alias, name: nicknameForAlias }) ||
+          "Remove this alias?";
+        if (!window.confirm(confirmText)) return;
+        aliasRemoveBtn.disabled = true;
+        aliasRemoveBtn.textContent = "…";
+        try {
+          await removeAliasFromPlayer(playerIdForAlias, alias);
+          showRosterWriteMessage(
+            aliasRemoveBtn,
+            tr("aliasRemoveSuccess", { alias: alias, name: nicknameForAlias }) ||
+              "Alias removed.",
+            false
+          );
+          refreshRosterSurfaces();
+        } catch (err) {
+          aliasRemoveBtn.disabled = false;
+          aliasRemoveBtn.textContent = "×";
+          showRosterWriteMessage(
+            aliasRemoveBtn,
+            err && err.message
+              ? err.message
+              : friendlyMessageFromTechnicalError(String(err)),
+            true
+          );
+        }
+        return;
+      }
+
       var btn = e.target.closest && e.target.closest(".btn-roster-remove:not(:disabled)");
       if (!btn || !messagesEl.contains(btn)) return;
       var playerId = btn.getAttribute("data-player-id");
@@ -5203,17 +5690,33 @@
           e.target.closest && e.target.closest(".roster-remove-wrap--disabled");
         var addWrap =
           e.target.closest && e.target.closest(".players-add-btn-wrap--disabled");
+        var aliasAddWrap =
+          e.target.closest && e.target.closest(".alias-add-wrap--disabled");
+        var aliasRemoveWrap =
+          e.target.closest && e.target.closest(".alias-remove-wrap--disabled");
         root.querySelectorAll(".roster-remove-wrap--tip-open").forEach(function (el) {
           if (el !== removeWrap) el.classList.remove("roster-remove-wrap--tip-open");
         });
         root.querySelectorAll(".players-add-btn-wrap--tip-open").forEach(function (el) {
           if (el !== addWrap) el.classList.remove("players-add-btn-wrap--tip-open");
         });
+        root.querySelectorAll(".alias-add-wrap--tip-open").forEach(function (el) {
+          if (el !== aliasAddWrap) el.classList.remove("alias-add-wrap--tip-open");
+        });
+        root.querySelectorAll(".alias-remove-wrap--tip-open").forEach(function (el) {
+          if (el !== aliasRemoveWrap) el.classList.remove("alias-remove-wrap--tip-open");
+        });
         if (removeWrap) {
           removeWrap.classList.add("roster-remove-wrap--tip-open");
         }
         if (addWrap) {
           addWrap.classList.add("players-add-btn-wrap--tip-open");
+        }
+        if (aliasAddWrap) {
+          aliasAddWrap.classList.add("alias-add-wrap--tip-open");
+        }
+        if (aliasRemoveWrap) {
+          aliasRemoveWrap.classList.add("alias-remove-wrap--tip-open");
         }
       },
       { passive: true }

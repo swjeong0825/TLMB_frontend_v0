@@ -608,6 +608,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
   position: relative;
 }
@@ -615,9 +616,184 @@ a:hover {
 .roster-player-name {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.roster-player-canonical {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
+}
+
+.alias-chip-list {
+  display: inline-flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.alias-chip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  color: var(--text);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+.alias-chip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.16rem 0.22rem 0.16rem 0.45rem;
+}
+
+.alias-chip-remove {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.alias-chip-remove:hover,
+.alias-chip-remove:focus-visible {
+  color: var(--text);
+  background: rgba(61, 154, 106, 0.18);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  outline: none;
+}
+
+.alias-chip-remove:disabled {
+  cursor: help;
+  opacity: 0.55;
+}
+
+.alias-remove-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.roster-player-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.alias-add-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.alias-add-wrap .btn-alias-add {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  line-height: 1.3;
+}
+
+.alias-add-wrap--disabled,
+.alias-remove-wrap--disabled {
+  cursor: help;
+}
+
+.alias-add-wrap--disabled .btn-alias-add:disabled,
+.alias-remove-wrap--disabled .btn-alias-remove:disabled {
+  pointer-events: none;
+}
+
+.alias-tip {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  min-width: 12rem;
+  max-width: min(18rem, 70vw);
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  box-sizing: border-box;
+}
+
+.alias-add-wrap--disabled:hover .alias-tip,
+.alias-add-wrap--disabled:focus .alias-tip,
+.alias-add-wrap--disabled:focus-within .alias-tip,
+.alias-add-wrap--disabled.alias-add-wrap--tip-open .alias-tip,
+.alias-remove-wrap--disabled:hover .alias-tip,
+.alias-remove-wrap--disabled:focus .alias-tip,
+.alias-remove-wrap--disabled:focus-within .alias-tip,
+.alias-remove-wrap--disabled.alias-remove-wrap--tip-open .alias-tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.alias-add-form-row {
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg));
+  border: 1px dashed var(--border);
+  list-style: none;
+}
+
+.alias-add-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.alias-add-input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.alias-add-inline-msg {
+  flex: 1 0 100%;
+  font-size: 0.78rem;
 }
 
 .roster-remove-wrap {

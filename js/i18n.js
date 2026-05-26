@@ -387,6 +387,7 @@
         mentionRosterError: "Could not load roster.",
         mentionNoMatch: "No matching players.",
         mentionMore: "Showing {cap} of {total}. Type to narrow down.",
+        mentionAliasMatch: "{name} ({aliases})",
         labelYou: "You",
         labelAssistant: "Assistant",
         assistantThinking: "Assistant is thinking",
@@ -425,6 +426,24 @@
           "Can\u2019t remove this player: they already belong to a team or appear in a match. Delete those first.",
         playersPanelAddDisabledAdminOnly:
           "Adding players is available only in Admin mode.",
+        aliasAddButton: "+ Alias",
+        aliasAddingButton: "Adding…",
+        aliasAddInputPlaceholder: "Alias for {name}",
+        aliasAddInputAria: "Alias nickname for {name}",
+        aliasAddCancel: "Cancel",
+        aliasRemoveButton: "Remove alias",
+        aliasRemoveConfirm: "Remove alias \"{alias}\" from {name}?",
+        aliasAddSuccess: "Alias added.",
+        aliasRemoveSuccess: "Alias removed.",
+        aliasAlreadyExists: "That nickname is already in use.",
+        aliasCannotRemoveCanonical:
+          "The canonical nickname cannot be removed as an alias.",
+        aliasLastNickname: "A player must keep at least one nickname.",
+        aliasAddDisabledAdminOnly:
+          "Adding aliases is available only in Admin mode.",
+        aliasRemoveDisabledAdminOnly:
+          "Removing aliases is available only in Admin mode.",
+        aliasChipRemoveAria: "Remove alias {alias} from {name}",
         rosterRemoveButton: "Remove",
         rosterRemoveAdminOnly: "Remove is available only in Admin mode.",
         rosterRemoveBlockedTeam:
@@ -805,6 +824,7 @@
         mentionRosterError: "명단을 불러올 수 없습니다.",
         mentionNoMatch: "일치하는 플레이어가 없습니다.",
         mentionMore: "총 {total}명 중 {cap}명만 표시합니다. 더 입력해 좁히세요.",
+        mentionAliasMatch: "{name} ({aliases})",
         labelYou: "나",
         labelAssistant: "어시스턴트",
         assistantThinking: "어시스턴트가 응답을 준비 중입니다",
@@ -843,6 +863,24 @@
           "이 선수는 이미 팀에 속해 있거나 경기에 등장해서 명단에서 제거할 수 없어요. 먼저 해당 팀이나 경기를 정리해 주세요.",
         playersPanelAddDisabledAdminOnly:
           "선수 추가는 관리자 모드에서만 사용할 수 있습니다.",
+        aliasAddButton: "+ 별명",
+        aliasAddingButton: "추가 중…",
+        aliasAddInputPlaceholder: "{name}의 별명",
+        aliasAddInputAria: "{name}의 별명 닉네임",
+        aliasAddCancel: "취소",
+        aliasRemoveButton: "별명 제거",
+        aliasRemoveConfirm: "{name}에서 별명 \"{alias}\"을(를) 제거할까요?",
+        aliasAddSuccess: "별명이 추가되었습니다.",
+        aliasRemoveSuccess: "별명이 제거되었습니다.",
+        aliasAlreadyExists: "이미 사용 중인 닉네임입니다.",
+        aliasCannotRemoveCanonical:
+          "대표 닉네임은 별명으로 제거할 수 없습니다.",
+        aliasLastNickname: "플레이어에게는 최소 하나의 닉네임이 필요합니다.",
+        aliasAddDisabledAdminOnly:
+          "별명 추가는 관리자 모드에서만 사용할 수 있습니다.",
+        aliasRemoveDisabledAdminOnly:
+          "별명 제거는 관리자 모드에서만 사용할 수 있습니다.",
+        aliasChipRemoveAria: "{name}에서 별명 {alias} 제거",
         rosterRemoveButton: "제거",
         rosterRemoveAdminOnly: "제거는 관리자 모드에서만 사용할 수 있습니다.",
         rosterRemoveBlockedTeam: "{name}은(는) 팀에 속해 있습니다. 먼저 팀을 삭제하세요.",
