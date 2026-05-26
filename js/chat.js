@@ -81,6 +81,7 @@
       return tr("panelMatchHistory");
     }
     if (dataType === "GET_ROSTER") return tr("panelRoster");
+    if (dataType === "GET_PLAYERS") return tr("panelPlayers");
     if (dataType === "HELP") return tr("panelHelp");
     var human = String(dataType || "")
       .replace(/^GET_/, "")
@@ -607,31 +608,50 @@
     );
   }
 
-  function renderRosterAdminPanelHtml(state) {
+  /**
+   * Returns the inner HTML for a "Get Players" panel body — the
+   * search-and-add roster surface used by the `local-get-players`
+   * quick action and by the post-match-submit "Add to roster" recovery
+   * affordance.
+   *
+   * Renders only players (no teams), in three regions:
+   *  1. A combined search / add input + Add button.
+   *     - Admin (`isAdmin === true`): Add button is enabled and posts
+   *       `POST /admin/leagues/{lid}/players` on click.
+   *     - Non-admin: Add button is disabled and the surrounding wrap
+   *       carries a hover/focus/touch tooltip explaining that adding
+   *       players is admin-only. The same input still drives the
+   *       live-filter — non-admins can search but not write.
+   *  2. The player list with per-row Remove buttons (only enabled for
+   *     admins; gated by `renderRosterPlayerRemoveButton`).
+   *  3. An inline-message slot for transient success / error messages.
+   *
+   * Wrapped in a `.players-panel` div so `bindPlayersPanelEvents` and
+   * `refreshAllPlayersPanels` can find it inside `#messages`. The
+   * caller is expected to wrap this body in a `.data-panel` with the
+   * "Players" title — done by `deliverPlayersPanel` so the panel
+   * reads as another `data-panel` alongside `GET_ROSTER` etc.
+   */
+  function renderPlayersPanelBody(state, isAdmin) {
     var entries = (state && state.players) || [];
     var isLoading = state && state.loading;
     var errorMsg = state && state.error;
-
-    var heading =
-      '<summary class="roster-admin-summary" aria-expanded="false">' +
-      escapeHtml(tr("rosterAdminPanelTitle") || "Roster") +
-      "</summary>";
 
     var bodyHtml;
     if (isLoading) {
       bodyHtml =
         '<p class="hint">' +
-        escapeHtml(tr("rosterAdminPanelLoading") || "Loading roster\u2026") +
+        escapeHtml(tr("playersPanelLoading") || "Loading players\u2026") +
         "</p>";
     } else if (errorMsg) {
       bodyHtml =
         '<p class="hint roster-admin-error">' +
-        escapeHtml(tr("rosterAdminPanelError") || "Could not load roster.") +
+        escapeHtml(tr("playersPanelError") || "Could not load players.") +
         "</p>";
     } else if (!entries.length) {
       bodyHtml =
         '<p class="hint">' +
-        escapeHtml(tr("rosterAdminPanelEmpty") || "No players on the roster yet.") +
+        escapeHtml(tr("playersPanelEmpty") || "No players on the roster yet.") +
         "</p>";
     } else {
       var teams = (state && state.teams) || [];
@@ -645,7 +665,7 @@
             '<span class="roster-admin-name roster-player-name">' +
             escapeHtml(nick) +
             "</span>" +
-            renderRosterPlayerRemoveButton(entry, { isAdmin: true, teams: teams }) +
+            renderRosterPlayerRemoveButton(entry, { isAdmin: !!isAdmin, teams: teams }) +
             "</li>"
           );
         })
@@ -655,22 +675,62 @@
         rows +
         "</ul>" +
         '<p class="hint roster-admin-no-matches" hidden>' +
-        escapeHtml(tr("rosterAdminNoMatches") || "No matching players.") +
+        escapeHtml(tr("playersPanelNoMatches") || "No matching players.") +
         "</p>";
     }
+
+    var inputPlaceholder = isAdmin
+      ? tr("playersPanelAddPlaceholder") || "e.g. alice, bob, charlie"
+      : tr("playersPanelSearchPlaceholder") || "Search players\u2026";
+    var addBtnLabel = tr("playersPanelAddButton") || "Add";
+    var addDisabledTip =
+      tr("playersPanelAddDisabledAdminOnly") ||
+      "Adding players is available only in Admin mode.";
+
+    var addBtnAttrs = isAdmin
+      ? ' type="button" class="btn-secondary roster-admin-add-btn"'
+      : ' type="button" class="btn-secondary roster-admin-add-btn" disabled aria-describedby="players-add-tip"';
+    var addWrapClass =
+      "players-add-btn-wrap" + (isAdmin ? "" : " players-add-btn-wrap--disabled");
+    var addWrapAttrs = isAdmin
+      ? ""
+      : ' tabindex="0" aria-describedby="players-add-tip"';
+    var tipHtml = isAdmin
+      ? ""
+      : '<span class="players-add-tip" id="players-add-tip" role="tooltip">' +
+        escapeHtml(addDisabledTip) +
+        "</span>";
 
     var addRow =
       '<div class="roster-admin-add-row">' +
       '<input type="text" class="roster-admin-add-input" placeholder="' +
-      escapeAttr(tr("rosterAdminAddPlaceholder") || "e.g. alice, bob, charlie") +
+      escapeAttr(inputPlaceholder) +
       '" />' +
-      '<button type="button" class="btn-secondary roster-admin-add-btn">' +
-      escapeHtml(tr("rosterAdminAddButton") || "Add") +
+      '<span class="' +
+      addWrapClass +
+      '"' +
+      addWrapAttrs +
+      ">" +
+      "<button" +
+      addBtnAttrs +
+      ">" +
+      escapeHtml(addBtnLabel) +
       "</button>" +
+      tipHtml +
+      "</span>" +
       "</div>" +
       '<div class="roster-admin-inline-msg" hidden></div>';
 
-    return heading + '<div class="roster-admin-body">' + addRow + bodyHtml + "</div>";
+    return (
+      '<div class="players-panel" data-is-admin="' +
+      (isAdmin ? "1" : "0") +
+      '">' +
+      '<div class="roster-admin-body">' +
+      addRow +
+      bodyHtml +
+      "</div>" +
+      "</div>"
+    );
   }
 
   function leagueApiJsonErrorCode(text) {
@@ -2428,6 +2488,27 @@
           "</svg>",
       },
       {
+        message: "show me all the players",
+        /* `local-get-players` skips the chat-to-intent server and opens
+           the search-and-add players panel directly. The panel itself
+           still hits backend_main directly for add/remove, so the
+           short-circuit is purely a UI affordance: any visitor (admin
+           or player) can open the panel; the Add button is disabled
+           with a tooltip in non-admin mode and the per-row Remove
+           buttons remain admin-only via the shared
+           `renderRosterPlayerRemoveButton` gate. */
+        mode: "local-get-players",
+        title: tr("quickActionGetPlayersTitle") || "Get Players",
+        desc: tr("quickActionGetPlayersDesc") || "Search and add players",
+        icon:
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">' +
+          '<circle cx="9" cy="8" r="3.25"/>' +
+          '<path d="M3.5 19c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5"/>' +
+          '<path d="M17 7v6"/>' +
+          '<path d="M14 10h6"/>' +
+          "</svg>",
+      },
+      {
         message: "help",
         title: tr("quickActionShowMoreCommandsTitle") || "Show More Commands",
         desc: tr("quickActionShowMoreCommandsDesc") || "See everything I can do",
@@ -2553,11 +2634,6 @@
       "</div>" +
       "</header>" +
       renderIntentHelper(isAdmin) +
-      (isAdmin
-        ? '<details id="roster-admin-panel" class="roster-admin-panel">' +
-          renderRosterAdminPanelHtml({ loading: true }) +
-          "</details>"
-        : "") +
       '<main class="chat-main is-empty">' +
       '<div id="messages" class="messages">' +
       "</div>" +
@@ -2727,25 +2803,51 @@
 
     refreshAdminHostEmail();
 
-    // ── Roster admin panel (host/admin only) ──────────────────────────
+    // ── Players panel (Get Players quick action) ─────────────────────
     //
-    // Replaces the v5 "Allowlist" admin panel. Uses the same
-    // `GET /leagues/{id}/roster` endpoint as the main roster view, and
-    // POSTs / DELETEs against `/admin/leagues/{id}/players` for pre-
-    // registration writes. Roster players that have actively played a
-    // match cannot be hard-deleted; the backend returns 409
-    // `PlayerHasParticipationError` which we render verbatim.
+    // Replaces the host-only `<details id="roster-admin-panel">` slab
+    // that used to live above the chat thread. The same search +
+    // add-by-nickname surface now ships as an in-thread assistant
+    // bubble that any visitor can open via the "Get Players" quick
+    // action. Reuses the same `GET /leagues/{id}/roster` read endpoint
+    // and the same `POST` / `DELETE /admin/leagues/{id}/players` write
+    // endpoints — admin-mode only. Non-admins still get the read +
+    // search affordance; the Add button is rendered disabled with a
+    // hover/focus tooltip explaining that adding is admin-only. Per-
+    // row Remove buttons reuse the existing `renderRosterPlayerRemove
+    // Button` admin-gate, so non-admins never see an enabled Remove
+    // either. Hard-deleting a player who has matches still surfaces
+    // the backend's 409 `PlayerHasParticipationError`.
 
-    var rosterAdminPanel = document.getElementById("roster-admin-panel");
-
-    function refreshRosterAdminPanel() {
-      if (!rosterAdminPanel) return;
+    function refreshAllPlayersPanels() {
+      if (!messagesEl) return;
+      var panels = messagesEl.querySelectorAll(".players-panel");
+      if (!panels.length) return;
       fetchLeagueRoster(route.leagueId).then(function (result) {
         var state = result.ok
           ? { players: result.players, teams: result.teams }
           : { players: [], error: true };
-        rosterAdminPanel.innerHTML = renderRosterAdminPanelHtml(state);
-        bindRosterAdminPanelEvents();
+        panels.forEach(function (panel) {
+          var isAdmin = panel.getAttribute("data-is-admin") === "1";
+          var prevInput = panel.querySelector(".roster-admin-add-input");
+          var savedValue = prevInput ? prevInput.value : "";
+          var dataPanel = panel.parentNode;
+          if (!dataPanel) return;
+          dataPanel.innerHTML =
+            "<h3>" +
+            escapeHtml(panelTitleForDataType("GET_PLAYERS")) +
+            "</h3>" +
+            renderPlayersPanelBody(state, isAdmin);
+          var freshPanel = dataPanel.querySelector(".players-panel");
+          if (freshPanel) {
+            var freshInput = freshPanel.querySelector(".roster-admin-add-input");
+            if (freshInput && savedValue) {
+              freshInput.value = savedValue;
+              freshInput.dispatchEvent(new Event("input"));
+            }
+            bindPlayersPanelEvents(freshPanel, isAdmin);
+          }
+        });
       });
     }
 
@@ -2753,7 +2855,7 @@
       if (!playerId || !route.hostToken) return false;
       if (btn) {
         btn.disabled = true;
-        btn.textContent = tr("rosterAdminRemovingButton") || "Removing\u2026";
+        btn.textContent = tr("playersPanelRemovingButton") || "Removing\u2026";
       }
 
       var base = backendMainBase();
@@ -2769,7 +2871,7 @@
           headers: { "X-Host-Token": route.hostToken || "" },
         });
         if (res.ok) {
-          refreshRosterAdminPanel();
+          refreshAllPlayersPanels();
           refreshLeagueRoster();
           return true;
         }
@@ -2779,8 +2881,8 @@
           leagueApiJsonErrorCode(txt) === "PlayerHasParticipationError"
         ) {
           throw new Error(
-            tr("rosterAdminRemoveBlockedByParticipation", { name: nickname }) ||
-              tr("rosterAdminRemoveBlockedByParticipation") ||
+            tr("playersPanelRemoveBlockedByParticipation", { name: nickname }) ||
+              tr("playersPanelRemoveBlockedByParticipation") ||
               nickname +
                 " has matches recorded and can't be removed. Delete the matches first."
           );
@@ -2795,10 +2897,18 @@
       }
     }
 
-    function bindRosterAdminPanelEvents() {
-      if (!rosterAdminPanel) return;
+    /**
+     * Wires up search filter + Add button on a freshly rendered
+     * `.players-panel` root. Per-row Remove buttons are intentionally
+     * NOT wired here — they're handled by the delegated
+     * `messagesEl` listener at the bottom of `mountChat`, which catches
+     * `.btn-roster-remove` clicks across every chat panel (including
+     * `GET_ROSTER` and the Get Players bubbles).
+     */
+    function bindPlayersPanelEvents(panel, isAdmin) {
+      if (!panel) return;
 
-      var inlineMsg = rosterAdminPanel.querySelector(".roster-admin-inline-msg");
+      var inlineMsg = panel.querySelector(".roster-admin-inline-msg");
 
       function showMsg(text, isError) {
         if (!inlineMsg) return;
@@ -2811,17 +2921,18 @@
         }, 4000);
       }
 
-      var addBtn = rosterAdminPanel.querySelector(".roster-admin-add-btn");
-      var addInput = rosterAdminPanel.querySelector(".roster-admin-add-input");
+      var addBtn = panel.querySelector(".roster-admin-add-btn");
+      var addInput = panel.querySelector(".roster-admin-add-input");
 
-      // Live-filter the roster list as the user types in the add-input.
+      // Live-filter the player list as the user types in the input.
       // We filter on the *last* comma-separated token (matches how the
       // composer's @-mention popover narrows on partial queries) so
       // incremental multi-add typing like "alice, bo" still narrows to
-      // "bo". Empty token => show everything.
+      // "bo". Empty token => show everything. Active for both admin
+      // (typing nicknames to add) and non-admin (search-only) modes.
       if (addInput) {
-        var rosterListEl = rosterAdminPanel.querySelector(".roster-admin-list");
-        var noMatchesEl = rosterAdminPanel.querySelector(".roster-admin-no-matches");
+        var rosterListEl = panel.querySelector(".roster-admin-list");
+        var noMatchesEl = panel.querySelector(".roster-admin-no-matches");
         var applyRosterFilter = function () {
           if (!rosterListEl) return;
           var raw = addInput.value || "";
@@ -2842,7 +2953,7 @@
         addInput.addEventListener("input", applyRosterFilter);
       }
 
-      if (addBtn && addInput) {
+      if (isAdmin && addBtn && addInput) {
         addBtn.addEventListener("click", async function () {
           var raw = (addInput.value || "").trim();
           if (!raw) return;
@@ -2853,7 +2964,7 @@
           if (!nicknames.length) return;
 
           addBtn.disabled = true;
-          addBtn.textContent = tr("rosterAdminAddingButton") || "Adding\u2026";
+          addBtn.textContent = tr("playersPanelAddingButton") || "Adding\u2026";
 
           var base = backendMainBase();
           var url = base + "/admin/leagues/" + encodeURIComponent(route.leagueId) + "/players";
@@ -2869,73 +2980,87 @@
             var txt = await res.text();
             if (res.ok) {
               addInput.value = "";
-              showMsg(tr("rosterAdminAddSuccess") || "Added to roster.", false);
-              refreshRosterAdminPanel();
+              showMsg(tr("playersPanelAddSuccess") || "Added to roster.", false);
+              refreshAllPlayersPanels();
               refreshLeagueRoster();
             } else if (
               res.status === 409 &&
               leagueApiJsonErrorCode(txt) === "NicknameAlreadyInUseError"
             ) {
               showMsg(
-                tr("rosterAdminAlreadyExists") || "One or more nicknames are already on the roster.",
+                tr("playersPanelAlreadyExists") || "One or more nicknames are already on the roster.",
                 true
               );
               addBtn.disabled = false;
-              addBtn.textContent = tr("rosterAdminAddButton") || "Add";
+              addBtn.textContent = tr("playersPanelAddButton") || "Add";
             } else {
               showMsg(friendlyMessageFromTechnicalError(txt), true);
               addBtn.disabled = false;
-              addBtn.textContent = tr("rosterAdminAddButton") || "Add";
+              addBtn.textContent = tr("playersPanelAddButton") || "Add";
             }
           } catch (e) {
             showMsg(friendlyMessageFromTechnicalError(String(e)), true);
             addBtn.disabled = false;
-            addBtn.textContent = tr("rosterAdminAddButton") || "Add";
+            addBtn.textContent = tr("playersPanelAddButton") || "Add";
           }
         });
       }
+    }
 
-      rosterAdminPanel.querySelectorAll(".btn-roster-remove:not(:disabled)").forEach(function (btn) {
-        btn.addEventListener("click", async function () {
-          var playerId = btn.getAttribute("data-player-id");
-          var nickname = btn.getAttribute("data-player-nickname") || "";
-          if (!playerId) return;
-          try {
-            var ok = await removePlayerFromRoster(playerId, nickname, btn);
-            if (ok) {
-              showMsg(tr("rosterAdminRemoveSuccess") || "Removed from roster.", false);
+    /**
+     * Append a new "Get Players" panel as an assistant bubble. Renders
+     * the loading state immediately, then re-renders with the loaded
+     * roster (or an error state) when the fetch resolves. This is the
+     * single entry point for both the `local-get-players` quick action
+     * and the post-match-submit "Add to roster" recovery affordance —
+     * pass `prefillNicknames` to seed the add-input with names the
+     * caller wants the host to register.
+     */
+    function deliverPlayersPanel(opts) {
+      var prefill = (opts && opts.prefillNicknames) || null;
+      var isAdmin = !!route.hostToken;
+      var initialHtml =
+        '<div class="data-panel" data-read-type="GET_PLAYERS">' +
+        "<h3>" +
+        escapeHtml(panelTitleForDataType("GET_PLAYERS")) +
+        "</h3>" +
+        renderPlayersPanelBody({ loading: true }, isAdmin) +
+        "</div>";
+      var bubble = appendAssistant(initialHtml);
+      var dataPanel = bubble.querySelector('.data-panel[data-read-type="GET_PLAYERS"]');
+      fetchLeagueRoster(route.leagueId).then(function (result) {
+        var state = result.ok
+          ? { players: result.players, teams: result.teams }
+          : { players: [], error: true };
+        if (!dataPanel) return;
+        dataPanel.innerHTML =
+          "<h3>" +
+          escapeHtml(panelTitleForDataType("GET_PLAYERS")) +
+          "</h3>" +
+          renderPlayersPanelBody(state, isAdmin);
+        var freshPanel = dataPanel.querySelector(".players-panel");
+        if (freshPanel) {
+          bindPlayersPanelEvents(freshPanel, isAdmin);
+          if (prefill && prefill.length && isAdmin) {
+            var addInput = freshPanel.querySelector(".roster-admin-add-input");
+            if (addInput) {
+              addInput.value = prefill.join(", ");
+              addInput.focus();
+              addInput.dispatchEvent(new Event("input"));
             }
-          } catch (e) {
-            showMsg(
-              e && e.message ? e.message : friendlyMessageFromTechnicalError(String(e)),
-              true
-            );
           }
-        });
+        }
       });
     }
 
-    if (rosterAdminPanel) {
-      rosterAdminPanel.addEventListener("toggle", function () {
-        if (rosterAdminPanel.open) {
-          refreshRosterAdminPanel();
-        }
-      });
-      refreshRosterAdminPanel();
-    }
-
-    /** Pre-fill the roster-admin add-input and open the panel. */
-    function openRosterAdminPanelWithNicknames(nicknames) {
-      if (!rosterAdminPanel) return;
-      rosterAdminPanel.open = true;
-      refreshRosterAdminPanel();
-      setTimeout(function () {
-        var addInput = rosterAdminPanel.querySelector(".roster-admin-add-input");
-        if (addInput && nicknames && nicknames.length) {
-          addInput.value = nicknames.join(", ");
-          addInput.focus();
-        }
-      }, 100);
+    /**
+     * Backwards-compatible alias used by the post-match-submit
+     * roster-membership recovery flow (the "+ Add to roster" button
+     * after a 422 RosterMembershipRequired error). Pre-fills the
+     * names that need adding into a freshly opened players panel.
+     */
+    function openPlayersPanelWithNicknames(nicknames) {
+      deliverPlayersPanel({ prefillNicknames: nicknames || [] });
     }
 
     var mentionList = [];
@@ -4247,7 +4372,7 @@
               var addMissingBtn = rosterErrWrap && rosterErrWrap.querySelector(".roster-admin-add-missing");
               if (addMissingBtn) {
                 addMissingBtn.addEventListener("click", function () {
-                  openRosterAdminPanelWithNicknames(missing);
+                  openPlayersPanelWithNicknames(missing);
                 });
               }
             }
@@ -5035,7 +5160,12 @@
       conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
     }
 
-    /* Roster remove from GET_ROSTER chat panels (admin only; player buttons are disabled). */
+    /* Roster remove from GET_ROSTER and Get Players chat panels (admin
+       only; player buttons are rendered disabled by
+       `renderRosterPlayerRemoveButton`). On 204 the success callout
+       lives on the same bubble and `removePlayerFromRoster` already
+       calls `refreshAllPlayersPanels()` so any open players panel
+       updates in place — we don't need a separate panel-refresh here. */
     messagesEl.addEventListener("click", async function (e) {
       var btn = e.target.closest && e.target.closest(".btn-roster-remove:not(:disabled)");
       if (!btn || !messagesEl.contains(btn)) return;
@@ -5049,7 +5179,7 @@
             '<div class="response-callout response-callout-success"><strong>' +
               escapeHtml(tr("done") || "Done.") +
               "</strong> " +
-              escapeHtml(tr("rosterAdminRemoveSuccess") || "Removed from roster.") +
+              escapeHtml(tr("playersPanelRemoveSuccess") || "Removed from roster.") +
               "</div>"
           );
         }
@@ -5060,17 +5190,30 @@
       }
     });
 
-    /* Show disabled remove tooltips on touch (mobile). */
+    /* Show disabled remove + players-add tooltips on touch (mobile).
+       Both `.roster-remove-wrap--disabled` (per-row Remove on roster /
+       players panels) and `.players-add-btn-wrap--disabled` (the
+       admin-only Add button on a non-admin Get Players panel) use the
+       same toggle-on-touch interaction so the tip is reachable on
+       devices where `:hover` never fires. */
     root.addEventListener(
       "touchstart",
       function (e) {
-        var wrap =
+        var removeWrap =
           e.target.closest && e.target.closest(".roster-remove-wrap--disabled");
+        var addWrap =
+          e.target.closest && e.target.closest(".players-add-btn-wrap--disabled");
         root.querySelectorAll(".roster-remove-wrap--tip-open").forEach(function (el) {
-          if (el !== wrap) el.classList.remove("roster-remove-wrap--tip-open");
+          if (el !== removeWrap) el.classList.remove("roster-remove-wrap--tip-open");
         });
-        if (wrap) {
-          wrap.classList.add("roster-remove-wrap--tip-open");
+        root.querySelectorAll(".players-add-btn-wrap--tip-open").forEach(function (el) {
+          if (el !== addWrap) el.classList.remove("players-add-btn-wrap--tip-open");
+        });
+        if (removeWrap) {
+          removeWrap.classList.add("roster-remove-wrap--tip-open");
+        }
+        if (addWrap) {
+          addWrap.classList.add("players-add-btn-wrap--tip-open");
         }
       },
       { passive: true }
@@ -5111,6 +5254,14 @@
       var mode = tile.getAttribute("data-quick-action-mode") || "";
       if (mode === "local-submit-match") {
         deliverEmptyMatchSubmitForm();
+        return;
+      }
+      if (mode === "local-get-players") {
+        var prompt = tile.getAttribute("data-quick-action") || "show me all the players";
+        appendUser(prompt);
+        deliverPlayersPanel();
+        conversationHistory.push({ role: "user", content: prompt });
+        conversationHistory.push({ role: "assistant", content: "[GET_PLAYERS]" });
         return;
       }
       var message = tile.getAttribute("data-quick-action") || "";

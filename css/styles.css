@@ -673,25 +673,11 @@ a:hover {
   visibility: visible;
 }
 
-.roster-admin-panel {
-  margin: 0 0 0.75rem;
-  padding: 0.65rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-}
-
-.roster-admin-summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
-  list-style: none;
-}
-
-.roster-admin-summary::-webkit-details-marker {
-  display: none;
-}
-
+/* Surface used by the "Get Players" assistant-bubble panel. The
+ * outer `.data-panel` already provides the bordered surface; this
+ * just adds top padding between the data-panel `<h3>` and the
+ * search/add row, matching the ~0.65rem gap the old admin
+ * `<details>` had between its `<summary>` and body. */
 .roster-admin-body {
   margin-top: 0.65rem;
 }
@@ -742,6 +728,59 @@ a:hover {
 
 .roster-admin-msg-error {
   color: var(--warn);
+}
+
+/* Wrap around the Add button on the "Get Players" panel. Keeps the
+ * tooltip anchor in scope when the button is disabled (non-admin
+ * page), so the explanatory tip can be positioned absolutely above
+ * the button. Mirrors `.roster-remove-wrap` so the disabled / hover
+ * / focus / touch interaction matrix is identical. */
+.players-add-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.players-add-btn-wrap--disabled {
+  cursor: help;
+}
+
+.players-add-btn-wrap--disabled .roster-admin-add-btn:disabled {
+  pointer-events: none;
+}
+
+.players-add-tip {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  min-width: 12rem;
+  max-width: 18rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  box-sizing: border-box;
+}
+
+.players-add-btn-wrap--disabled:hover .players-add-tip,
+.players-add-btn-wrap--disabled:focus .players-add-tip,
+.players-add-btn-wrap--disabled:focus-within .players-add-tip,
+.players-add-btn-wrap--disabled.players-add-btn-wrap--tip-open .players-add-tip {
+  opacity: 1;
+  visibility: visible;
 }
 
 table.data {
