@@ -324,6 +324,11 @@
     return u.replace(/\/$/, "");
   }
 
+  function dateOnlyOrNull(raw) {
+    var s = String(raw == null ? "" : raw).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+  }
+
   /**
    * GET /leagues/{id}/roster — used on chat open; includes league title for
    * header, the active LeagueRules config (so we can gate UI hints like the
@@ -360,6 +365,10 @@
           data && typeof data.league_timezone === "string"
             ? data.league_timezone
             : "America/Los_Angeles",
+        latest_match_date:
+          data && typeof data.latest_match_date === "string"
+            ? dateOnlyOrNull(data.latest_match_date)
+            : null,
         rules: data && typeof data.rules === "object" && data.rules !== null ? data.rules : null,
         players: Array.isArray(data.players) ? data.players : [],
         teams: Array.isArray(data.teams) ? data.teams : [],
@@ -399,6 +408,45 @@
         error: "parse",
         message: e && e.message ? e.message : String(e),
       };
+    }
+  }
+
+  async function fetchLeagueStandings(
+    leagueId,
+    dataType,
+    playerName,
+    startDate,
+    endDate
+  ) {
+    var base = backendMainBase();
+    if (!base || !leagueId) {
+      return { ok: false, error: "missing_config_or_league" };
+    }
+    var isByPlayer = dataType === "GET_STANDINGS_BY_PLAYER";
+    var path =
+      "/leagues/" +
+      encodeURIComponent(leagueId) +
+      "/standings" +
+      (isByPlayer ? "/by-player" : "");
+    var params = new URLSearchParams();
+    if (isByPlayer) {
+      var name = String(playerName == null ? "" : playerName).trim();
+      if (!name) return { ok: false, error: "missing_player_name" };
+      params.set("player_name", name);
+    }
+    if (dateOnlyOrNull(startDate)) params.set("start_date", startDate);
+    if (dateOnlyOrNull(endDate)) params.set("end_date", endDate);
+
+    try {
+      var url = base + path + (params.toString() ? "?" + params.toString() : "");
+      var res = await fetch(url);
+      var text = await res.text();
+      if (!res.ok) {
+        return { ok: false, error: "http", status: res.status, body: text };
+      }
+      return { ok: true, data: JSON.parse(text) };
+    } catch (e) {
+      return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };
     }
   }
 
@@ -1144,8 +1192,72 @@
     return String(raw);
   }
 
+  function cloneStandingsDataWithDateFilter(data, startDate, endDate) {
+    var source = data && typeof data === "object" ? data : {};
+    var next = {};
+    Object.keys(source).forEach(function (key) {
+      next[key] = source[key];
+    });
+    next.standings = Array.isArray(source.standings) ? source.standings : [];
+    next.tie_breakers = Array.isArray(source.tie_breakers) ? source.tie_breakers : [];
+    next._standings_filter_start_date = dateOnlyOrNull(startDate) || "";
+    next._standings_filter_end_date = dateOnlyOrNull(endDate) || "";
+    return next;
+  }
+
+  function renderStandingsDateControls(data, dataType) {
+    var startDate = dateOnlyOrNull(data && data._standings_filter_start_date) || "";
+    var endDate = dateOnlyOrNull(data && data._standings_filter_end_date) || "";
+    var playerName =
+      dataType === "GET_STANDINGS_BY_PLAYER" && data && data.player_name != null
+        ? String(data.player_name).trim()
+        : "";
+    return (
+      '<form class="standings-date-filter" data-standings-date-filter' +
+      ' data-standings-type="' +
+      escapeAttr(dataType || "") +
+      '" data-player-name="' +
+      escapeAttr(playerName) +
+      '">' +
+      '<div class="standings-date-fields">' +
+      '<label class="standings-date-field">' +
+      '<span>' +
+      escapeHtml(tr("standingsStartDate") || "Start date") +
+      "</span>" +
+      '<input type="date" name="start_date" value="' +
+      escapeAttr(startDate) +
+      '">' +
+      "</label>" +
+      '<label class="standings-date-field">' +
+      '<span>' +
+      escapeHtml(tr("standingsEndDate") || "End date") +
+      "</span>" +
+      '<input type="date" name="end_date" value="' +
+      escapeAttr(endDate) +
+      '">' +
+      "</label>" +
+      '<div class="standings-date-actions">' +
+      '<button type="submit" class="btn-secondary standings-date-apply">' +
+      escapeHtml(tr("standingsApplyFilter") || "Apply") +
+      "</button>" +
+      '<button type="button" class="btn-secondary standings-date-clear" data-standings-clear>' +
+      escapeHtml(tr("standingsClearFilter") || "Clear") +
+      "</button>" +
+      "</div>" +
+      "</div>" +
+      '<p class="standings-date-error" data-standings-date-error hidden></p>' +
+      "</form>"
+    );
+  }
+
+  function standingsRowsWithMatches(rows) {
+    return (rows || []).filter(function (r) {
+      return (Number(r.matches_played) || 0) > 0;
+    });
+  }
+
   function renderStandings(data) {
-    var rows = data.standings || [];
+    var rows = standingsRowsWithMatches(data.standings);
     if (!rows.length) {
       return "<p class=\"hint\">" + escapeHtml(tr("standingsEmpty") || "No standings yet.") + "</p>";
     }
@@ -1792,12 +1904,12 @@
     return "<div class=\"help-panel\">" + "" + "<div class=\"intent-helper-body help-panel-body\">" + body + "</div></div>";
   }
 
-  function renderReadPanel(dataType, data, isAdmin) {
+  function renderReadPanelBody(dataType, data, isAdmin) {
     var inner = "";
     var filterNote = "";
     if (dataType === "GET_STANDINGS" || dataType === "GET_STANDINGS_BY_PLAYER") {
       filterNote = dataType === "GET_STANDINGS_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
-      inner = renderStandings(data);
+      inner = renderStandingsDateControls(data, dataType) + renderStandings(data);
     } else if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
       inner = renderMatches(data, !!isAdmin);
@@ -1805,11 +1917,20 @@
     else if (dataType === "HELP") inner = renderHelpPanel(data, !!isAdmin);
     else inner = renderFallbackData(data);
     return (
-      '<div class="data-panel"><h3>' +
+      "<h3>" +
       escapeHtml(panelTitleForDataType(dataType)) +
       "</h3>" +
       filterNote +
-      inner +
+      inner
+    );
+  }
+
+  function renderReadPanel(dataType, data, isAdmin) {
+    return (
+      '<div class="data-panel" data-read-type="' +
+      escapeAttr(dataType || "") +
+      '">' +
+      renderReadPanelBody(dataType, data, isAdmin) +
       "</div>"
     );
   }
@@ -2510,6 +2631,7 @@
       teams: [],
       rules: null,
       league_timezone: "America/Los_Angeles",
+      latest_match_date: null,
       fetchedAt: null,
     };
 
@@ -2519,6 +2641,8 @@
       leagueRoster.rules = result.rules || null;
       leagueRoster.league_timezone =
         result.league_timezone || "America/Los_Angeles";
+      leagueRoster.latest_match_date =
+        dateOnlyOrNull(result.latest_match_date) || null;
       leagueRoster.status = "ok";
       leagueRoster.fetchedAt = Date.now();
       // Cache the server-config player-edit window for the
@@ -3418,6 +3542,169 @@
       return leagueRoster;
     }
 
+    async function ensureLeagueRosterForStandingsDefault() {
+      if (leagueRoster.status === "ok") return leagueRoster;
+      try {
+        var result = await fetchLeagueRoster(route.leagueId);
+        if (result.ok) {
+          applyLeagueRosterResult(result);
+        } else {
+          console.warn("[TLCHAT] Standings default roster fetch failed:", result);
+        }
+      } catch (err) {
+        console.warn("[TLCHAT] Standings default roster fetch failed:", err);
+      }
+      return leagueRoster;
+    }
+
+    function isStandingsDataType(dataType) {
+      return dataType === "GET_STANDINGS" || dataType === "GET_STANDINGS_BY_PLAYER";
+    }
+
+    function showStandingsDateError(form, message) {
+      var errorEl = form && form.querySelector("[data-standings-date-error]");
+      if (!errorEl) return;
+      errorEl.textContent = message || "";
+      errorEl.hidden = !message;
+    }
+
+    function setStandingsFilterBusy(form, busy) {
+      if (!form) return;
+      form
+        .querySelectorAll("input, button")
+        .forEach(function (el) {
+          el.disabled = !!busy;
+        });
+    }
+
+    function renderStandingsPanelInto(panel, dataType, data, isAdmin) {
+      panel.innerHTML = renderReadPanelBody(dataType, data, isAdmin);
+      bindStandingsDateControls(panel, dataType, isAdmin);
+    }
+
+    async function fetchAndRenderStandingsPanel(
+      panel,
+      dataType,
+      playerName,
+      startDate,
+      endDate,
+      isAdmin
+    ) {
+      var result = await fetchLeagueStandings(
+        route.leagueId,
+        dataType,
+        playerName,
+        startDate,
+        endDate
+      );
+      if (!result.ok) return result;
+      var nextData = cloneStandingsDataWithDateFilter(
+        result.data || {},
+        startDate,
+        endDate
+      );
+      if (playerName) nextData.player_name = playerName;
+      renderStandingsPanelInto(panel, dataType, nextData, isAdmin);
+      return result;
+    }
+
+    function bindStandingsDateControls(scope, dataType, isAdmin) {
+      if (!isStandingsDataType(dataType)) return;
+      var panel = scope && scope.classList && scope.classList.contains("data-panel")
+        ? scope
+        : scope && scope.querySelector
+          ? scope.querySelector(".data-panel")
+          : null;
+      if (!panel) return;
+      var form = panel.querySelector("[data-standings-date-filter]");
+      if (!form) return;
+      var startInput = form.querySelector('input[name="start_date"]');
+      var endInput = form.querySelector('input[name="end_date"]');
+      var clearBtn = form.querySelector("[data-standings-clear]");
+      var playerName = form.getAttribute("data-player-name") || "";
+
+      async function applyFilter(startDate, endDate) {
+        showStandingsDateError(form, "");
+        if (startDate && endDate && startDate > endDate) {
+          showStandingsDateError(
+            form,
+            tr("standingsDateRangeInvalid") ||
+              "Start date must be on or before end date."
+          );
+          return;
+        }
+        setStandingsFilterBusy(form, true);
+        try {
+          var result = await fetchAndRenderStandingsPanel(
+            panel,
+            dataType,
+            playerName,
+            startDate,
+            endDate,
+            isAdmin
+          );
+          if (!result || !result.ok) {
+            showStandingsDateError(
+              form,
+              tr("standingsFilterFailed") ||
+                "Could not update standings for those dates."
+            );
+          }
+        } catch (err) {
+          console.warn("[TLCHAT] Standings filter fetch failed:", err);
+          showStandingsDateError(
+            form,
+            tr("standingsFilterFailed") ||
+              "Could not update standings for those dates."
+          );
+        } finally {
+          if (document.body.contains(form)) setStandingsFilterBusy(form, false);
+        }
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        applyFilter(startInput ? startInput.value : "", endInput ? endInput.value : "");
+      });
+
+      if (clearBtn) {
+        clearBtn.addEventListener("click", function () {
+          if (startInput) startInput.value = "";
+          if (endInput) endInput.value = "";
+          applyFilter("", "");
+        });
+      }
+    }
+
+    async function resolveInitialStandingsData(dataType, data) {
+      if (!isStandingsDataType(dataType)) return data || {};
+      await ensureLeagueRosterForStandingsDefault();
+      var latestDate = dateOnlyOrNull(leagueRoster.latest_match_date);
+      if (!latestDate) return data || {};
+      var playerName =
+        dataType === "GET_STANDINGS_BY_PLAYER" && data && data.player_name != null
+          ? String(data.player_name).trim()
+          : "";
+      var result = await fetchLeagueStandings(
+        route.leagueId,
+        dataType,
+        playerName,
+        latestDate,
+        latestDate
+      );
+      if (result.ok) {
+        var nextData = cloneStandingsDataWithDateFilter(
+          result.data || {},
+          latestDate,
+          latestDate
+        );
+        if (playerName) nextData.player_name = playerName;
+        return nextData;
+      }
+      console.warn("[TLCHAT] Latest-day standings fetch failed:", result);
+      return cloneStandingsDataWithDateFilter(data || {}, latestDate, latestDate);
+    }
+
     function matchSummaryForConfirmation(match) {
       var team1 =
         String(match.team1_player1_nickname || "") +
@@ -3705,6 +3992,12 @@
             // window-gate math uses the DB-authoritative timestamp (not
             // an unreliable client clock).
             var serverResp = tryParseJson(txt) || {};
+            var recordedAt = serverResp.created_at || new Date().toISOString();
+            var latestDate = leagueLocalDateKey(
+              recordedAt,
+              leagueRoster.league_timezone || "America/Los_Angeles"
+            );
+            if (latestDate) leagueRoster.latest_match_date = latestDate;
             var t1 = Array.isArray(payload.team1_nicknames) ? payload.team1_nicknames : [];
             var t2 = Array.isArray(payload.team2_nicknames) ? payload.team2_nicknames : [];
             var newMatchRecord = {
@@ -3715,7 +4008,7 @@
               team2_player2_nickname: normalizeMatchNickname(t2[1]),
               team1_score: payload.team1_score,
               team2_score: payload.team2_score,
-              created_at: serverResp.created_at || new Date().toISOString(),
+              created_at: recordedAt,
             };
             removeLoadingBubble(loadingNode);
             loadingNode = null;
@@ -3843,6 +4136,7 @@
               });
             }
             var matchDeletedLine = tr("matchDeleted") || "Match deleted.";
+            refreshLeagueRoster();
             removeLoadingBubble(loadingNode);
             loadingNode = null;
             appendAssistant(
@@ -4481,7 +4775,7 @@
       return String(v == null ? "" : v).replace(/(["\\])/g, "\\$1");
     }
 
-    function renderResponse(resp) {
+    async function renderResponse(resp) {
 
       if (resp.data_type === "ERROR") {
         var em = (resp.data && resp.data.error_message) || "";
@@ -4508,8 +4802,15 @@
       }
 
       if (READ_TYPES[resp.data_type]) {
-        parts.push(renderReadPanel(resp.data_type, resp.data || {}, !!route.hostToken));
+        var readData = await resolveInitialStandingsData(
+          resp.data_type,
+          resp.data || {}
+        );
+        parts.push(renderReadPanel(resp.data_type, readData, !!route.hostToken));
         var readWrap = appendAssistant(parts.join(""));
+        if (isStandingsDataType(resp.data_type)) {
+          bindStandingsDateControls(readWrap, resp.data_type, !!route.hostToken);
+        }
         if (
           resp.data_type === "GET_MATCH_HISTORY" ||
           resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
@@ -4610,7 +4911,7 @@
         var resp = await postChat(submittedText);
         removeLoadingBubble(loadingNode);
         loadingNode = null;
-        renderResponse(resp);
+        await renderResponse(resp);
         conversationHistory.push({ role: "user", content: submittedText });
         var assistantContent = assistantContentFromResponse(resp);
         if (assistantContent) {

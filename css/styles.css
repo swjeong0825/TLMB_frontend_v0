@@ -911,6 +911,88 @@ tr.match-date-group-hidden {
   max-width: 100%;
 }
 
+.standings-date-filter {
+  margin: 0.4rem 0 0.75rem;
+}
+
+.standings-date-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.standings-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.standings-date-field input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.42rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.standings-date-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.standings-date-actions .btn-secondary {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.standings-date-error {
+  margin: 0.4rem 0 0;
+  color: var(--warn);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 520px) {
+  .standings-date-fields {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .standings-date-field {
+    align-items: flex-start;
+  }
+
+  .standings-date-field input {
+    width: 100%;
+    max-width: 16rem;
+    align-self: flex-start;
+  }
+
+  .standings-date-actions {
+    justify-content: flex-start;
+  }
+
+  .standings-table-wrap {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  table.data.standings-table th:last-child,
+  table.data.standings-table td:last-child {
+    padding-right: 0.5rem;
+  }
+}
+
 table.data th.standings-metric-rank,
 table.data td.standings-metric-rank strong {
   font-weight: 700;
