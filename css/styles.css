@@ -697,7 +697,21 @@ a:hover {
 }
 
 .roster-admin-list {
-  margin-bottom: 0.65rem;
+  margin-top: 0.65rem;
+  /* Cap visible rows at ~10 (row height ~40px + 0.35rem gap from
+   * `.roster-list`); the rest stay reachable via scrolling. The filter
+   * applied on `.roster-admin-item[hidden]` collapses out non-matching
+   * rows, so a narrowed list shrinks naturally instead of scrolling. */
+  max-height: 28rem;
+  overflow-y: auto;
+}
+
+/* The `[hidden]` HTML attribute relies on the UA `[hidden] { display: none }`
+ * rule, whose specificity (0,1,0) ties with `.roster-item-with-action`'s
+ * `display: flex` and loses the cascade. Scope a higher-specificity rule
+ * so JS-driven row filtering on `<li class="roster-admin-item ...">` works. */
+.roster-admin-item[hidden] {
+  display: none;
 }
 
 .roster-admin-add-row {

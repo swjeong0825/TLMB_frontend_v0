@@ -637,17 +637,26 @@
       var teams = (state && state.teams) || [];
       var rows = entries
         .map(function (entry) {
+          var nick = entry.nickname || "";
           return (
-            '<li class="roster-admin-item roster-item-with-action">' +
+            '<li class="roster-admin-item roster-item-with-action" data-nick-norm="' +
+            escapeAttr(normalizeMatchNickname(nick)) +
+            '">' +
             '<span class="roster-admin-name roster-player-name">' +
-            escapeHtml(entry.nickname || "") +
+            escapeHtml(nick) +
             "</span>" +
             renderRosterPlayerRemoveButton(entry, { isAdmin: true, teams: teams }) +
             "</li>"
           );
         })
         .join("");
-      bodyHtml = '<ul class="roster-admin-list roster-list roster-list-players">' + rows + "</ul>";
+      bodyHtml =
+        '<ul class="roster-admin-list roster-list roster-list-players">' +
+        rows +
+        "</ul>" +
+        '<p class="hint roster-admin-no-matches" hidden>' +
+        escapeHtml(tr("rosterAdminNoMatches") || "No matching players.") +
+        "</p>";
     }
 
     var addRow =
@@ -661,7 +670,7 @@
       "</div>" +
       '<div class="roster-admin-inline-msg" hidden></div>';
 
-    return heading + '<div class="roster-admin-body">' + bodyHtml + addRow + "</div>";
+    return heading + '<div class="roster-admin-body">' + addRow + bodyHtml + "</div>";
   }
 
   function leagueApiJsonErrorCode(text) {
@@ -2804,6 +2813,34 @@
 
       var addBtn = rosterAdminPanel.querySelector(".roster-admin-add-btn");
       var addInput = rosterAdminPanel.querySelector(".roster-admin-add-input");
+
+      // Live-filter the roster list as the user types in the add-input.
+      // We filter on the *last* comma-separated token (matches how the
+      // composer's @-mention popover narrows on partial queries) so
+      // incremental multi-add typing like "alice, bo" still narrows to
+      // "bo". Empty token => show everything.
+      if (addInput) {
+        var rosterListEl = rosterAdminPanel.querySelector(".roster-admin-list");
+        var noMatchesEl = rosterAdminPanel.querySelector(".roster-admin-no-matches");
+        var applyRosterFilter = function () {
+          if (!rosterListEl) return;
+          var raw = addInput.value || "";
+          var lastToken = raw.split(",").pop();
+          var query = normalizeMatchNickname(lastToken);
+          var items = rosterListEl.querySelectorAll(".roster-admin-item");
+          var anyVisible = false;
+          items.forEach(function (li) {
+            var nick = li.getAttribute("data-nick-norm") || "";
+            var visible = !query || nick.indexOf(query) !== -1;
+            li.hidden = !visible;
+            if (visible) anyVisible = true;
+          });
+          if (noMatchesEl) {
+            noMatchesEl.hidden = !(query && !anyVisible);
+          }
+        };
+        addInput.addEventListener("input", applyRosterFilter);
+      }
 
       if (addBtn && addInput) {
         addBtn.addEventListener("click", async function () {
