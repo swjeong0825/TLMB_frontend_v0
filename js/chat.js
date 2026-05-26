@@ -1512,14 +1512,15 @@
       escapeHtml(tr("tableTeams") || "Teams") +
       "</th><th>" +
       escapeHtml(tr("tableScore") || "Score") +
-      "</th><th class=\"col-when\">" +
-      escapeHtml(tr("tableWhen") || "When") +
       "</th>" +
       (hasAnyId
         ? "<th class=\"col-actions\">" +
           escapeHtml(tr("tableActions") || "Actions") +
           "</th>"
         : "") +
+      "<th class=\"col-when\">" +
+      escapeHtml(tr("tableWhen") || "When") +
+      "</th>" +
       "</tr></thead><tbody>";
     var colCount = hasAnyId ? 4 : 3;
     var lastDateGroupKey = null;
@@ -1582,8 +1583,6 @@
         escapeHtml(m.team1_score) +
         " – " +
         escapeHtml(m.team2_score) +
-        "</td><td class=\"col-when\">" +
-        when +
         "</td>" +
         (hasAnyId
           ? "<td class=\"col-actions match-row-actions\">" +
@@ -1591,6 +1590,9 @@
             renderMatchRowDeleteAction(m, !!isAdmin) +
             "</td>"
           : "") +
+        "<td class=\"col-when\">" +
+        when +
+        "</td>" +
         "</tr>";
     });
     return h + "</tbody></table></div>";
