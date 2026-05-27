@@ -725,13 +725,20 @@ a:hover {
   pointer-events: none;
 }
 
+/* Positioned `fixed` (not `absolute`) so the tip escapes the
+ * `overflow` clipping of the `.roster-admin-list` scroll container
+ * (per the CSS overflow spec, `overflow-y: auto` clips both axes).
+ * `top`/`left` are owned by `positionDisabledTip()` in `chat.js`,
+ * which measures the wrap with `getBoundingClientRect()` and clamps
+ * to the viewport. The CSS `:hover` / `:focus` / `--tip-open` rules
+ * keep owning visibility. */
 .alias-tip {
-  position: absolute;
-  z-index: 20;
-  right: 0;
-  bottom: calc(100% + 0.35rem);
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
   min-width: 12rem;
-  max-width: min(18rem, 70vw);
+  max-width: min(18rem, calc(100vw - 16px));
   padding: 0.45rem 0.6rem;
   border-radius: 8px;
   background: var(--text);
@@ -814,14 +821,20 @@ a:hover {
   pointer-events: none;
 }
 
+/* Positioned `fixed` (not `absolute`) so the tip escapes the
+ * `overflow` clipping of the `.roster-admin-list` scroll container
+ * (per the CSS overflow spec, `overflow-y: auto` clips both axes).
+ * `top`/`left` are owned by `positionDisabledTip()` in `chat.js`,
+ * which measures the wrap with `getBoundingClientRect()` and clamps
+ * to the viewport. The CSS `:hover` / `:focus` / `--tip-open` rules
+ * keep owning visibility. */
 .roster-remove-tip {
-  position: absolute;
-  z-index: 20;
+  position: fixed;
+  z-index: 1000;
+  top: 0;
   left: 0;
-  right: 0;
-  bottom: calc(100% + 0.35rem);
-  width: auto;
-  max-width: 100%;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 16px));
   padding: 0.45rem 0.6rem;
   border-radius: 8px;
   background: var(--text);

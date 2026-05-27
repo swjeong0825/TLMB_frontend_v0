@@ -5708,19 +5708,123 @@
         });
         if (removeWrap) {
           removeWrap.classList.add("roster-remove-wrap--tip-open");
+          positionDisabledTip(removeWrap);
         }
         if (addWrap) {
           addWrap.classList.add("players-add-btn-wrap--tip-open");
         }
         if (aliasAddWrap) {
           aliasAddWrap.classList.add("alias-add-wrap--tip-open");
+          positionDisabledTip(aliasAddWrap);
         }
         if (aliasRemoveWrap) {
           aliasRemoveWrap.classList.add("alias-remove-wrap--tip-open");
+          positionDisabledTip(aliasRemoveWrap);
         }
       },
       { passive: true }
     );
+
+    /* Disabled-button tooltips on alias add / alias remove / roster
+       remove are positioned `fixed` (see `.alias-tip` /
+       `.roster-remove-tip` in styles.css) so they escape the
+       `overflow: auto` clipping of the `.roster-admin-list` scroll
+       container. The CSS keeps owning visibility (hover / focus /
+       --tip-open); this code owns coordinates only.
+
+       Without this, the tip would render at viewport (0, 0) because
+       `position: fixed` ignores its ancestor `position: relative`. We
+       measure the wrap with `getBoundingClientRect()` on every show
+       event, place the tip centered above the wrap, then clamp to the
+       viewport (flip below when there is no room above, slide
+       sideways when wider than the wrap's slot). */
+    var DISABLED_TIP_WRAP_SELECTOR =
+      ".alias-add-wrap--disabled, " +
+      ".alias-remove-wrap--disabled, " +
+      ".roster-remove-wrap--disabled";
+
+    function disabledTipNodeFor(wrap) {
+      if (!wrap) return null;
+      if (wrap.matches(".roster-remove-wrap--disabled")) {
+        return wrap.querySelector(".roster-remove-tip");
+      }
+      return wrap.querySelector(".alias-tip");
+    }
+
+    function positionDisabledTip(wrap) {
+      var tip = disabledTipNodeFor(wrap);
+      if (!tip) return;
+      // Reset before measuring so prior coordinates don't bias the
+      // tip's measured width (which depends on max-width and the
+      // viewport, not on `left`).
+      tip.style.left = "0px";
+      tip.style.top = "0px";
+      var wrapRect = wrap.getBoundingClientRect();
+      var tipRect = tip.getBoundingClientRect();
+      var pad = 8;
+      var vw = window.innerWidth || document.documentElement.clientWidth;
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var gap = 6;
+      // Default: centered horizontally on the wrap, sitting above it.
+      var left = wrapRect.left + wrapRect.width / 2 - tipRect.width / 2;
+      var top = wrapRect.top - tipRect.height - gap;
+      if (left < pad) left = pad;
+      if (left + tipRect.width > vw - pad) {
+        left = Math.max(pad, vw - tipRect.width - pad);
+      }
+      // Flip below the wrap when there is no room above.
+      if (top < pad) top = wrapRect.bottom + gap;
+      if (top + tipRect.height > vh - pad) {
+        top = Math.max(pad, vh - tipRect.height - pad);
+      }
+      tip.style.left = left + "px";
+      tip.style.top = top + "px";
+    }
+
+    root.addEventListener(
+      "mouseover",
+      function (e) {
+        var wrap =
+          e.target.closest && e.target.closest(DISABLED_TIP_WRAP_SELECTOR);
+        if (!wrap) return;
+        positionDisabledTip(wrap);
+      },
+      true
+    );
+
+    root.addEventListener("focusin", function (e) {
+      var wrap =
+        e.target.closest && e.target.closest(DISABLED_TIP_WRAP_SELECTOR);
+      if (!wrap) return;
+      positionDisabledTip(wrap);
+    });
+
+    // Reposition every currently-visible tip on scroll / resize (the
+    // wrap moves, the fixed tip would otherwise stay where it was
+    // first measured). `:hover` and `:focus-within` cover desktop;
+    // `--tip-open` covers the touch / tap case.
+    var disabledTipRafId = null;
+    function repositionVisibleDisabledTips() {
+      disabledTipRafId = null;
+      var visibleWraps = document.querySelectorAll(
+        ".alias-add-wrap--disabled:hover, " +
+          ".alias-add-wrap--disabled:focus-within, " +
+          ".alias-add-wrap--tip-open, " +
+          ".alias-remove-wrap--disabled:hover, " +
+          ".alias-remove-wrap--disabled:focus-within, " +
+          ".alias-remove-wrap--tip-open, " +
+          ".roster-remove-wrap--disabled:hover, " +
+          ".roster-remove-wrap--disabled:focus-within, " +
+          ".roster-remove-wrap--tip-open"
+      );
+      visibleWraps.forEach(positionDisabledTip);
+    }
+    function scheduleDisabledTipReposition() {
+      if (disabledTipRafId != null) return;
+      disabledTipRafId = requestAnimationFrame(repositionVisibleDisabledTips);
+    }
+    window.addEventListener("scroll", scheduleDisabledTipReposition, true);
+    window.addEventListener("resize", scheduleDisabledTipReposition);
 
     /* Click-outside dismissal for the disabled Update/Delete tooltips on
        match-history rows. The per-wrap click handlers in
