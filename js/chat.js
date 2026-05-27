@@ -5176,6 +5176,9 @@
                 other.classList.remove("match-update-wrap--tip-open");
             });
           w.classList.toggle("match-update-wrap--tip-open");
+          if (w.classList.contains("match-update-wrap--tip-open")) {
+            positionDisabledTip(w);
+          }
         });
       });
     }
@@ -5371,6 +5374,9 @@
                 other.classList.remove("match-delete-wrap--tip-open");
             });
           w.classList.toggle("match-delete-wrap--tip-open");
+          if (w.classList.contains("match-delete-wrap--tip-open")) {
+            positionDisabledTip(w);
+          }
         });
       });
     }
@@ -5741,12 +5747,20 @@
     var DISABLED_TIP_WRAP_SELECTOR =
       ".alias-add-wrap--disabled, " +
       ".alias-remove-wrap--disabled, " +
-      ".roster-remove-wrap--disabled";
+      ".roster-remove-wrap--disabled, " +
+      ".match-update-wrap--disabled, " +
+      ".match-delete-wrap--disabled";
 
     function disabledTipNodeFor(wrap) {
       if (!wrap) return null;
       if (wrap.matches(".roster-remove-wrap--disabled")) {
         return wrap.querySelector(".roster-remove-tip");
+      }
+      if (wrap.matches(".match-update-wrap--disabled")) {
+        return wrap.querySelector(".match-update-tip");
+      }
+      if (wrap.matches(".match-delete-wrap--disabled")) {
+        return wrap.querySelector(".match-delete-tip");
       }
       return wrap.querySelector(".alias-tip");
     }
@@ -5815,7 +5829,13 @@
           ".alias-remove-wrap--tip-open, " +
           ".roster-remove-wrap--disabled:hover, " +
           ".roster-remove-wrap--disabled:focus-within, " +
-          ".roster-remove-wrap--tip-open"
+          ".roster-remove-wrap--tip-open, " +
+          ".match-update-wrap--disabled:hover, " +
+          ".match-update-wrap--disabled:focus-within, " +
+          ".match-update-wrap--tip-open, " +
+          ".match-delete-wrap--disabled:hover, " +
+          ".match-delete-wrap--disabled:focus-within, " +
+          ".match-delete-wrap--tip-open"
       );
       visibleWraps.forEach(positionDisabledTip);
     }

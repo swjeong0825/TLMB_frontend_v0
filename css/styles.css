@@ -1696,14 +1696,21 @@ table.data th.standings-metric-rank {
   line-height: 1.45;
 }
 
+/* Positioned `fixed` (not `absolute`) so the tip escapes any
+ * overflow / clipping ancestor (the match-history table can be
+ * narrow on mobile and the row's actions cell would otherwise clip
+ * the tip past the viewport edge). `top`/`left` are owned by
+ * `positionDisabledTip()` in `chat.js`, which measures the wrap with
+ * `getBoundingClientRect()` and clamps to the viewport. The CSS
+ * `:hover` / `:focus` / `--tip-open` rules keep owning visibility. */
 .match-update-tip,
 .match-delete-tip {
-  position: absolute;
-  z-index: 20;
-  right: 0;
-  bottom: calc(100% + 0.35rem);
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
   width: max-content;
-  max-width: min(20rem, 80vw);
+  max-width: min(20rem, calc(100vw - 16px));
   padding: 0.45rem 0.6rem;
   border-radius: 8px;
   background: var(--text);
