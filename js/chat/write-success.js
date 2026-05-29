@@ -61,16 +61,16 @@
         leagueRoster.league_timezone || "America/Los_Angeles"
       );
       if (latestDate) leagueRoster.latest_match_date = latestDate;
-      var t1 = Array.isArray(payload.team1_nicknames) ? payload.team1_nicknames : [];
-      var t2 = Array.isArray(payload.team2_nicknames) ? payload.team2_nicknames : [];
+      var t1 = Array.isArray(payload.pair1_nicknames) ? payload.pair1_nicknames : [];
+      var t2 = Array.isArray(payload.pair2_nicknames) ? payload.pair2_nicknames : [];
       appendMatchHistorySuccess(calloutHtml, {
         match_id: serverResp.match_id || null,
-        team1_player1_nickname: normalizeMatchNickname(t1[0]),
-        team1_player2_nickname: normalizeMatchNickname(t1[1]),
-        team2_player1_nickname: normalizeMatchNickname(t2[0]),
-        team2_player2_nickname: normalizeMatchNickname(t2[1]),
-        team1_score: payload.team1_score,
-        team2_score: payload.team2_score,
+        pair1_player1_nickname: normalizeMatchNickname(t1[0]),
+        pair1_player2_nickname: normalizeMatchNickname(t1[1]),
+        pair2_player1_nickname: normalizeMatchNickname(t2[0]),
+        pair2_player2_nickname: normalizeMatchNickname(t2[1]),
+        pair1_score: payload.pair1_score,
+        pair2_score: payload.pair2_score,
         created_at: recordedAt,
       });
       conversationHistory.push({
@@ -85,13 +85,13 @@
         extractMatchIdFromEditUrl(url) ||
         (editServerResp.match_id ? String(editServerResp.match_id) : "");
       var newT1Score =
-        editServerResp.team1_score != null
-          ? String(editServerResp.team1_score)
-          : String(payload.team1_score == null ? "" : payload.team1_score);
+        editServerResp.pair1_score != null
+          ? String(editServerResp.pair1_score)
+          : String(payload.pair1_score == null ? "" : payload.pair1_score);
       var newT2Score =
-        editServerResp.team2_score != null
-          ? String(editServerResp.team2_score)
-          : String(payload.team2_score == null ? "" : payload.team2_score);
+        editServerResp.pair2_score != null
+          ? String(editServerResp.pair2_score)
+          : String(payload.pair2_score == null ? "" : payload.pair2_score);
       var origRow = editedMatchId
         ? document.querySelector(
             '#messages [data-match-row-id="' +
@@ -101,20 +101,20 @@
         : null;
       var editedMatchRecord = {
         match_id: editedMatchId || null,
-        team1_player1_nickname: origRow
-          ? origRow.getAttribute("data-team1-p1") || ""
+        pair1_player1_nickname: origRow
+          ? origRow.getAttribute("data-pair1-p1") || ""
           : "",
-        team1_player2_nickname: origRow
-          ? origRow.getAttribute("data-team1-p2") || ""
+        pair1_player2_nickname: origRow
+          ? origRow.getAttribute("data-pair1-p2") || ""
           : "",
-        team2_player1_nickname: origRow
-          ? origRow.getAttribute("data-team2-p1") || ""
+        pair2_player1_nickname: origRow
+          ? origRow.getAttribute("data-pair2-p1") || ""
           : "",
-        team2_player2_nickname: origRow
-          ? origRow.getAttribute("data-team2-p2") || ""
+        pair2_player2_nickname: origRow
+          ? origRow.getAttribute("data-pair2-p2") || ""
           : "",
-        team1_score: newT1Score,
-        team2_score: newT2Score,
+        pair1_score: newT1Score,
+        pair2_score: newT2Score,
         created_at:
           (origRow && origRow.getAttribute("data-match-created-at")) ||
           new Date().toISOString(),

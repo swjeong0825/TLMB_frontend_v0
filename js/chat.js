@@ -77,14 +77,14 @@
     /** Latest roster from main API; refreshed when this chat view mounts.
      * `rules` is the LeagueRules config returned by GET /roster — used by
      * `renderMatchSubmitRosterNotes` to suppress the partner-conflict
-     * warning when `one_team_per_player === false`. In v6 the roster IS
+     * warning when `one_pair_per_player === false`. In v6 the roster IS
      * the player list (the `allowlist_entries` side table was retired);
      * the same `players` array already includes pre-registered nicknames
      * that have not yet played, so there is no separate fetch / union. */
     var leagueRoster = {
       status: "loading",
       players: [],
-      teams: [],
+      pairs: [],
       rules: null,
       league_timezone: "America/Los_Angeles",
       latest_match_date: null,
@@ -93,7 +93,7 @@
 
     function applyLeagueRosterResult(result) {
       leagueRoster.players = result.players;
-      leagueRoster.teams = result.teams;
+      leagueRoster.pairs = result.pairs;
       leagueRoster.rules = result.rules || null;
       leagueRoster.league_timezone =
         result.league_timezone || "America/Los_Angeles";
@@ -437,10 +437,10 @@
       var url = base + "/leagues/" + encodeURIComponent(route.leagueId) + "/matches";
       var method = "POST";
       var bodySpec = {
-        team1_nicknames: { type: "array[string]", required: true, value: null },
-        team2_nicknames: { type: "array[string]", required: true, value: null },
-        team1_score:     { type: "string",        required: true, value: null },
-        team2_score:     { type: "string",        required: true, value: null },
+        pair1_nicknames: { type: "array[string]", required: true, value: null },
+        pair2_nicknames: { type: "array[string]", required: true, value: null },
+        pair1_score:     { type: "string",        required: true, value: null },
+        pair2_score:     { type: "string",        required: true, value: null },
       };
       var parts = [];
       parts.push(renderMatchSubmitRosterNotes(bodySpec, leagueRoster));

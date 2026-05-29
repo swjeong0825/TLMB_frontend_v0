@@ -182,11 +182,11 @@
     if (!rows.length) {
       return "<p class=\"hint\">" + escapeHtml(tr("standingsEmpty") || "No standings yet.") + "</p>";
     }
-    var subjectKind = rows[0].subject_kind || "team";
+    var subjectKind = rows[0].subject_kind || "pair";
     var subjectHeader =
       subjectKind === "player"
         ? escapeHtml(tr("tablePlayer") || "Player")
-        : escapeHtml(tr("tableTeam") || "Team");
+        : escapeHtml(tr("tablePair") || "Pair");
     var parts = partitionStandingsMetricKeys(data.tie_breakers);
     var rankKeys = parts.rankKeys;
     var suppKeys = parts.suppKeys;
@@ -231,7 +231,7 @@
     h += "</tr></thead><tbody>";
     rows.forEach(function (r) {
       var subjectLabel;
-      if ((r.subject_kind || "team") === "player") {
+      if ((r.subject_kind || "pair") === "player") {
         subjectLabel = escapeHtml(r.nickname);
       } else {
         subjectLabel =

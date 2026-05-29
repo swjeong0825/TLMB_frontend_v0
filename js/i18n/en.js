@@ -77,19 +77,19 @@
         placeholderDescription: "Shown to organisers; optional.",
         advancedSummary: "Advanced options",
         advancedHint:
-          "Optional description, league timezone, one-team-only restriction, auto-register behaviour, and extra tie-breaker columns.",
+          "Optional description, league timezone, one-pair-only restriction, auto-register behaviour, and extra tie-breaker columns.",
         labelMatchPair: "Rematch rule",
         optionOncePerDay: "Once per day — recommended",
         optionOncePerLeague: "Once per league",
         optionAllowMultiple: "Unlimited rematches",
         labelLeagueTimezone: "League timezone",
-        oneTeamPerPlayer: "One team per player",
-        labelOneTeamPerPlayer: "Can a player be on more than one team?",
-        labelOneTeamPerPlayerToggle: "One team per player",
-        oneTeamPerPlayerToggleHint:
-          "Off by default — players can join multiple teams.\nTurn on to restrict each player to a single team.",
-        optionOTPPTrue: "No — each player belongs to one team only",
-        optionOTPPFalse: "Yes — a player can be on several teams (default)",
+        onePairPerPlayer: "One pair per player",
+        labelOnePairPerPlayer: "Can a player be on more than one pair?",
+        labelOnePairPerPlayerToggle: "One pair per player",
+        onePairPerPlayerToggleHint:
+          "Off by default — players can join multiple pairs.\nTurn on to restrict each player to a single pair.",
+        optionOTPPTrue: "No — each player belongs to one pair only",
+        optionOTPPFalse: "Yes — a player can be on several pairs (default)",
         labelAutoRegisterPlayersOnMatch: "Auto-add players",
         labelInitialPlayers: "Pre-register players",
         autoRegisterPlayersOnMatchHint:
@@ -103,10 +103,10 @@
         initialPlayersRequiredError:
           "Auto-register is off, so add at least one nickname to pre-register, or turn auto-register back on.",
         labelRankingSubject: "Ranking Type",
-        optionRankingSubjectTeam: "Teams",
+        optionRankingSubjectPair: "Pairs",
         optionRankingSubjectPlayer: "Individual players (default)",
         crossRuleHint:
-          "Turning this on forces Ranking Type to \u201cTeams\u201d.",
+          "Turning this on forces Ranking Type to \u201cPairs\u201d.",
         labelTieBreakerPrimary: "Ranking Score",
         labelTieBreakerSecondary: "First TieBreaker",
         labelTieBreakerTertiary: "Second TieBreaker",
@@ -119,22 +119,22 @@
         metricWinPct: "Win rate (%)",
         help: {
           modalCloseAria: "Close help",
-          matchPairAria: "Help: same two teams playing more than once",
-          matchPairTitle: "Same two teams, more than one match?",
+          matchPairAria: "Help: same two pairs playing more than once",
+          matchPairTitle: "Same two pairs, more than one match?",
           matchPairBody:
-            "By default, the same two teams can play once per league day. That keeps accidental double-submits out while still allowing a rematch tomorrow.\n\nOnce per day (recommended): one match per pair of teams on each league-local calendar day.\n\nOnce per league: the same two teams can only have one match for the whole league.\n\nUnlimited rematches: every submitted match counts.",
+            "By default, the same two pairs can play once per league day. That keeps accidental double-submits out while still allowing a rematch tomorrow.\n\nOnce per day (recommended): one match per pair matchup on each league-local calendar day.\n\nOnce per league: the same two pairs can only have one match for the whole league.\n\nUnlimited rematches: every submitted match counts.",
           leagueTimezoneAria: "Help: league timezone",
           leagueTimezoneTitle: "Which day does a match belong to?",
           leagueTimezoneBody:
             "The once-per-day rematch rule uses this timezone to decide where each calendar day starts and ends.\n\nBy default, the form picks your browser timezone. Existing and omitted values default to America/Los_Angeles.",
-          oneTeamPerPlayerAria: "Help: players on multiple teams",
-          oneTeamPerPlayerTitle: "Can someone be on more than one team?",
-          oneTeamPerPlayerBody:
-            "By default, players can join multiple teams in this league.\n\nTurn the toggle on to restrict each person to one team — the simpler setup most groups use.\n\nIf you rank individual players in the standings, multi-team membership must stay allowed. Counting points per player only makes sense when they can play for more than one side.",
-          rankingSubjectAria: "Help: team vs player standings",
-          rankingSubjectTitle: "Team table or player table?",
+          onePairPerPlayerAria: "Help: players on multiple pairs",
+          onePairPerPlayerTitle: "Can someone be on more than one pair?",
+          onePairPerPlayerBody:
+            "By default, players can join multiple pairs in this league.\n\nTurn the toggle on to restrict each person to one pair — the simpler setup most groups use.\n\nIf you rank individual players in the standings, multi-pair membership must stay allowed. Counting points per player only makes sense when they can play for more than one side.",
+          rankingSubjectAria: "Help: pair vs player standings",
+          rankingSubjectTitle: "Pair table or player table?",
           rankingSubjectBody:
-            "Choose what each row in the leaderboard represents.\n\nIndividual players (default): You compare people. The product needs players to be allowed on several teams for that to work, so this is the default and keeps the one-team-only restriction off.\n\nTeams: You compare whole teams—typical for doubles or fixed pairs.\n\nYou can\u2019t combine \u201cIndividual players\u201d with \u201cone team only\u201d—pick one story and stick with it.",
+            "Choose what each row in the leaderboard represents.\n\nIndividual players (default): You compare people. The product needs players to be allowed on several pairs for that to work, so this is the default and keeps the one-pair-only restriction off.\n\nPairs: You compare whole pairs—typical for doubles or fixed pairs.\n\nYou can\u2019t combine \u201cIndividual players\u201d with \u201cone pair only\u201d—pick one story and stick with it.",
           tieBreakersAria: "Help: sorting and tie-breakers",
           tieBreakersTitle: "How standings are ordered",
           tieBreakersBody:
@@ -173,18 +173,18 @@
           "This league doesn’t exist or isn’t available from this link. Check the league ID or ask your organiser for the correct URL.",
         playerNotFound:
           "We couldn’t find that player in this league. Check the spelling of their nickname.",
-        teamNotFound:
-          "We couldn’t find a team with those players in this league. Check both nicknames on the roster.",
+        pairNotFound:
+          "We couldn’t find a pair with those players in this league. Check both nicknames on the roster.",
         matchNotFound:
-          "We couldn’t find a match between those teams. Check the four nicknames, or browse the full match list for this league.",
+          "We couldn’t find a match between those pairs. Check the four nicknames, or browse the full match list for this league.",
         notFoundFallback:
           "We couldn’t find what you asked for. Double-check spelling and names, or try asking in another way.",
         duplicateMatchToday:
-          "Those two teams already have a match today. Edit the existing result if you meant to change the score, or try again on another league day.",
+          "Those two pairs already have a match today. Edit the existing result if you meant to change the score, or try again on another league day.",
         duplicateMatch:
-          "This league only allows one match per pair of teams, and those two teams already have a match in this league.",
+          "This league only allows one match per pair matchup, and those two pairs already have a match in this league.",
         invalidLeagueRules:
-          "Those choices don\u2019t fit together. Individual-player standings need people on several teams. Either allow players on multiple teams, or switch standings back to teams.",
+          "Those choices don\u2019t fit together. Individual-player standings need people on several pairs. Either allow players on multiple pairs, or switch standings back to pairs.",
         titleExists: "A league with this title already exists. Try a different name.",
         forbidden:
           "You don’t have permission for that action. Admins should use the league link that includes the host token.",
@@ -210,20 +210,20 @@
         panelHelp: "Supported commands",
         panelDetails: "Details",
         helpEmpty: "No commands available.",
-        fieldTeamId: "Team reference",
+        fieldPairId: "Pair reference",
         fieldMatchId: "Match reference",
         fieldPlayerId: "Player reference",
         fieldCurrentNickname: "Current name",
         fieldNewNickname: "New name",
-        fieldTeam1Players: "Team 1 players",
-        fieldTeam2Players: "Team 2 players",
-        fieldTeam1Nicknames: "Team 1 nicknames",
-        fieldTeam2Nicknames: "Team 2 nicknames",
-        fieldTeam1Score: "Team 1 score",
-        fieldTeam2Score: "Team 2 score",
+        fieldPair1Players: "Pair 1 players",
+        fieldPair2Players: "Pair 2 players",
+        fieldPair1Nicknames: "Pair 1 nicknames",
+        fieldPair2Nicknames: "Pair 2 nicknames",
+        fieldPair1Score: "Pair 1 score",
+        fieldPair2Score: "Pair 2 score",
         formScoresHeading: "Scores",
-        formScoreTeam1: "Team 1",
-        formScoreTeam2: "Team 2",
+        formScorePair1: "Pair 1",
+        formScorePair2: "Pair 2",
         fieldMethod: "Method",
         fieldUrl: "URL",
         fieldNicknames: "Player nicknames",
@@ -233,16 +233,16 @@
         noDetails: "No additional details to show.",
         rosterLoadingNotes:
           "League roster is still loading or could not be loaded; registration previews are unavailable.",
-        rosterWarnPlayerTeam:
-          "Player {player} is already in the following team: <strong>{team}</strong>",
+        rosterWarnPlayerPair:
+          "Player {player} is already in the following pair: <strong>{pair}</strong>",
         newPlayerRegLine:
           "<p class=\"hint roster-note-info\"><strong>New player registration:</strong> Following players will be registered: {list}</p>",
-        newTeamLineOne:
-          "<p class=\"hint roster-note-info\"><strong>New team registration:</strong> Following team will be created: {team}</p>",
-        newTeamLineMany:
-          "<p class=\"hint roster-note-info\"><strong>New team registration:</strong> Following teams will be created: {teams}</p>",
+        newPairLineOne:
+          "<p class=\"hint roster-note-info\"><strong>New pair registration:</strong> Following pair will be created: {pair}</p>",
+        newPairLineMany:
+          "<p class=\"hint roster-note-info\"><strong>New pair registration:</strong> Following pairs will be created: {pairs}</p>",
         warning: "Warning:",
-        rosterHeadingTeams: "Teams",
+        rosterHeadingPairs: "Pairs",
         rosterHeadingPlayers: "Players",
         rosterEmpty: "Roster is empty.",
         standingsEmpty: "No standings yet.",
@@ -256,7 +256,7 @@
         matchDateShow: "Show matches for {date}",
         matchDateHide: "Hide matches for {date}",
         tableRank: "Rank",
-        tableTeam: "Team",
+        tablePair: "Pair",
         tablePlayer: "Player",
         tableW: "W",
         tableL: "L",
@@ -268,7 +268,7 @@
         tableGamesLost: "Games lost",
         tableWinPct: "Win %",
         tableMatchesPlayed: "Played",
-        tableTeams: "Teams",
+        tablePairs: "Pairs",
         tableScore: "Score",
         tableWhen: "When",
         tableActions: "Actions",
@@ -296,9 +296,9 @@
         rematchConfirmAction: "Record rematch",
         rematchConfirmModalTitle: "Record another match today?",
         rematchConfirmModalWarning:
-          "These two teams already have a match recorded today. Continue only if this is a separate rematch.",
+          "These two pairs already have a match recorded today. Continue only if this is a separate rematch.",
         rematchConfirmModalExisting:
-          "Existing result: {teams} · {score} · {when}",
+          "Existing result: {pairs} · {score} · {when}",
         rematchConfirmModalCloseAria: "Close",
         vs: "vs",
         filterFor: "Showing results for {name}.",
@@ -307,13 +307,13 @@
         formP1: "P1",
         formP2: "P2",
         intentGetStandingsDesc:
-          "League leaderboard (teams or players).",
+          "League leaderboard (pairs or players).",
         intentGetStandingsEx1: "show me the standings",
         intentGetStandingsEx2: "who's winning the league?",
         intentGetStandingsEx3: "what's the current leaderboard?",
         intentGetStandingsByPlayerDesc: "One player's standings row.",
         intentGetStandingsByPlayerEx1: "what's Alice's rank in the league?",
-        intentGetStandingsByPlayerEx2: "where does Bob's team stand?",
+        intentGetStandingsByPlayerEx2: "where does Bob's pair stand?",
         intentGetStandingsByPlayerEx3: "show me Charlie's standing",
         intentGetMatchHistoryDesc: "All match results, newest first.",
         intentGetMatchHistoryEx1: "show me all the matches",
@@ -323,10 +323,10 @@
         intentGetMatchHistoryByPlayerEx1: "show me Alice's match history",
         intentGetMatchHistoryByPlayerEx2: "what matches has Bob played?",
         intentGetMatchHistoryByPlayerEx3: "matches involving Charlie",
-        intentGetRosterDesc: "All registered players and teams.",
+        intentGetRosterDesc: "All registered players and pairs.",
         intentGetRosterEx1: "show me all the players",
         intentGetRosterEx2: "who's in the league?",
-        intentGetRosterEx3: "list all teams",
+        intentGetRosterEx3: "list all pairs",
         intentSubmitMatchDesc: "Record a doubles match result.",
         intentSubmitMatchEx1: "record a match",
         intentSubmitMatchEx2: "Jae + Jazz 6:4 DK + Casper",
@@ -340,13 +340,13 @@
         intentEditScoreEx3: "correct the score of the match Alice and Bob vs Charlie and Diana",
         intentDeleteMatchDesc: "Delete a match (four nicknames).",
         intentDeleteMatchEx1: "delete the match between Alice/Bob and Charlie/Diana",
-        intentDeleteTeamDesc: "Delete a team with no matches.",
-        intentDeleteTeamEx1: "delete the team Alice and Bob",
+        intentDeletePairDesc: "Delete a pair with no matches.",
+        intentDeletePairEx1: "delete the pair Alice and Bob",
         intentAddPlayersToRosterDesc: "Pre-register one or more players on the league roster.",
         intentAddPlayersToRosterEx1: "add Alex and Daniel to the roster",
         intentAddPlayersToRosterEx2: "register Jason as a player",
         intentRemovePlayerFromRosterDesc:
-          "Remove one player from the roster (only if they have no teams and no matches).",
+          "Remove one player from the roster (only if they have no pairs and no matches).",
         intentRemovePlayerFromRosterEx1: "remove Michael from the roster",
         intentRemovePlayerFromRosterEx2: "drop Ryan from the league",
         groupPlayerCommands: "Player commands",
@@ -394,8 +394,8 @@
         actionCompleted: "Action completed:",
         matchRecorded: "Match recorded.",
         matchScoreUpdated: "Match score updated.",
-        matchAlreadyExistsToday: "Those two teams already have a match today. Record not saved.",
-        matchAlreadyExistsInLeague: "Those two teams already have a match in this league. Record not saved.",
+        matchAlreadyExistsToday: "Those two pairs already have a match today. Record not saved.",
+        matchAlreadyExistsInLeague: "Those two pairs already have a match in this league. Record not saved.",
         matchAlreadyExists: "Match already exists. Record not saved.",
         submitToLeague: "Submit to league API",
         adminUrlWarn:
@@ -419,7 +419,7 @@
         playersPanelAddSuccess: "Added to roster.",
         playersPanelRemoveSuccess: "Removed from roster.",
         playersPanelRemoveBlockedByParticipation:
-          "Can\u2019t remove this player: they already belong to a team or appear in a match. Delete those first.",
+          "Can\u2019t remove this player: they already belong to a pair or appear in a match. Delete those first.",
         playersPanelAddDisabledAdminOnly:
           "Adding players is available only in Admin mode.",
         aliasAddButton: "+ Alias",
@@ -442,12 +442,12 @@
         aliasChipRemoveAria: "Remove alias {alias} from {name}",
         rosterRemoveButton: "Remove",
         rosterRemoveAdminOnly: "Remove is available only in Admin mode.",
-        rosterRemoveBlockedTeam:
-          "{name} belongs to a team. Delete the team first.",
+        rosterRemoveBlockedPair:
+          "{name} belongs to a pair. Delete the pair first.",
         rosterRemoveBlockedMatch:
           "{name} appears in a match. Delete the match first.",
-        rosterRemoveBlockedTeamAndMatch:
-          "{name} belongs to a team and appears in a match. Delete those first.",
+        rosterRemoveBlockedPairAndMatch:
+          "{name} belongs to a pair and appears in a match. Delete those first.",
         rosterMembershipRequiredHeadline:
           "{names} are not on this league's roster. Use '{atHint}' in chat to search for the player.",
         rosterMembershipAddButton: "+ Add to roster",

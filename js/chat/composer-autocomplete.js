@@ -70,7 +70,7 @@
 
     /**
      * Per-input nickname autocomplete used by the write-form nick-pair
-     * inputs (team1_nicknames / team2_nicknames). Mirrors the composer's
+     * inputs (pair1_nicknames / pair2_nicknames). Mirrors the composer's
      * @-mention popover behavior but is scoped to a single text input and
      * triggered on focus/typing instead of an `@` sigil.
      */

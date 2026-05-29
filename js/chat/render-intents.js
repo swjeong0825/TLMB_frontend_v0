@@ -23,7 +23,7 @@
         name: "GET_STANDINGS",
         desc:
           tr("intentGetStandingsDesc") ||
-          "League leaderboard (teams or players).",
+          "League leaderboard (pairs or players).",
         examples: [
           tr("intentGetStandingsEx1") || "show me the standings",
           tr("intentGetStandingsEx2") || "who's winning the league?",
@@ -37,7 +37,7 @@
           "One player's standings row.",
         examples: [
           tr("intentGetStandingsByPlayerEx1") || "what's Alice's rank in the league?",
-          tr("intentGetStandingsByPlayerEx2") || "where does Bob's team stand?",
+          tr("intentGetStandingsByPlayerEx2") || "where does Bob's pair stand?",
           tr("intentGetStandingsByPlayerEx3") || "show me Charlie's standing",
         ],
       },
@@ -63,11 +63,11 @@
       },
       {
         name: "GET_ROSTER",
-        desc: tr("intentGetRosterDesc") || "All registered players and teams.",
+        desc: tr("intentGetRosterDesc") || "All registered players and pairs.",
         examples: [
           tr("intentGetRosterEx1") || "show me all the players",
           tr("intentGetRosterEx2") || "who's in the league?",
-          tr("intentGetRosterEx3") || "list all teams",
+          tr("intentGetRosterEx3") || "list all pairs",
         ],
       },
     ];
@@ -100,9 +100,9 @@
         examples: [tr("intentDeleteMatchEx1") || "delete the match between Alice/Bob and Charlie/Diana"],
       },
       {
-        name: "DELETE_TEAM",
-        desc: tr("intentDeleteTeamDesc") || "Delete a team with no matches.",
-        examples: [tr("intentDeleteTeamEx1") || "delete the team Alice and Bob"],
+        name: "DELETE_PAIR",
+        desc: tr("intentDeletePairDesc") || "Delete a pair with no matches.",
+        examples: [tr("intentDeletePairEx1") || "delete the pair Alice and Bob"],
       },
       {
         name: "ADD_PLAYERS_TO_ROSTER",

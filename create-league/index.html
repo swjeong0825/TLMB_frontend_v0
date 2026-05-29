@@ -94,7 +94,7 @@
                   ?
                 </button>
               </span>
-              <select name="match_pair_idempotency">
+              <select name="pair_matchup_idempotency">
                 <option value="once_per_day" selected data-i18n="createLeague.optionOncePerDay"></option>
                 <option value="once_per_league" data-i18n="createLeague.optionOncePerLeague"></option>
                 <option value="none" data-i18n="createLeague.optionAllowMultiple"></option>
@@ -114,7 +114,7 @@
                 </button>
               </span>
               <select name="ranking_subject">
-                <option value="team" data-i18n="createLeague.optionRankingSubjectTeam"></option>
+                <option value="pair" data-i18n="createLeague.optionRankingSubjectPair"></option>
                 <option value="player" selected data-i18n="createLeague.optionRankingSubjectPlayer"></option>
               </select>
             </label>
@@ -175,28 +175,28 @@
               <span class="field-label-with-help roster-label-row">
                 <span class="roster-label-with-toggle">
                   <label
-                    for="one-team-per-player-toggle"
-                    data-i18n="createLeague.labelOneTeamPerPlayerToggle"
+                    for="one-pair-per-player-toggle"
+                    data-i18n="createLeague.labelOnePairPerPlayerToggle"
                   ></label>
                   <input
                     type="checkbox"
-                    name="one_team_per_player"
-                    id="one-team-per-player-toggle"
+                    name="one_pair_per_player"
+                    id="one-pair-per-player-toggle"
                     class="roster-toggle-input"
                   />
                 </span>
                 <button
                   type="button"
                   class="help-icon"
-                  data-help-key="oneTeamPerPlayer"
+                  data-help-key="onePairPerPlayer"
                   aria-haspopup="dialog"
-                  data-i18n-aria-label="createLeague.help.oneTeamPerPlayerAria"
+                  data-i18n-aria-label="createLeague.help.onePairPerPlayerAria"
                 >
                   ?
                 </button>
               </span>
               <div class="roster-field-hints">
-                <p class="hint" data-i18n="createLeague.oneTeamPerPlayerToggleHint"></p>
+                <p class="hint" data-i18n="createLeague.onePairPerPlayerToggleHint"></p>
                 <p class="hint create-league-cross-rule-hint" data-i18n="createLeague.crossRuleHint"></p>
               </div>
             </div>

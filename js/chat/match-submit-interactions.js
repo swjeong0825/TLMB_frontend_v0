@@ -24,7 +24,7 @@
       return !!(
         rosterState &&
         rosterState.rules &&
-        rosterState.rules.match_pair_idempotency === "none"
+        rosterState.rules.pair_matchup_idempotency === "none"
       );
     }
 
@@ -44,20 +44,20 @@
     }
 
     function matchSummaryForConfirmation(match) {
-      var team1 =
-        String(match.team1_player1_nickname || "") +
+      var pair1 =
+        String(match.pair1_player1_nickname || "") +
         " + " +
-        String(match.team1_player2_nickname || "");
-      var team2 =
-        String(match.team2_player1_nickname || "") +
+        String(match.pair1_player2_nickname || "");
+      var pair2 =
+        String(match.pair2_player1_nickname || "") +
         " + " +
-        String(match.team2_player2_nickname || "");
+        String(match.pair2_player2_nickname || "");
       return {
-        teams: team1 + " " + (tr("vs") || "vs") + " " + team2,
+        pairs: pair1 + " " + (tr("vs") || "vs") + " " + pair2,
         score:
-          String(match.team1_score == null ? "" : match.team1_score) +
+          String(match.pair1_score == null ? "" : match.pair1_score) +
           " - " +
-          String(match.team2_score == null ? "" : match.team2_score),
+          String(match.pair2_score == null ? "" : match.pair2_score),
         when: formatWhenPlain(match.created_at),
       };
     }
@@ -119,14 +119,14 @@
         if (warningEl) {
           warningEl.textContent =
             tr("rematchConfirmModalWarning") ||
-            "These two teams already have a match recorded today. Continue only if this is a separate rematch.";
+            "These two pairs already have a match recorded today. Continue only if this is a separate rematch.";
         }
         if (detailEl && existing) {
           var summary = matchSummaryForConfirmation(existing);
           detailEl.textContent =
             tr("rematchConfirmModalExisting", summary) ||
             "Existing result: " +
-              summary.teams +
+              summary.pairs +
               " · " +
               summary.score +
               " · " +
@@ -218,11 +218,11 @@
     async function confirmAllowedSameDayRematchIfNeeded(method, url, payload, submitBtn) {
       if (!isMatchCreationCall(method, url)) return true;
 
-      var pt1 = Array.isArray(payload.team1_nicknames)
-        ? payload.team1_nicknames
+      var pt1 = Array.isArray(payload.pair1_nicknames)
+        ? payload.pair1_nicknames
         : [];
-      var pt2 = Array.isArray(payload.team2_nicknames)
-        ? payload.team2_nicknames
+      var pt2 = Array.isArray(payload.pair2_nicknames)
+        ? payload.pair2_nicknames
         : [];
       var t1RawNorm = [normalizeMatchNickname(pt1[0]), normalizeMatchNickname(pt1[1])];
       var t2RawNorm = [normalizeMatchNickname(pt2[0]), normalizeMatchNickname(pt2[1])];

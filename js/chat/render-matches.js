@@ -165,7 +165,7 @@
     var hasAnyId = rows.some(function (m) { return m && m.match_id; });
     var h =
       "<div class=\"match-history-table-wrap\"><table class=\"data match-history-table\"><thead><tr><th>" +
-      escapeHtml(tr("tableTeams") || "Teams") +
+      escapeHtml(tr("tablePairs") || "Pairs") +
       "</th><th>" +
       escapeHtml(tr("tableScore") || "Score") +
       "</th>" +
@@ -182,16 +182,16 @@
     var lastDateGroupKey = null;
     rows.forEach(function (m) {
       var t1 =
-        '<span class="match-team match-team--1">' +
-        escapeHtml(m.team1_player1_nickname) +
-        ' <span class="match-team-plus">+</span> ' +
-        escapeHtml(m.team1_player2_nickname) +
+        '<span class="match-pair match-pair--1">' +
+        escapeHtml(m.pair1_player1_nickname) +
+        ' <span class="match-pair-plus">+</span> ' +
+        escapeHtml(m.pair1_player2_nickname) +
         "</span>";
       var t2 =
-        '<span class="match-team match-team--2">' +
-        escapeHtml(m.team2_player1_nickname) +
-        ' <span class="match-team-plus">+</span> ' +
-        escapeHtml(m.team2_player2_nickname) +
+        '<span class="match-pair match-pair--2">' +
+        escapeHtml(m.pair2_player1_nickname) +
+        ' <span class="match-pair-plus">+</span> ' +
+        escapeHtml(m.pair2_player2_nickname) +
         "</span>";
       var when = m.created_at ? formatWhen(m.created_at) : escapeHtml(tr("emDash") || "—");
       var matchId = m.match_id ? String(m.match_id) : "";
@@ -221,24 +221,24 @@
           (m.created_at
             ? " data-match-created-at=\"" + escapeAttr(String(m.created_at)) + "\""
             : "") +
-          " data-team1-p1=\"" + escapeAttr(m.team1_player1_nickname || "") + "\"" +
-          " data-team1-p2=\"" + escapeAttr(m.team1_player2_nickname || "") + "\"" +
-          " data-team2-p1=\"" + escapeAttr(m.team2_player1_nickname || "") + "\"" +
-          " data-team2-p2=\"" + escapeAttr(m.team2_player2_nickname || "") + "\""
+          " data-pair1-p1=\"" + escapeAttr(m.pair1_player1_nickname || "") + "\"" +
+          " data-pair1-p2=\"" + escapeAttr(m.pair1_player2_nickname || "") + "\"" +
+          " data-pair2-p1=\"" + escapeAttr(m.pair2_player1_nickname || "") + "\"" +
+          " data-pair2-p2=\"" + escapeAttr(m.pair2_player2_nickname || "") + "\""
         : "";
       h +=
         "<tr class=\"match-row\"" +
         rowDataAttrs +
-        "><td class=\"col-teams\"><span class=\"match-teams\">" +
+        "><td class=\"col-pairs\"><span class=\"match-pairs\">" +
         t1 +
         '<span class="match-vs">' +
         escapeHtml(tr("vs") || "vs") +
         "</span>" +
         t2 +
         "</span></td><td>" +
-        escapeHtml(m.team1_score) +
+        escapeHtml(m.pair1_score) +
         " – " +
-        escapeHtml(m.team2_score) +
+        escapeHtml(m.pair2_score) +
         "</td>" +
         (hasAnyId
           ? "<td class=\"col-actions match-row-actions\">" +
@@ -367,16 +367,16 @@
     var rowsHtml = matches
       .map(function (m) {
         var t1 =
-          '<span class="match-team match-team--1">' +
-          escapeHtml(m.team1_player1_nickname) +
-          ' <span class="match-team-plus">+</span> ' +
-          escapeHtml(m.team1_player2_nickname) +
+          '<span class="match-pair match-pair--1">' +
+          escapeHtml(m.pair1_player1_nickname) +
+          ' <span class="match-pair-plus">+</span> ' +
+          escapeHtml(m.pair1_player2_nickname) +
           "</span>";
         var t2 =
-          '<span class="match-team match-team--2">' +
-          escapeHtml(m.team2_player1_nickname) +
-          ' <span class="match-team-plus">+</span> ' +
-          escapeHtml(m.team2_player2_nickname) +
+          '<span class="match-pair match-pair--2">' +
+          escapeHtml(m.pair2_player1_nickname) +
+          ' <span class="match-pair-plus">+</span> ' +
+          escapeHtml(m.pair2_player2_nickname) +
           "</span>";
         var when = m.created_at
           ? formatWhen(m.created_at)
@@ -391,15 +391,15 @@
           (m.created_at
             ? ' data-match-created-at="' + escapeAttr(String(m.created_at)) + '"'
             : "") +
-          ' data-team1-p1="' + escapeAttr(m.team1_player1_nickname || "") + '"' +
-          ' data-team1-p2="' + escapeAttr(m.team1_player2_nickname || "") + '"' +
-          ' data-team2-p1="' + escapeAttr(m.team2_player1_nickname || "") + '"' +
-          ' data-team2-p2="' + escapeAttr(m.team2_player2_nickname || "") + '"';
+          ' data-pair1-p1="' + escapeAttr(m.pair1_player1_nickname || "") + '"' +
+          ' data-pair1-p2="' + escapeAttr(m.pair1_player2_nickname || "") + '"' +
+          ' data-pair2-p1="' + escapeAttr(m.pair2_player1_nickname || "") + '"' +
+          ' data-pair2-p2="' + escapeAttr(m.pair2_player2_nickname || "") + '"';
         return (
           '<tr class="match-picker-row"' +
           pickerRowAttrs +
           ">" +
-          '<td class="col-teams"><span class="match-teams">' +
+          '<td class="col-pairs"><span class="match-pairs">' +
           t1 +
           '<span class="match-vs">' +
           escapeHtml(tr("vs") || "vs") +
@@ -407,9 +407,9 @@
           t2 +
           "</span></td>" +
           "<td>" +
-          escapeHtml(m.team1_score) +
+          escapeHtml(m.pair1_score) +
           " – " +
-          escapeHtml(m.team2_score) +
+          escapeHtml(m.pair2_score) +
           "</td>" +
           '<td class="col-when">' +
           when +
@@ -433,7 +433,7 @@
       '<table class="data match-picker-table">' +
       "<thead><tr>" +
       "<th>" +
-      escapeHtml(tr("tableTeams") || "Teams") +
+      escapeHtml(tr("tablePairs") || "Pairs") +
       "</th>" +
       "<th>" +
       escapeHtml(tr("tableScore") || "Score") +

@@ -16,10 +16,10 @@
   function renderRosterPlayerRemoveButton(player, opts) {
     opts = opts || {};
     var isAdmin = !!opts.isAdmin;
-    var teams = opts.teams || [];
-    var canRemove = isAdmin && rosterPlayerCanRemove(player, teams);
+    var pairs = opts.pairs || [];
+    var canRemove = isAdmin && rosterPlayerCanRemove(player, pairs);
     var disabled = !canRemove;
-    var reason = disabled ? rosterPlayerRemoveDisableReason(isAdmin, player, teams) : "";
+    var reason = disabled ? rosterPlayerRemoveDisableReason(isAdmin, player, pairs) : "";
     var btnLabel = tr("rosterRemoveButton") || "Remove";
     var playerId = player && player.player_id ? String(player.player_id) : "";
     var nickname = player && player.nickname ? String(player.nickname) : "";
@@ -204,7 +204,7 @@
    * quick action and by the post-match-submit "Add to roster" recovery
    * affordance.
    *
-   * Renders only players (no teams), in three regions:
+   * Renders only players (no pairs), in three regions:
    *  1. A combined search / add input + Add button.
    *     - Admin (`isAdmin === true`): Add button is enabled and posts
    *       `POST /admin/leagues/{lid}/players` on click.
@@ -244,7 +244,7 @@
         escapeHtml(tr("playersPanelEmpty") || "No players on the roster yet.") +
         "</p>";
     } else {
-      var teams = (state && state.teams) || [];
+      var pairs = (state && state.pairs) || [];
       var rows = entries
         .map(function (entry) {
           var nick = entry.nickname || "";
@@ -260,7 +260,7 @@
             escapeAttr(nick) +
             '">' +
             renderRosterPlayerName(entry, { isAdmin: !!isAdmin }) +
-            renderRosterPlayerActions(entry, { isAdmin: !!isAdmin, teams: teams }) +
+            renderRosterPlayerActions(entry, { isAdmin: !!isAdmin, pairs: pairs }) +
             "</li>"
           );
         })
@@ -330,14 +330,14 @@
 
   function renderRoster(data, isAdmin) {
     var players = data.players || [];
-    var teams = data.teams || [];
+    var pairs = data.pairs || [];
     var h = "";
-    if (teams.length) {
+    if (pairs.length) {
       h +=
         '<div class="roster-block"><h4 class="roster-heading">' +
-        escapeHtml(tr("rosterHeadingTeams") || "Teams") +
+        escapeHtml(tr("rosterHeadingPairs") || "Pairs") +
         "</h4><ul class=\"roster-list\">";
-      teams.forEach(function (t) {
+      pairs.forEach(function (t) {
         h +=
           "<li class=\"roster-item\"><span class=\"roster-pair\">" +
           escapeHtml(t.player1_nickname) +
@@ -366,7 +366,7 @@
           escapeAttr(nick) +
           '">' +
           renderRosterPlayerName(p, { isAdmin: !!isAdmin }) +
-          renderRosterPlayerActions(p, { isAdmin: !!isAdmin, teams: teams }) +
+          renderRosterPlayerActions(p, { isAdmin: !!isAdmin, pairs: pairs }) +
           "</li>";
       });
       h += "</ul></div>";

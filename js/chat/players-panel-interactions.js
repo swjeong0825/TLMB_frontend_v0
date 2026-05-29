@@ -20,8 +20,8 @@
 
     function rosterStateFromResult(result) {
       return result && result.ok
-        ? { players: result.players, teams: result.teams }
-        : { players: [], teams: [], error: true };
+        ? { players: result.players, pairs: result.pairs }
+        : { players: [], pairs: [], error: true };
     }
 
     function rerenderPlayersPanels(state) {
@@ -190,7 +190,7 @@
       var dataPanel = bubble.querySelector('.data-panel[data-read-type="GET_PLAYERS"]');
       fetchLeagueRoster(route.leagueId).then(function (result) {
         var state = result.ok
-          ? { players: result.players, teams: result.teams }
+          ? { players: result.players, pairs: result.pairs }
           : { players: [], error: true };
         if (!dataPanel) return;
         dataPanel.innerHTML =

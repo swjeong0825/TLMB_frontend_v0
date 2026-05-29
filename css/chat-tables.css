@@ -41,16 +41,16 @@ table.data td {
   white-space: nowrap;
 }
 
-.match-teams {
+.match-pairs {
   display: inline;
 }
 
-.match-team {
+.match-pair {
   font-weight: 500;
   white-space: nowrap;
 }
 
-.match-team-plus {
+.match-pair-plus {
   color: var(--muted);
   font-weight: 400;
   margin: 0 0.05rem;
@@ -76,11 +76,11 @@ table.data td {
     min-width: 100%;
   }
 
-  .match-history-table .col-teams {
+  .match-history-table .col-pairs {
     white-space: nowrap;
   }
 
-  .match-teams {
+  .match-pairs {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -88,7 +88,7 @@ table.data td {
     line-height: 1.3;
   }
 
-  .match-team {
+  .match-pair {
     display: block;
     white-space: nowrap;
   }

@@ -77,19 +77,19 @@
         placeholderDescription: "주최자에게 보입니다. 선택 사항입니다.",
         advancedSummary: "고급 옵션",
         advancedHint:
-          "선택 설명, 리그 시간대, 팀 소속 제한, 자동 등록 동작, 추가 동률 처리 기준입니다.",
+          "선택 설명, 리그 시간대, 페어 소속 제한, 자동 등록 동작, 추가 동률 처리 기준입니다.",
         labelMatchPair: "재경기 규칙",
         optionOncePerDay: "하루에 한 번 — 권장",
         optionOncePerLeague: "리그 전체에서 한 번",
         optionAllowMultiple: "재경기 제한 없음",
         labelLeagueTimezone: "리그 시간대",
-        oneTeamPerPlayer: "플레이어당 팀 하나",
-        labelOneTeamPerPlayer: "한 사람이 여러 팀에 들어갈 수 있나요?",
-        labelOneTeamPerPlayerToggle: "플레이어당 팀 하나",
-        oneTeamPerPlayerToggleHint:
-          "기본값은 꺼짐 — 여러 팀에 속할 수 있어요. 켜면 한 사람당 팀 하나로 제한합니다.",
-        optionOTPPTrue: "아니요 — 한 사람은 팀 하나에만 소속돼요",
-        optionOTPPFalse: "예 — 한 사람이 여러 팀에 속할 수 있어요(기본)",
+        onePairPerPlayer: "플레이어당 페어 하나",
+        labelOnePairPerPlayer: "한 사람이 여러 페어에 들어갈 수 있나요?",
+        labelOnePairPerPlayerToggle: "플레이어당 페어 하나",
+        onePairPerPlayerToggleHint:
+          "기본값은 꺼짐 — 여러 페어에 속할 수 있어요. 켜면 한 사람당 페어 하나로 제한합니다.",
+        optionOTPPTrue: "아니요 — 한 사람은 페어 하나에만 소속돼요",
+        optionOTPPFalse: "예 — 한 사람이 여러 페어에 속할 수 있어요(기본)",
         labelAutoRegisterPlayersOnMatch: "선수 자동 추가",
         labelInitialPlayers: "선수 사전 등록",
         autoRegisterPlayersOnMatchHint:
@@ -103,10 +103,10 @@
         initialPlayersRequiredError:
           "자동 등록이 꺼져 있어요. 사전 등록할 닉네임을 한 명 이상 추가하거나, 자동 등록을 다시 켜 주세요.",
         labelRankingSubject: "순위 유형",
-        optionRankingSubjectTeam: "팀",
+        optionRankingSubjectPair: "페어",
         optionRankingSubjectPlayer: "개인(플레이어)(기본)",
         crossRuleHint:
-          "이 옵션을 켜면 순위 유형이 \u201c팀\u201d으로 바뀝니다.",
+          "이 옵션을 켜면 순위 유형이 \u201c페어\u201d으로 바뀝니다.",
         labelTieBreakerPrimary: "순위 점수",
         labelTieBreakerSecondary: "첫 번째 동률 처리",
         labelTieBreakerTertiary: "두 번째 동률 처리",
@@ -119,22 +119,22 @@
         metricWinPct: "승률(%)",
         help: {
           modalCloseAria: "도움말 닫기",
-          matchPairAria: "도움말: 같은 두 팀의 재경기",
-          matchPairTitle: "같은 두 팀, 여러 번 경기?",
+          matchPairAria: "도움말: 같은 두 페어의 재경기",
+          matchPairTitle: "같은 두 페어, 여러 번 경기?",
           matchPairBody:
-            "기본값은 같은 두 팀이 리그 날짜 기준으로 하루에 한 번만 경기할 수 있는 방식이에요. 실수로 두 번 제출하는 일은 막고, 다음 날 재경기는 허용합니다.\n\n하루에 한 번(권장): 리그 시간대의 같은 날짜에는 팀 쌍당 경기 하나만 기록돼요.\n\n리그 전체에서 한 번: 같은 두 팀은 리그 전체에서 한 경기만 기록돼요.\n\n재경기 제한 없음: 제출된 모든 경기가 순위표에 반영돼요.",
+            "기본값은 같은 두 페어가 리그 날짜 기준으로 하루에 한 번만 경기할 수 있는 방식이에요. 실수로 두 번 제출하는 일은 막고, 다음 날 재경기는 허용합니다.\n\n하루에 한 번(권장): 리그 시간대의 같은 날짜에는 페어 쌍당 경기 하나만 기록돼요.\n\n리그 전체에서 한 번: 같은 두 페어는 리그 전체에서 한 경기만 기록돼요.\n\n재경기 제한 없음: 제출된 모든 경기가 순위표에 반영돼요.",
           leagueTimezoneAria: "도움말: 리그 시간대",
           leagueTimezoneTitle: "경기가 어느 날짜에 속하나요?",
           leagueTimezoneBody:
             "하루에 한 번 재경기 규칙은 이 시간대를 기준으로 날짜의 시작과 끝을 계산합니다.\n\n기본값은 브라우저 시간대입니다. 기존 리그나 값이 생략된 경우 America/Los_Angeles로 저장됩니다.",
-          oneTeamPerPlayerAria: "도움말: 여러 팀에 속한 플레이어",
-          oneTeamPerPlayerTitle: "한 사람이 여러 팀에 들어갈 수 있나요?",
-          oneTeamPerPlayerBody:
-            "기본값은 한 사람이 여러 팀에 속할 수 있어요.\n\n토글을 켜면 한 사람당 팀 하나로 제한해요. 대부분의 모임이 쓰는 단순한 방식이에요.\n\n순위를 \u201c개인(플레이어)\u201d 기준으로 보려면 여러 팀 소속이 허용돼야 해요. 개인 점수는 여러 팀에 나갈 수 있을 때만 말이 맞아요.",
-          rankingSubjectAria: "도움말: 팀 순위 vs 개인 순위",
-          rankingSubjectTitle: "팀 표인가요, 개인 표인가요?",
+          onePairPerPlayerAria: "도움말: 여러 페어에 속한 플레이어",
+          onePairPerPlayerTitle: "한 사람이 여러 페어에 들어갈 수 있나요?",
+          onePairPerPlayerBody:
+            "기본값은 한 사람이 여러 페어에 속할 수 있어요.\n\n토글을 켜면 한 사람당 페어 하나로 제한해요. 대부분의 모임이 쓰는 단순한 방식이에요.\n\n순위를 \u201c개인(플레이어)\u201d 기준으로 보려면 여러 페어 소속이 허용돼야 해요. 개인 점수는 여러 페어에 나갈 수 있을 때만 말이 맞아요.",
+          rankingSubjectAria: "도움말: 페어 순위 vs 개인 순위",
+          rankingSubjectTitle: "페어 표인가요, 개인 표인가요?",
           rankingSubjectBody:
-            "순위표의 한 줄이 무엇을 뜻하는지 고르는 거예요.\n\n개인(플레이어)(기본): 사람끼리 비교해요. 여러 팀에 속할 수 있어야 해서 기본값이며, 팀 하나 제한은 꺼진 상태예요.\n\n팀: 팀끼리 비교해요. 더블스나 고정 페어에 잘 맞아요.\n\n\u201c개인 순위\u201d와 \u201c팀은 하나만\u201d은 같이 쓸 수 없어요. 운영 방식 하나를 정하면 돼요.",
+            "순위표의 한 줄이 무엇을 뜻하는지 고르는 거예요.\n\n개인(플레이어)(기본): 사람끼리 비교해요. 여러 페어에 속할 수 있어야 해서 기본값이며, 페어 하나 제한은 꺼진 상태예요.\n\n페어: 페어끼리 비교해요. 더블스나 고정 페어에 잘 맞아요.\n\n\u201c개인 순위\u201d와 \u201c페어는 하나만\u201d은 같이 쓸 수 없어요. 운영 방식 하나를 정하면 돼요.",
           tieBreakersAria: "도움말: 정렬과 동점 처리",
           tieBreakersTitle: "순위를 어떻게 정렬할까요",
           tieBreakersBody:
@@ -171,18 +171,18 @@
           "리그가 없거나 이 링크로는 이용할 수 없습니다. 리그 ID를 확인하거나 주최자에게 올바른 URL을 요청하세요.",
         playerNotFound:
           "해당 리그에서 플레이어를 찾지 못했습니다. 닉네임 철자를 확인하세요.",
-        teamNotFound:
-          "해당 선수들로 구성된 팀을 이 리그에서 찾지 못했습니다. 명단의 두 닉네임을 확인하세요.",
+        pairNotFound:
+          "해당 선수들로 구성된 페어를 이 리그에서 찾지 못했습니다. 명단의 두 닉네임을 확인하세요.",
         matchNotFound:
-          "해당 팀들 사이의 경기를 찾지 못했습니다. 네 닉네임을 확인하거나 이 리그의 전체 경기 목록을 찾아보세요.",
+          "해당 페어들 사이의 경기를 찾지 못했습니다. 네 닉네임을 확인하거나 이 리그의 전체 경기 목록을 찾아보세요.",
         notFoundFallback:
           "요청하신 내용을 찾지 못했습니다. 철자와 이름을 다시 확인하거나 다른 방식으로 질문해 보세요.",
         duplicateMatchToday:
-          "오늘은 이미 이 두 팀의 경기가 기록되어 있어요. 점수만 바꾸려면 기존 결과를 수정하고, 다른 리그 날짜에 다시 기록하세요.",
+          "오늘은 이미 이 두 페어의 경기가 기록되어 있어요. 점수만 바꾸려면 기존 결과를 수정하고, 다른 리그 날짜에 다시 기록하세요.",
         duplicateMatch:
-          "이 리그는 팀 쌍당 경기를 한 번만 허용하며, 해당 두 팀의 경기가 리그에 이미 있습니다.",
+          "이 리그는 페어 쌍당 경기를 한 번만 허용하며, 해당 두 페어의 경기가 리그에 이미 있습니다.",
         invalidLeagueRules:
-          "이 조합은 함께 쓸 수 없어요. 개인 순위를 쓰려면 한 사람이 여러 팀에 들어갈 수 있어야 해요. 여러 팀을 허용하거나, 순위를 다시 \u201c팀\u201d으로 바꿔 보세요.",
+          "이 조합은 함께 쓸 수 없어요. 개인 순위를 쓰려면 한 사람이 여러 페어에 들어갈 수 있어야 해요. 여러 페어를 허용하거나, 순위를 다시 \u201c페어\u201d으로 바꿔 보세요.",
         titleExists: "이미 같은 제목의 리그가 있습니다. 다른 이름을 사용해 보세요.",
         forbidden:
           "해당 작업을 할 권한이 없습니다. 관리자는 호스트 토큰이 포함된 리그 링크를 사용하세요.",
@@ -205,20 +205,20 @@
         panelHelp: "지원 명령",
         panelDetails: "세부 정보",
         helpEmpty: "사용 가능한 명령이 없습니다.",
-        fieldTeamId: "팀 참조",
+        fieldPairId: "페어 참조",
         fieldMatchId: "경기 참조",
         fieldPlayerId: "플레이어 참조",
         fieldCurrentNickname: "현재 이름",
         fieldNewNickname: "새 이름",
-        fieldTeam1Players: "팀 1 선수",
-        fieldTeam2Players: "팀 2 선수",
-        fieldTeam1Nicknames: "팀 1 닉네임",
-        fieldTeam2Nicknames: "팀 2 닉네임",
-        fieldTeam1Score: "팀 1 점수",
-        fieldTeam2Score: "팀 2 점수",
+        fieldPair1Players: "페어 1 선수",
+        fieldPair2Players: "페어 2 선수",
+        fieldPair1Nicknames: "페어 1 닉네임",
+        fieldPair2Nicknames: "페어 2 닉네임",
+        fieldPair1Score: "페어 1 점수",
+        fieldPair2Score: "페어 2 점수",
         formScoresHeading: "점수",
-        formScoreTeam1: "팀 1",
-        formScoreTeam2: "팀 2",
+        formScorePair1: "페어 1",
+        formScorePair2: "페어 2",
         fieldMethod: "메서드",
         fieldUrl: "URL",
         fieldNicknames: "선수 닉네임",
@@ -228,16 +228,16 @@
         noDetails: "추가로 표시할 세부 정보가 없습니다.",
         rosterLoadingNotes:
           "리그 명단을 불러오는 중이거나 불러오지 못했습니다. 등록 미리보기를 사용할 수 없습니다.",
-        rosterWarnPlayerTeam:
-          "선수 {player}은(는) 이미 다음 팀에 소속되어 있습니다: <strong>{team}</strong>",
+        rosterWarnPlayerPair:
+          "선수 {player}은(는) 이미 다음 페어에 소속되어 있습니다: <strong>{pair}</strong>",
         newPlayerRegLine:
           "<p class=\"hint roster-note-info\"><strong>신규 플레이어 등록:</strong> 다음 플레이어가 등록됩니다: {list}</p>",
-        newTeamLineOne:
-          "<p class=\"hint roster-note-info\"><strong>신규 팀 등록:</strong> 다음 팀이 생성됩니다: {team}</p>",
-        newTeamLineMany:
-          "<p class=\"hint roster-note-info\"><strong>신규 팀 등록:</strong> 다음 팀들이 생성됩니다: {teams}</p>",
+        newPairLineOne:
+          "<p class=\"hint roster-note-info\"><strong>신규 페어 등록:</strong> 다음 페어가 생성됩니다: {pair}</p>",
+        newPairLineMany:
+          "<p class=\"hint roster-note-info\"><strong>신규 페어 등록:</strong> 다음 페어들이 생성됩니다: {pairs}</p>",
         warning: "주의:",
-        rosterHeadingTeams: "팀",
+        rosterHeadingPairs: "페어",
         rosterHeadingPlayers: "플레이어",
         rosterEmpty: "명단이 비어 있습니다.",
         standingsEmpty: "아직 순위가 없습니다.",
@@ -251,7 +251,7 @@
         matchDateShow: "{date} 경기 보기",
         matchDateHide: "{date} 경기 숨기기",
         tableRank: "순위",
-        tableTeam: "팀",
+        tablePair: "페어",
         tablePlayer: "플레이어",
         tableW: "승",
         tableL: "패",
@@ -263,7 +263,7 @@
         tableGamesLost: "잃은 게임",
         tableWinPct: "승률",
         tableMatchesPlayed: "경기 수",
-        tableTeams: "팀",
+        tablePairs: "페어",
         tableScore: "점수",
         tableWhen: "일시",
         tableActions: "동작",
@@ -289,11 +289,11 @@
         matchDeleteWindowExpired:
           "삭제 가능 시간이 지나 더 이상 이 경기를 삭제할 수 없습니다. 그룹 호스트에게 삭제를 요청하세요.",
         rematchConfirmAction: "재경기 기록",
-        rematchConfirmModalTitle: "오늘 같은 팀끼리 한 경기를 더 기록할까요?",
+        rematchConfirmModalTitle: "오늘 같은 페어끼리 한 경기를 더 기록할까요?",
         rematchConfirmModalWarning:
-          "오늘 이미 이 두 팀의 경기가 기록되어 있어요. 별도의 재경기일 때만 계속하세요.",
+          "오늘 이미 이 두 페어의 경기가 기록되어 있어요. 별도의 재경기일 때만 계속하세요.",
         rematchConfirmModalExisting:
-          "기존 결과: {teams} · {score} · {when}",
+          "기존 결과: {pairs} · {score} · {when}",
         rematchConfirmModalCloseAria: "닫기",
         vs: "vs",
         filterFor: "{name}에 대한 결과를 표시합니다.",
@@ -301,13 +301,13 @@
         noBodyHint: "요청 본문이 없습니다. 전송할지 확인하세요.",
         formP1: "선수1",
         formP2: "선수2",
-        intentGetStandingsDesc: "리그 순위(팀 또는 개인) 보기.",
+        intentGetStandingsDesc: "리그 순위(페어 또는 개인) 보기.",
         intentGetStandingsEx1: "순위 보여줘",
         intentGetStandingsEx2: "리그 1위가 누구야?",
         intentGetStandingsEx3: "현재 리더보드 어떻게 돼?",
         intentGetStandingsByPlayerDesc: "특정 선수 순위 한 줄.",
         intentGetStandingsByPlayerEx1: "앨리스 리그 순위가 어떻게 돼?",
-        intentGetStandingsByPlayerEx2: "밥네 팀 몇 위야?",
+        intentGetStandingsByPlayerEx2: "밥네 페어 몇 위야?",
         intentGetStandingsByPlayerEx3: "찰리 순위 보여줘",
         intentGetMatchHistoryDesc: "모든 경기 결과(최신순).",
         intentGetMatchHistoryEx1: "경기 전부 보여줘",
@@ -317,10 +317,10 @@
         intentGetMatchHistoryByPlayerEx1: "앨리스 경기 기록 보여줘",
         intentGetMatchHistoryByPlayerEx2: "밥이 어떤 경기들 했어?",
         intentGetMatchHistoryByPlayerEx3: "찰리가 들어간 경기들",
-        intentGetRosterDesc: "등록 선수와 팀 전체.",
+        intentGetRosterDesc: "등록 선수와 페어 전체.",
         intentGetRosterEx1: "플레이어 다 보여줘",
         intentGetRosterEx2: "리그에 누가 있어?",
-        intentGetRosterEx3: "팀 목록",
+        intentGetRosterEx3: "페어 목록",
         intentSubmitMatchDesc: "복식 경기 결과 입력.",
         intentSubmitMatchEx1: "경기 기록할래",
         intentSubmitMatchEx2: "재 + 재즈 6:4 DK + 캐스퍼",
@@ -334,13 +334,13 @@
         intentEditScoreEx3: "앨리스·밥 vs 찰리·다이애나 경기 점수 수정",
         intentDeleteMatchDesc: "네 명 닉네임으로 경기 삭제.",
         intentDeleteMatchEx1: "앨리스/밥 vs 찰리/다이애나 경기 삭제",
-        intentDeleteTeamDesc: "경기 없는 팀 삭제.",
-        intentDeleteTeamEx1: "앨리스와 밥 팀 삭제",
+        intentDeletePairDesc: "경기 없는 페어 삭제.",
+        intentDeletePairEx1: "앨리스와 밥 페어 삭제",
         intentAddPlayersToRosterDesc: "선수를 리그 명단에 미리 등록합니다.",
         intentAddPlayersToRosterEx1: "Alex와 Daniel을 명단에 추가해줘",
         intentAddPlayersToRosterEx2: "Jason을 선수로 등록해줘",
         intentRemovePlayerFromRosterDesc:
-          "명단에서 선수 한 명을 제거합니다(팀과 경기 기록이 모두 없을 때만 가능).",
+          "명단에서 선수 한 명을 제거합니다(페어와 경기 기록이 모두 없을 때만 가능).",
         intentRemovePlayerFromRosterEx1: "Michael을 명단에서 제거해줘",
         intentRemovePlayerFromRosterEx2: "Ryan을 리그에서 빼줘",
         groupPlayerCommands: "플레이어 명령",
@@ -387,8 +387,8 @@
         actionCompleted: "작업 완료:",
         matchRecorded: "경기가 기록되었습니다.",
         matchScoreUpdated: "경기 점수가 수정되었습니다.",
-        matchAlreadyExistsToday: "오늘은 해당 두 팀의 경기가 이미 있습니다. 기록되지 않았습니다.",
-        matchAlreadyExistsInLeague: "이 리그에는 해당 두 팀의 경기가 이미 있습니다. 기록되지 않았습니다.",
+        matchAlreadyExistsToday: "오늘은 해당 두 페어의 경기가 이미 있습니다. 기록되지 않았습니다.",
+        matchAlreadyExistsInLeague: "이 리그에는 해당 두 페어의 경기가 이미 있습니다. 기록되지 않았습니다.",
         matchAlreadyExists: "경기가 이미 있습니다. 기록되지 않았습니다.",
         submitToLeague: "리그 API로 전송",
         adminUrlWarn:
@@ -412,7 +412,7 @@
         playersPanelAddSuccess: "명단에 추가되었습니다.",
         playersPanelRemoveSuccess: "명단에서 제거되었습니다.",
         playersPanelRemoveBlockedByParticipation:
-          "이 선수는 이미 팀에 속해 있거나 경기에 등장해서 명단에서 제거할 수 없어요. 먼저 해당 팀이나 경기를 정리해 주세요.",
+          "이 선수는 이미 페어에 속해 있거나 경기에 등장해서 명단에서 제거할 수 없어요. 먼저 해당 페어나 경기를 정리해 주세요.",
         playersPanelAddDisabledAdminOnly:
           "선수 추가는 관리자 모드에서만 사용할 수 있습니다.",
         aliasAddButton: "+ 별명",
@@ -435,10 +435,10 @@
         aliasChipRemoveAria: "{name}에서 별명 {alias} 제거",
         rosterRemoveButton: "제거",
         rosterRemoveAdminOnly: "제거는 관리자 모드에서만 사용할 수 있습니다.",
-        rosterRemoveBlockedTeam: "{name}은(는) 팀에 속해 있습니다. 먼저 팀을 삭제하세요.",
+        rosterRemoveBlockedPair: "{name}은(는) 페어에 속해 있습니다. 먼저 페어를 삭제하세요.",
         rosterRemoveBlockedMatch: "{name}은(는) 경기 기록이 있습니다. 먼저 경기를 삭제하세요.",
-        rosterRemoveBlockedTeamAndMatch:
-          "{name}은(는) 팀에 속해 있고 경기 기록도 있습니다. 먼저 팀과 경기를 정리하세요.",
+        rosterRemoveBlockedPairAndMatch:
+          "{name}은(는) 페어에 속해 있고 경기 기록도 있습니다. 먼저 페어와 경기를 정리하세요.",
         rosterMembershipRequiredHeadline:
           "{names}은(는) 이 리그 명단에 없습니다. 경기를 기록하기 전에 주최자에게 추가를 요청하세요. 채팅에서 '{atHint}'를 입력하면 플레이어를 찾을 수 있습니다.",
         rosterMembershipAddButton: "+ 명단에 추가",

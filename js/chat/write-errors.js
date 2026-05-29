@@ -120,8 +120,8 @@
 
     async function handleDuplicateMatch(payload, text) {
       var hist = await fetchLeagueMatchHistory(route.leagueId);
-      var pt1 = Array.isArray(payload.team1_nicknames) ? payload.team1_nicknames : [];
-      var pt2 = Array.isArray(payload.team2_nicknames) ? payload.team2_nicknames : [];
+      var pt1 = Array.isArray(payload.pair1_nicknames) ? payload.pair1_nicknames : [];
+      var pt2 = Array.isArray(payload.pair2_nicknames) ? payload.pair2_nicknames : [];
       var rosterStateForDuplicate = await ensureLeagueRosterForRematchConfirmation();
       var duplicateCanonicalMap = rosterCanonicalNormMap(rosterStateForDuplicate.players);
       var t1n = canonicalizedNickPair(
@@ -181,7 +181,7 @@
       var failedMatchCreate =
         isMatchCreationCall(method, url) &&
         res.status === 409 &&
-        leagueApiJsonErrorCode(text) === "DuplicateTeamPairMatchError";
+        leagueApiJsonErrorCode(text) === "DuplicatePairMatchupMatchError";
       if (failedMatchCreate) {
         await handleDuplicateMatch(payload, text);
         return;

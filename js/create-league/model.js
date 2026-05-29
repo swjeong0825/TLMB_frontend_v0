@@ -66,13 +66,13 @@
       form.auto_register_players_on_match &&
       form.auto_register_players_on_match.checked
     );
-    var mpi = form.match_pair_idempotency.value;
+    var mpi = form.pair_matchup_idempotency.value;
     var subject =
       form.ranking_subject && form.ranking_subject.value
         ? form.ranking_subject.value
         : "player";
     var otpp = !!(
-      form.one_team_per_player && form.one_team_per_player.checked
+      form.one_pair_per_player && form.one_pair_per_player.checked
     );
     var tieBreakers = collectTieBreakers(form);
     if (!tieBreakers.length) tieBreakers = ["games_won"];
@@ -82,9 +82,9 @@
         : DEFAULT_LEAGUE_TIMEZONE;
     payload.league_timezone = leagueTimezone;
     payload.rules = {
-      version: 7,
-      match_pair_idempotency: mpi,
-      one_team_per_player: otpp,
+      version: 8,
+      pair_matchup_idempotency: mpi,
+      one_pair_per_player: otpp,
       ranking_subject: subject,
       tie_breakers: tieBreakers,
       auto_register_players_on_match: autoRegister,
@@ -99,14 +99,14 @@
 
   function applyCrossRule(form, source) {
     var subjectSel = form.ranking_subject;
-    var otppSel = form.one_team_per_player;
+    var otppSel = form.one_pair_per_player;
     if (!subjectSel || !otppSel) return;
     if (source === "ranking_subject" && subjectSel.value === "player") {
       if (otppSel.checked) otppSel.checked = false;
       return;
     }
-    if (source === "one_team_per_player" && otppSel.checked) {
-      if (subjectSel.value !== "team") subjectSel.value = "team";
+    if (source === "one_pair_per_player" && otppSel.checked) {
+      if (subjectSel.value !== "pair") subjectSel.value = "pair";
       return;
     }
   }

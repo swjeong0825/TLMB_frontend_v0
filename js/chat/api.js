@@ -52,7 +52,7 @@
             : null,
         rules: data && typeof data.rules === "object" && data.rules !== null ? data.rules : null,
         players: Array.isArray(data.players) ? data.players : [],
-        teams: Array.isArray(data.teams) ? data.teams : [],
+        pairs: Array.isArray(data.pairs) ? data.pairs : [],
         player_score_edit_window_seconds: windowSecs,
         player_match_delete_window_seconds: deleteWindowSecs,
       };
@@ -158,7 +158,7 @@
    *
    * In v6 the roster IS the player list (the `allowlist_entries` side table
    * was dropped). Pre-registered players that have not yet played show up
-   * in the same `players` array — they simply do not appear in `teams`. */
+   * in the same `players` array — they simply do not appear in `pairs`. */
   async function fetchRosterPlayersFromApi(leagueId) {
     var base = backendMainBase();
     if (!base || !leagueId) {

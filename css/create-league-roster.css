@@ -50,7 +50,7 @@
 }
 
 .roster-label-row label[for="auto-register-toggle"],
-.roster-label-row label[for="one-team-per-player-toggle"] {
+.roster-label-row label[for="one-pair-per-player-toggle"] {
   cursor: pointer;
 }
 

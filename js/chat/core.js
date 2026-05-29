@@ -17,7 +17,7 @@
     EDIT_PLAYER_NICKNAME: true,
     EDIT_MATCH_SCORE: true,
     DELETE_MATCH: true,
-    DELETE_TEAM: true,
+    DELETE_PAIR: true,
     ADD_PLAYERS_TO_ROSTER: true,
     REMOVE_PLAYER_FROM_ROSTER: true,
   };
@@ -97,17 +97,17 @@
 
   function labelForFormField(key) {
     var byKey = {
-      team_id: tr("fieldTeamId"),
+      pair_id: tr("fieldPairId"),
       match_id: tr("fieldMatchId"),
       player_id: tr("fieldPlayerId"),
       current_nickname: tr("fieldCurrentNickname"),
       new_nickname: tr("fieldNewNickname"),
-      team1_player_nicknames: tr("fieldTeam1Players"),
-      team2_player_nicknames: tr("fieldTeam2Players"),
-      team1_nicknames: tr("fieldTeam1Nicknames"),
-      team2_nicknames: tr("fieldTeam2Nicknames"),
-      team1_score: tr("fieldTeam1Score"),
-      team2_score: tr("fieldTeam2Score"),
+      pair1_player_nicknames: tr("fieldPair1Players"),
+      pair2_player_nicknames: tr("fieldPair2Players"),
+      pair1_nicknames: tr("fieldPair1Nicknames"),
+      pair2_nicknames: tr("fieldPair2Nicknames"),
+      pair1_score: tr("fieldPair1Score"),
+      pair2_score: tr("fieldPair2Score"),
       method: tr("fieldMethod"),
       url: tr("fieldUrl"),
       nicknames: tr("fieldNicknames") || "Player nicknames",
@@ -230,7 +230,7 @@
       if (d) return d;
       // Anti-leak: a JSON success body with no human-readable
       // `message` / `detail` field is almost always ID-shaped
-      // (e.g. `{match_id, team_id}`). Returning the raw stringified
+      // (e.g. `{match_id, pair_id}`). Returning the raw stringified
       // body would dump those IDs into a "Done." callout, which
       // violates the "Never surface technical IDs in user-visible
       // UI" rule in `frontend/AGENTS.md`. Fall back to the localised
@@ -247,7 +247,7 @@
   }
 
   var INTERNAL_DISPLAY_KEYS = {
-    team_id: true,
+    pair_id: true,
     match_id: true,
     player_id: true,
     league_id: true,

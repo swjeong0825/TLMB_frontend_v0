@@ -6,7 +6,7 @@
   var HELP_KEYS = {
     matchPair: true,
     leagueTimezone: true,
-    oneTeamPerPlayer: true,
+    onePairPerPlayer: true,
     rankingSubject: true,
     tieBreakers: true,
     autoRegisterPlayersOnMatch: true,

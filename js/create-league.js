@@ -60,9 +60,9 @@
         applyCrossRule(form, "ranking_subject");
       });
     }
-    if (form.one_team_per_player) {
-      form.one_team_per_player.addEventListener("change", function () {
-        applyCrossRule(form, "one_team_per_player");
+    if (form.one_pair_per_player) {
+      form.one_pair_per_player.addEventListener("change", function () {
+        applyCrossRule(form, "one_pair_per_player");
       });
     }
 

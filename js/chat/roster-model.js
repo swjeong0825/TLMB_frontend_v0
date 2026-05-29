@@ -7,47 +7,47 @@
   function escapeHtml() { return api.escapeHtml.apply(api, arguments); }
   function isFieldSpec() { return api.isFieldSpec.apply(api, arguments); }
 
-  function rosterPlayerParticipationCounts(player, teams) {
-    var teamsCount =
-      player && typeof player.teams_count === "number" ? player.teams_count : 0;
+  function rosterPlayerParticipationCounts(player, pairs) {
+    var pairsCount =
+      player && typeof player.pairs_count === "number" ? player.pairs_count : 0;
     var matchesCount =
       player && typeof player.matches_count === "number" ? player.matches_count : 0;
-    if (teamsCount === 0 && teams && teams.length && player && player.nickname) {
+    if (pairsCount === 0 && pairs && pairs.length && player && player.nickname) {
       var nick = String(player.nickname).toLowerCase();
-      teams.forEach(function (t) {
+      pairs.forEach(function (t) {
         if (
           String(t.player1_nickname || "").toLowerCase() === nick ||
           String(t.player2_nickname || "").toLowerCase() === nick
         ) {
-          teamsCount += 1;
+          pairsCount += 1;
         }
       });
     }
-    return { teamsCount: teamsCount, matchesCount: matchesCount };
+    return { pairsCount: pairsCount, matchesCount: matchesCount };
   }
 
-  function rosterPlayerCanRemove(player, teams) {
-    var c = rosterPlayerParticipationCounts(player, teams);
-    return c.teamsCount === 0 && c.matchesCount === 0;
+  function rosterPlayerCanRemove(player, pairs) {
+    var c = rosterPlayerParticipationCounts(player, pairs);
+    return c.pairsCount === 0 && c.matchesCount === 0;
   }
 
-  function rosterPlayerRemoveDisableReason(isAdmin, player, teams) {
+  function rosterPlayerRemoveDisableReason(isAdmin, player, pairs) {
     if (!isAdmin) {
       return tr("rosterRemoveAdminOnly") || "Remove is available only in Admin mode.";
     }
-    var c = rosterPlayerParticipationCounts(player, teams);
+    var c = rosterPlayerParticipationCounts(player, pairs);
     var name = (player && player.nickname) || "";
-    if (c.teamsCount > 0 && c.matchesCount > 0) {
+    if (c.pairsCount > 0 && c.matchesCount > 0) {
       return (
-        tr("rosterRemoveBlockedTeamAndMatch", { name: name }) ||
+        tr("rosterRemoveBlockedPairAndMatch", { name: name }) ||
         name +
-          " belongs to a team and appears in a match. Delete those first."
+          " belongs to a pair and appears in a match. Delete those first."
       );
     }
-    if (c.teamsCount > 0) {
+    if (c.pairsCount > 0) {
       return (
-        tr("rosterRemoveBlockedTeam", { name: name }) ||
-        name + " belongs to a team. Delete the team first."
+        tr("rosterRemoveBlockedPair", { name: name }) ||
+        name + " belongs to a pair. Delete the pair first."
       );
     }
     if (c.matchesCount > 0) {
@@ -142,29 +142,29 @@
     ];
   }
 
-  function rosterTeamPairKey(a, b) {
+  function rosterPairMatchupKey(a, b) {
     if (!a || !b) return "";
     return a < b ? a + "\0" + b : b + "\0" + a;
   }
 
-  function matchRecordTeamPairKeys(record) {
+  function matchRecordPairMatchupKeys(record) {
     if (!record) return ["", ""];
-    var k1 = rosterTeamPairKey(
-      normalizeMatchNickname(record.team1_player1_nickname),
-      normalizeMatchNickname(record.team1_player2_nickname)
+    var k1 = rosterPairMatchupKey(
+      normalizeMatchNickname(record.pair1_player1_nickname),
+      normalizeMatchNickname(record.pair1_player2_nickname)
     );
-    var k2 = rosterTeamPairKey(
-      normalizeMatchNickname(record.team2_player1_nickname),
-      normalizeMatchNickname(record.team2_player2_nickname)
+    var k2 = rosterPairMatchupKey(
+      normalizeMatchNickname(record.pair2_player1_nickname),
+      normalizeMatchNickname(record.pair2_player2_nickname)
     );
     return [k1, k2];
   }
 
   function matchRecordMatchesSubmittedPair(record, t1Norms, t2Norms) {
-    var kA = rosterTeamPairKey(t1Norms[0], t1Norms[1]);
-    var kB = rosterTeamPairKey(t2Norms[0], t2Norms[1]);
+    var kA = rosterPairMatchupKey(t1Norms[0], t1Norms[1]);
+    var kB = rosterPairMatchupKey(t2Norms[0], t2Norms[1]);
     if (!kA || !kB) return false;
-    var sides = matchRecordTeamPairKeys(record);
+    var sides = matchRecordPairMatchupKeys(record);
     var s0 = sides[0];
     var s1 = sides[1];
     if (!s0 || !s1) return false;
@@ -202,8 +202,8 @@
   }
 
   /**
-   * Find the league match row for the same unordered pair of teams (handles swapped sides).
-   * t1Norms/t2Norms: two-element arrays of normalized nicknames per team.
+   * Find the league match row for the same unordered pair matchup (handles swapped sides).
+   * t1Norms/t2Norms: two-element arrays of normalized nicknames per pair.
    */
   function findMatchRecordForSubmittedPair(matches, t1Norms, t2Norms) {
     for (var i = 0; i < (matches || []).length; i++) {
@@ -227,20 +227,20 @@
     return null;
   }
 
-  function rosterPairKeysFromTeams(teams) {
+  function rosterPairKeysFromPairs(pairs) {
     var keys = Object.create(null);
-    (teams || []).forEach(function (t) {
+    (pairs || []).forEach(function (t) {
       var a = normalizeMatchNickname(t.player1_nickname);
       var b = normalizeMatchNickname(t.player2_nickname);
-      if (a && b) keys[rosterTeamPairKey(a, b)] = true;
+      if (a && b) keys[rosterPairMatchupKey(a, b)] = true;
     });
     return keys;
   }
 
-  function findRosterTeamForPlayer(playerNorm, teams) {
+  function findRosterPairForPlayer(playerNorm, pairs) {
     if (!playerNorm) return null;
-    for (var i = 0; i < (teams || []).length; i++) {
-      var tm = teams[i];
+    for (var i = 0; i < (pairs || []).length; i++) {
+      var tm = pairs[i];
       var a = normalizeMatchNickname(tm.player1_nickname);
       var b = normalizeMatchNickname(tm.player2_nickname);
       if (a === playerNorm) {
@@ -261,7 +261,7 @@
     return null;
   }
 
-  function escapeTeamPairLabel(p1, p2) {
+  function escapePairMatchupLabel(p1, p2) {
     return escapeHtml(p1) + " + " + escapeHtml(p2);
   }
 
@@ -277,13 +277,13 @@
   api.rosterCanonicalNormMap = rosterCanonicalNormMap;
   api.canonicalizeNicknameNorm = canonicalizeNicknameNorm;
   api.canonicalizedNickPair = canonicalizedNickPair;
-  api.rosterTeamPairKey = rosterTeamPairKey;
-  api.matchRecordTeamPairKeys = matchRecordTeamPairKeys;
+  api.rosterPairMatchupKey = rosterPairMatchupKey;
+  api.matchRecordPairMatchupKeys = matchRecordPairMatchupKeys;
   api.matchRecordMatchesSubmittedPair = matchRecordMatchesSubmittedPair;
   api.leagueLocalDateKey = leagueLocalDateKey;
   api.findMatchRecordForSubmittedPair = findMatchRecordForSubmittedPair;
   api.findSameDayMatchRecordForSubmittedPair = findSameDayMatchRecordForSubmittedPair;
-  api.rosterPairKeysFromTeams = rosterPairKeysFromTeams;
-  api.findRosterTeamForPlayer = findRosterTeamForPlayer;
-  api.escapeTeamPairLabel = escapeTeamPairLabel;
+  api.rosterPairKeysFromPairs = rosterPairKeysFromPairs;
+  api.findRosterPairForPlayer = findRosterPairForPlayer;
+  api.escapePairMatchupLabel = escapePairMatchupLabel;
 })(typeof window !== "undefined" ? window : this);

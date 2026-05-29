@@ -41,7 +41,7 @@
 
     var MSG_LEAGUE_NOT_FOUND = t("errors.leagueNotFound") || genericMessage();
     var MSG_PLAYER_NOT_FOUND = t("errors.playerNotFound") || genericMessage();
-    var MSG_TEAM_NOT_FOUND = t("errors.teamNotFound") || genericMessage();
+    var MSG_PAIR_NOT_FOUND = t("errors.pairNotFound") || genericMessage();
     var MSG_MATCH_NOT_FOUND = t("errors.matchNotFound") || genericMessage();
     var MSG_NOT_FOUND_FALLBACK = t("errors.notFoundFallback") || genericMessage();
 
@@ -52,11 +52,11 @@
       return MSG_MATCH_NOT_FOUND;
     }
 
-    if (low.indexOf("no team found with players") !== -1) {
-      return MSG_TEAM_NOT_FOUND;
+    if (low.indexOf("no pair found with players") !== -1) {
+      return MSG_PAIR_NOT_FOUND;
     }
-    if (low.indexOf("teamnotfound") !== -1 || low.indexOf("team not found") !== -1) {
-      return MSG_TEAM_NOT_FOUND;
+    if (low.indexOf("pairnotfound") !== -1 || low.indexOf("pair not found") !== -1) {
+      return MSG_PAIR_NOT_FOUND;
     }
 
     if (
@@ -92,8 +92,8 @@
     }
 
     if (
-      low.indexOf("duplicateteampairmatcherror") !== -1 ||
-      low.indexOf("a match between these two teams already exists") !== -1
+      low.indexOf("duplicatepairpairmatcherror") !== -1 ||
+      low.indexOf("a match between these two pairs already exists") !== -1
     ) {
       if (low.indexOf("already exists today") !== -1) {
         return t("errors.duplicateMatchToday") || genericMessage();

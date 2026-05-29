@@ -10,24 +10,24 @@
   function isFieldSpec() { return api.isFieldSpec.apply(api, arguments); }
   function rosterPlayerNormSet() { return api.rosterPlayerNormSet.apply(api, arguments); }
   function rosterCanonicalNormMap() { return api.rosterCanonicalNormMap.apply(api, arguments); }
-  function rosterPairKeysFromTeams() { return api.rosterPairKeysFromTeams.apply(api, arguments); }
+  function rosterPairKeysFromPairs() { return api.rosterPairKeysFromPairs.apply(api, arguments); }
   function nickPairFromBodySpec() { return api.nickPairFromBodySpec.apply(api, arguments); }
   function canonicalizedNickPair() { return api.canonicalizedNickPair.apply(api, arguments); }
-  function rosterTeamPairKey() { return api.rosterTeamPairKey.apply(api, arguments); }
-  function findRosterTeamForPlayer() { return api.findRosterTeamForPlayer.apply(api, arguments); }
-  function escapeTeamPairLabel() { return api.escapeTeamPairLabel.apply(api, arguments); }
+  function rosterPairMatchupKey() { return api.rosterPairMatchupKey.apply(api, arguments); }
+  function findRosterPairForPlayer() { return api.findRosterPairForPlayer.apply(api, arguments); }
+  function escapePairMatchupLabel() { return api.escapePairMatchupLabel.apply(api, arguments); }
 
   /**
    * Compares prefilled match form nicknames to cached GET /roster (same normalization as backend).
    *
-   * The partner-conflict warning ("Player X is already in the following team:
-   * ...") only makes sense under `LeagueRules.one_team_per_player = true`,
+   * The partner-conflict warning ("Player X is already in the following pair:
+   * ...") only makes sense under `LeagueRules.one_pair_per_player = true`,
    * which is the backend-default but configurable since rules v3. When the
-   * league explicitly allows a player to belong to multiple teams we skip the
-   * warning entirely — the partnership is legitimately a new team, not a
-   * conflict — and still surface the "new team registration" hint. If
+   * league explicitly allows a player to belong to multiple pairs we skip the
+   * warning entirely — the partnership is legitimately a new pair, not a
+   * conflict — and still surface the "new pair registration" hint. If
    * `leagueRoster.rules` is missing (older response or fetch in progress) we
-   * fall back to the conservative one-team-per-player assumption so existing
+   * fall back to the conservative one-pair-per-player assumption so existing
    * leagues don't lose the warning.
    */
   function renderMatchSubmitRosterNotes(bodySpec, leagueRoster) {
@@ -42,15 +42,15 @@
     }
 
     var players = leagueRoster.players || [];
-    var teams = leagueRoster.teams || [];
+    var pairs = leagueRoster.pairs || [];
     var known = rosterPlayerNormSet(players);
     var canonicalMap = rosterCanonicalNormMap(players);
-    var pairKeys = rosterPairKeysFromTeams(teams);
-    var allowMultipleTeamsPerPlayer =
-      !!(leagueRoster.rules && leagueRoster.rules.one_team_per_player === false);
+    var pairKeys = rosterPairKeysFromPairs(pairs);
+    var allowMultiplePairsPerPlayer =
+      !!(leagueRoster.rules && leagueRoster.rules.one_pair_per_player === false);
 
-    var t1 = nickPairFromBodySpec(bodySpec, "team1_nicknames");
-    var t2 = nickPairFromBodySpec(bodySpec, "team2_nicknames");
+    var t1 = nickPairFromBodySpec(bodySpec, "pair1_nicknames");
+    var t2 = nickPairFromBodySpec(bodySpec, "pair2_nicknames");
     var t1CanonicalNorm = canonicalizedNickPair(t1.norm, canonicalMap);
     var t2CanonicalNorm = canonicalizedNickPair(t2.norm, canonicalMap);
 
@@ -75,7 +75,7 @@
     addNewPlayerNorm(t2.norm[1]);
 
     var warnings = [];
-    var newTeams = [];
+    var newPairs = [];
 
     function analyzeSide(raw, norm) {
       var n0 = norm[0];
@@ -83,46 +83,46 @@
       var r0 = raw[0];
       var r1 = raw[1];
       if (!n0 || !n1 || n0 === n1) return;
-      if (pairKeys[rosterTeamPairKey(n0, n1)]) return;
+      if (pairKeys[rosterPairMatchupKey(n0, n1)]) return;
 
-      if (allowMultipleTeamsPerPlayer) {
-        newTeams.push(escapeTeamPairLabel(r0, r1));
+      if (allowMultiplePairsPerPlayer) {
+        newPairs.push(escapePairMatchupLabel(r0, r1));
         return;
       }
 
       var sideConflict = false;
-      var teamA = findRosterTeamForPlayer(n0, teams);
-      if (teamA && teamA.partnerNorm !== n1) {
+      var pairA = findRosterPairForPlayer(n0, pairs);
+      if (pairA && pairA.partnerNorm !== n1) {
         warnings.push(
-          tr("rosterWarnPlayerTeam", {
+          tr("rosterWarnPlayerPair", {
             player: escapeHtml(r0 || n0),
-            team: escapeTeamPairLabel(teamA.player1_nickname, teamA.player2_nickname),
+            pair: escapePairMatchupLabel(pairA.player1_nickname, pairA.player2_nickname),
           }) ||
             "Player " +
               escapeHtml(r0 || n0) +
-              " is already in the following team: <strong>" +
-              escapeTeamPairLabel(teamA.player1_nickname, teamA.player2_nickname) +
+              " is already in the following pair: <strong>" +
+              escapePairMatchupLabel(pairA.player1_nickname, pairA.player2_nickname) +
               "</strong>"
         );
         sideConflict = true;
       }
-      var teamB = findRosterTeamForPlayer(n1, teams);
-      if (teamB && teamB.partnerNorm !== n0) {
+      var pairB = findRosterPairForPlayer(n1, pairs);
+      if (pairB && pairB.partnerNorm !== n0) {
         warnings.push(
-          tr("rosterWarnPlayerTeam", {
+          tr("rosterWarnPlayerPair", {
             player: escapeHtml(r1 || n1),
-            team: escapeTeamPairLabel(teamB.player1_nickname, teamB.player2_nickname),
+            pair: escapePairMatchupLabel(pairB.player1_nickname, pairB.player2_nickname),
           }) ||
             "Player " +
               escapeHtml(r1 || n1) +
-              " is already in the following team: <strong>" +
-              escapeTeamPairLabel(teamB.player1_nickname, teamB.player2_nickname) +
+              " is already in the following pair: <strong>" +
+              escapePairMatchupLabel(pairB.player1_nickname, pairB.player2_nickname) +
               "</strong>"
         );
         sideConflict = true;
       }
       if (!sideConflict) {
-        newTeams.push(escapeTeamPairLabel(r0, r1));
+        newPairs.push(escapePairMatchupLabel(r0, r1));
       }
     }
 
@@ -141,20 +141,20 @@
             "</p>"
       );
     }
-    if (newTeams.length) {
-      var boldTeams = newTeams.map(function (tm) {
+    if (newPairs.length) {
+      var boldPairs = newPairs.map(function (tm) {
         return "<strong>" + tm + "</strong>";
       });
-      var teamLine =
-        newTeams.length === 1
-          ? tr("newTeamLineOne", { team: boldTeams[0] })
-          : tr("newTeamLineMany", { teams: boldTeams.join("; ") });
+      var pairLine =
+        newPairs.length === 1
+          ? tr("newPairLineOne", { pair: boldPairs[0] })
+          : tr("newPairLineMany", { pairs: boldPairs.join("; ") });
       chunks.push(
-        teamLine ||
-          "<p class=\"hint roster-note-info\"><strong>New team registration:</strong> " +
-            (newTeams.length === 1
-              ? "Following team will be created: " + boldTeams[0]
-              : "Following teams will be created: " + boldTeams.join("; ")) +
+        pairLine ||
+          "<p class=\"hint roster-note-info\"><strong>New pair registration:</strong> " +
+            (newPairs.length === 1
+              ? "Following pair will be created: " + boldPairs[0]
+              : "Following pairs will be created: " + boldPairs.join("; ")) +
             "</p>"
       );
     }
@@ -216,8 +216,8 @@
   }
 
   function isScorePairBodyFields(bodySpec) {
-    var s1 = bodySpec.team1_score;
-    var s2 = bodySpec.team2_score;
+    var s1 = bodySpec.pair1_score;
+    var s2 = bodySpec.pair2_score;
     if (!isFieldSpec(s1) || !isFieldSpec(s2)) return false;
     if (s1.type && s1.type.indexOf("array") === 0) return false;
     if (s2.type && s2.type.indexOf("array") === 0) return false;
@@ -266,13 +266,13 @@
       if (!isFieldSpec(spec)) continue;
 
       if (
-        (key === "team1_score" || key === "team2_score") &&
+        (key === "pair1_score" || key === "pair2_score") &&
         isScorePairBodyFields(bodySpec) &&
-        !handled.team1_score &&
-        !handled.team2_score
+        !handled.pair1_score &&
+        !handled.pair2_score
       ) {
-        var sc1 = bodySpec.team1_score;
-        var sc2 = bodySpec.team2_score;
+        var sc1 = bodySpec.pair1_score;
+        var sc2 = bodySpec.pair2_score;
         var req1 = sc1.required ? " *" : "";
         var req2 = sc2.required ? " *" : "";
         var v1 = sc1.value == null ? "" : String(sc1.value);
@@ -284,21 +284,21 @@
             "</div>" +
             '<div class="form-scores-row">' +
             "<label><span>" +
-            escapeHtml(tr("formScoreTeam1") || "Team 1") +
+            escapeHtml(tr("formScorePair1") || "Pair 1") +
             req1 +
             "</span>" +
-            renderScorePicker("team1_score", v1) +
+            renderScorePicker("pair1_score", v1) +
             "</label>" +
             "<label><span>" +
-            escapeHtml(tr("formScoreTeam2") || "Team 2") +
+            escapeHtml(tr("formScorePair2") || "Pair 2") +
             req2 +
             "</span>" +
-            renderScorePicker("team2_score", v2) +
+            renderScorePicker("pair2_score", v2) +
             "</label>" +
             "</div></div>"
         );
-        handled.team1_score = true;
-        handled.team2_score = true;
+        handled.pair1_score = true;
+        handled.pair2_score = true;
         continue;
       }
 

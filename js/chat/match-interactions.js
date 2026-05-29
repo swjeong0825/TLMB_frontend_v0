@@ -36,8 +36,8 @@
       if (!anchor) return;
 
       var initialValues = {
-        team1_score: match.team1_score == null ? "" : String(match.team1_score),
-        team2_score: match.team2_score == null ? "" : String(match.team2_score),
+        pair1_score: match.pair1_score == null ? "" : String(match.pair1_score),
+        pair2_score: match.pair2_score == null ? "" : String(match.pair2_score),
       };
       var bodySpec = {};
       Object.keys(bodySchema || {}).forEach(function (key) {
@@ -128,8 +128,8 @@
     }
 
     var DEFAULT_EDIT_MATCH_SCORE_BODY_SCHEMA = {
-      team1_score: { type: "string", required: true },
-      team2_score: { type: "string", required: true },
+      pair1_score: { type: "string", required: true },
+      pair2_score: { type: "string", required: true },
     };
 
     function bindMatchRowUpdateButtons(wrap) {
@@ -148,8 +148,8 @@
         var parts = scoreCell.textContent.split("\u2013");
         if (parts.length !== 2) parts = scoreCell.textContent.split("-");
         return {
-          team1_score: (parts[0] || "").trim(),
-          team2_score: (parts[1] || "").trim(),
+          pair1_score: (parts[0] || "").trim(),
+          pair2_score: (parts[1] || "").trim(),
         };
       }
 
