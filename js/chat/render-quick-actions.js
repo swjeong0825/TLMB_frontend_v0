@@ -28,6 +28,7 @@
       },
       {
         message: "show me the standings",
+        mode: "local-standings-choice",
         title: tr("quickActionShowStandingsTitle") || "Show Current Standings",
         desc: tr("quickActionShowStandingsDesc") || "See the league leaderboard",
         icon:

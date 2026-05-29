@@ -179,6 +179,31 @@ tr.match-date-group-hidden {
   max-width: 100%;
 }
 
+.standings-subject-chooser {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.standings-subject-copy {
+  margin: 0;
+}
+
+.standings-subject-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.standings-subject-option {
+  margin-top: 0;
+}
+
+.standings-subject-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .standings-date-filter {
   margin: 0.4rem 0 0.75rem;
 }
@@ -269,4 +294,3 @@ table.data td.standings-metric-rank strong {
 table.data th.standings-metric-rank {
   color: var(--text);
 }
-

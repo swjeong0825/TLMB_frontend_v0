@@ -15,6 +15,7 @@
     var route = ctx.route || {};
     var leagueRoster = ctx.leagueRoster || {};
     var applyLeagueRosterResult = ctx.applyLeagueRosterResult;
+    var messagesEl = ctx.messagesEl || null;
 
     async function ensureLeagueRosterForStandingsDefault() {
       if (leagueRoster.status === "ok") return leagueRoster;
@@ -62,14 +63,16 @@
       playerName,
       startDate,
       endDate,
-      isAdmin
+      isAdmin,
+      subject
     ) {
       var result = await fetchLeagueStandings(
         route.leagueId,
         dataType,
         playerName,
         startDate,
-        endDate
+        endDate,
+        subject
       );
       if (!result.ok) return result;
       var nextData = cloneStandingsDataWithDateFilter(
@@ -78,8 +81,81 @@
         endDate
       );
       if (playerName) nextData.player_name = playerName;
+      if (subject === "pair" || subject === "player") {
+        nextData._standings_subject = subject;
+      }
       renderStandingsPanelInto(panel, dataType, nextData, isAdmin);
       return result;
+    }
+
+    function showStandingsSubjectMessage(chooser, message) {
+      var messageEl = chooser && chooser.querySelector("[data-standings-subject-message]");
+      if (!messageEl) return;
+      messageEl.textContent = message || "";
+      messageEl.hidden = !message;
+    }
+
+    function setStandingsSubjectBusy(chooser, busy) {
+      if (!chooser) return;
+      chooser
+        .querySelectorAll(".standings-subject-option")
+        .forEach(function (btn) {
+          btn.disabled = !!busy;
+        });
+    }
+
+    async function fetchSelectedStandingsSubject(panel, subject, isAdmin) {
+      await ensureLeagueRosterForStandingsDefault();
+      var latestDate = dateOnlyOrNull(leagueRoster.latest_match_date) || "";
+      return fetchAndRenderStandingsPanel(
+        panel,
+        "GET_STANDINGS",
+        "",
+        latestDate,
+        latestDate,
+        isAdmin,
+        subject
+      );
+    }
+
+    function bindStandingsSubjectChooserActions() {
+      if (!messagesEl || !messagesEl.addEventListener) return;
+      messagesEl.addEventListener("click", async function (e) {
+        var btn = e.target.closest && e.target.closest(".standings-subject-option");
+        if (!btn || !messagesEl.contains(btn)) return;
+        var subject = btn.getAttribute("data-standings-subject") || "";
+        if (subject !== "pair" && subject !== "player") return;
+        var panel = btn.closest(".data-panel");
+        var chooser = btn.closest(".standings-subject-chooser");
+        if (!panel || !chooser) return;
+
+        showStandingsSubjectMessage(
+          chooser,
+          tr("standingsSubjectLoading") || "Loading standings..."
+        );
+        setStandingsSubjectBusy(chooser, true);
+        try {
+          var result = await fetchSelectedStandingsSubject(
+            panel,
+            subject,
+            !!route.hostToken
+          );
+          if (!result || !result.ok) {
+            showStandingsSubjectMessage(
+              chooser,
+              tr("standingsSubjectFetchFailed") || "Could not load those standings."
+            );
+            setStandingsSubjectBusy(chooser, false);
+          }
+        } catch (err) {
+          console.warn("[TLCHAT] Standings subject fetch failed:", err);
+          showStandingsSubjectMessage(
+            chooser,
+            tr("standingsSubjectFetchFailed") || "Could not load those standings."
+          );
+          setStandingsSubjectBusy(chooser, false);
+        }
+      });
     }
 
     function bindStandingsDateControls(scope, dataType, isAdmin) {
@@ -96,6 +172,7 @@
       var endInput = form.querySelector('input[name="end_date"]');
       var clearBtn = form.querySelector("[data-standings-clear]");
       var playerName = form.getAttribute("data-player-name") || "";
+      var subject = form.getAttribute("data-standings-subject") || "";
 
       async function applyFilter(startDate, endDate) {
         showStandingsDateError(form, "");
@@ -115,7 +192,8 @@
             playerName,
             startDate,
             endDate,
-            isAdmin
+            isAdmin,
+            subject
           );
           if (!result || !result.ok) {
             showStandingsDateError(
@@ -164,7 +242,8 @@
         dataType,
         playerName,
         latestDate,
-        latestDate
+        latestDate,
+        data && data._standings_subject
       );
       if (result.ok) {
         var nextData = cloneStandingsDataWithDateFilter(
@@ -173,6 +252,9 @@
           latestDate
         );
         if (playerName) nextData.player_name = playerName;
+        if (data && data._standings_subject) {
+          nextData._standings_subject = data._standings_subject;
+        }
         return nextData;
       }
       console.warn("[TLCHAT] Latest-day standings fetch failed:", result);
@@ -181,6 +263,7 @@
 
     return {
       bindStandingsDateControls: bindStandingsDateControls,
+      bindStandingsSubjectChooserActions: bindStandingsSubjectChooserActions,
       isStandingsDataType: isStandingsDataType,
       resolveInitialStandingsData: resolveInitialStandingsData,
     };

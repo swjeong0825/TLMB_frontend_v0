@@ -196,8 +196,11 @@
       route: route,
       leagueRoster: leagueRoster,
       applyLeagueRosterResult: applyLeagueRosterResult,
+      messagesEl: messagesEl,
     });
     var bindStandingsDateControls = standingsInteractions.bindStandingsDateControls;
+    var bindStandingsSubjectChooserActions =
+      standingsInteractions.bindStandingsSubjectChooserActions;
     var isStandingsDataType = standingsInteractions.isStandingsDataType;
     var resolveInitialStandingsData = standingsInteractions.resolveInitialStandingsData;
 
@@ -271,6 +274,17 @@
       }
 
       if (READ_TYPES[resp.data_type]) {
+        if (resp.data_type === "GET_STANDINGS") {
+          parts.push(
+            renderReadPanel(
+              resp.data_type,
+              { _standings_show_subject_chooser: true },
+              !!route.hostToken
+            )
+          );
+          appendAssistant(parts.join(""));
+          return;
+        }
         var readData = await resolveInitialStandingsData(
           resp.data_type,
           resp.data || {}
@@ -397,6 +411,20 @@
       }
     }
 
+    function deliverStandingsSubjectChooser(prompt) {
+      var text = prompt || "show me the standings";
+      appendUser(text);
+      appendAssistant(
+        renderReadPanel(
+          "GET_STANDINGS",
+          { _standings_show_subject_chooser: true },
+          !!route.hostToken
+        )
+      );
+      conversationHistory.push({ role: "user", content: text });
+      conversationHistory.push({ role: "assistant", content: "[GET_STANDINGS]" });
+    }
+
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var text = (input.value || "").trim();
@@ -467,6 +495,7 @@
 
     rosterInteractions.bindRosterMessageActions();
     rosterInteractions.bindRosterDisabledTouchTooltips();
+    bindStandingsSubjectChooserActions();
     bindDisabledTipPositioning(root);
 
     /* Quick-action triggers (grid tiles plus sticky intent-helper bar):
@@ -491,6 +520,12 @@
         deliverPlayersPanel();
         conversationHistory.push({ role: "user", content: prompt });
         conversationHistory.push({ role: "assistant", content: "[GET_PLAYERS]" });
+        return;
+      }
+      if (mode === "local-standings-choice") {
+        deliverStandingsSubjectChooser(
+          tile.getAttribute("data-quick-action") || "show me the standings"
+        );
         return;
       }
       var message = tile.getAttribute("data-quick-action") || "";

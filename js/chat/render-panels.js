@@ -9,6 +9,7 @@
   function escapeAttr() { return api.escapeAttr.apply(api, arguments); }
   function panelTitleForDataType() { return api.panelTitleForDataType.apply(api, arguments); }
   function renderFallbackData() { return api.renderFallbackData.apply(api, arguments); }
+  function renderStandingsSubjectChooser() { return api.renderStandingsSubjectChooser.apply(api, arguments); }
   function renderStandingsDateControls() { return api.renderStandingsDateControls.apply(api, arguments); }
   function renderStandings() { return api.renderStandings.apply(api, arguments); }
   function renderMatches() { return api.renderMatches.apply(api, arguments); }
@@ -113,7 +114,10 @@
     var filterNote = "";
     if (dataType === "GET_STANDINGS" || dataType === "GET_STANDINGS_BY_PLAYER") {
       filterNote = dataType === "GET_STANDINGS_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
-      inner = renderStandingsDateControls(data, dataType) + renderStandings(data);
+      inner =
+        dataType === "GET_STANDINGS" && data && data._standings_show_subject_chooser
+          ? renderStandingsSubjectChooser(data)
+          : renderStandingsDateControls(data, dataType) + renderStandings(data);
     } else if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
       inner = renderMatches(data, !!isAdmin);

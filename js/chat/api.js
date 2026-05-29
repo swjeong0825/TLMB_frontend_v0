@@ -97,7 +97,8 @@
     dataType,
     playerName,
     startDate,
-    endDate
+    endDate,
+    subject
   ) {
     var base = backendMainBase();
     if (!base || !leagueId) {
@@ -114,6 +115,11 @@
       var name = String(playerName == null ? "" : playerName).trim();
       if (!name) return { ok: false, error: "missing_player_name" };
       params.set("player_name", name);
+    } else {
+      var selectedSubject = String(subject == null ? "" : subject).trim();
+      if (selectedSubject === "pair" || selectedSubject === "player") {
+        params.set("subject", selectedSubject);
+      }
     }
     if (dateOnlyOrNull(startDate)) params.set("start_date", startDate);
     if (dateOnlyOrNull(endDate)) params.set("end_date", endDate);

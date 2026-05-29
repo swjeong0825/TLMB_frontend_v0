@@ -126,9 +126,34 @@
     return next;
   }
 
+  function renderStandingsSubjectChooser() {
+    return (
+      '<div class="standings-subject-chooser">' +
+      '<p class="hint standings-subject-copy">' +
+      escapeHtml(tr("standingsChooseSubject") || "Choose how to view standings.") +
+      "</p>" +
+      '<div class="standings-subject-options" role="group" aria-label="' +
+      escapeAttr(tr("standingsChooseSubject") || "Choose how to view standings.") +
+      '">' +
+      '<button type="button" class="btn-secondary standings-subject-option" data-standings-subject="pair">' +
+      escapeHtml(tr("standingsPairOption") || "Pair standings") +
+      "</button>" +
+      '<button type="button" class="btn-secondary standings-subject-option" data-standings-subject="player">' +
+      escapeHtml(tr("standingsPlayerOption") || "Player standings") +
+      "</button>" +
+      "</div>" +
+      '<p class="standings-subject-message" data-standings-subject-message hidden></p>' +
+      "</div>"
+    );
+  }
+
   function renderStandingsDateControls(data, dataType) {
     var startDate = dateOnlyOrNull(data && data._standings_filter_start_date) || "";
     var endDate = dateOnlyOrNull(data && data._standings_filter_end_date) || "";
+    var subject =
+      dataType === "GET_STANDINGS" && data && data._standings_subject != null
+        ? String(data._standings_subject).trim()
+        : "";
     var playerName =
       dataType === "GET_STANDINGS_BY_PLAYER" && data && data.player_name != null
         ? String(data.player_name).trim()
@@ -139,6 +164,8 @@
       escapeAttr(dataType || "") +
       '" data-player-name="' +
       escapeAttr(playerName) +
+      '" data-standings-subject="' +
+      escapeAttr(subject) +
       '">' +
       '<div class="standings-date-fields">' +
       '<label class="standings-date-field">' +
@@ -282,6 +309,7 @@
   api.rankingMetricSet = rankingMetricSet;
   api.formatMetricValue = formatMetricValue;
   api.cloneStandingsDataWithDateFilter = cloneStandingsDataWithDateFilter;
+  api.renderStandingsSubjectChooser = renderStandingsSubjectChooser;
   api.renderStandingsDateControls = renderStandingsDateControls;
   api.standingsRowsWithMatches = standingsRowsWithMatches;
   api.renderStandings = renderStandings;
