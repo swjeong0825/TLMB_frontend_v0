@@ -1,0 +1,176 @@
+/* ── Sticky shortcut bar (starter-tile icons). HELP accordion still uses ────
+    .intent-helper-body when rendering the HELP intent panel. ───────────── */
+
+.intent-helper {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.45rem 1.25rem;
+}
+
+.intent-helper-shortcuts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.intent-helper-quick-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background-color 0.12s,
+    transform 0.08s,
+    box-shadow 0.12s;
+}
+
+.intent-helper-quick-btn:hover {
+  border-color: var(--muted);
+  background: var(--bg);
+}
+
+.intent-helper-quick-btn:active {
+  transform: translateY(1px);
+}
+
+.intent-helper-quick-btn:focus-visible {
+  outline: 2px solid var(--accent-soft, var(--muted));
+  outline-offset: 2px;
+}
+
+.intent-helper-quick-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intent-helper-quick-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.intent-helper-body {
+  padding: 0.75rem 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.intent-group-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.intent-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.intent-item {
+  padding: 0;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.intent-accordion > .intent-item-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.intent-accordion > .intent-item-summary::-webkit-details-marker {
+  display: none;
+}
+
+.intent-chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  min-height: 1em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.intent-chevron::before {
+  content: ">";
+}
+
+.intent-accordion[open] > .intent-item-summary .intent-chevron::before {
+  content: "▼";
+  font-size: 0.58rem;
+  line-height: 1;
+}
+
+.intent-item-details {
+  padding: 0 0.75rem 0.65rem 0.75rem;
+  padding-left: calc(0.75rem + 1.1em + 0.45rem);
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.intent-item-details .intent-desc {
+  padding-top: 0.45rem;
+}
+
+.intent-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+  color: var(--accent);
+  margin-bottom: 0;
+}
+
+.admin-intents .intent-name {
+  color: var(--warn);
+}
+
+.intent-desc {
+  font-size: 0.78rem;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+
+.intent-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.intent-ex {
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-style: italic;
+}
+

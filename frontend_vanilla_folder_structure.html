@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>frontend_vanilla Folder Structure</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --soft: #edf3f7;
+      --ink: #17202a;
+      --muted: #607081;
+      --line: #d7dee8;
+      --accent: #0f766e;
+      --accent-soft: #dff4ef;
+      --blue: #1d4ed8;
+      --blue-soft: #e0ebff;
+      --amber: #a16207;
+      --amber-soft: #fef3c7;
+      --code-bg: #111827;
+      --code-ink: #e5e7eb;
+      --shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code {
+      padding: 0.12rem 0.32rem;
+      border-radius: 0.32rem;
+      background: #e7edf3;
+      color: #111827;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 0;
+      padding: 1rem;
+      overflow: auto;
+      border-radius: 0.7rem;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      font-size: 0.91rem;
+      line-height: 1.55;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2rem 0 4rem;
+    }
+
+    .hero {
+      padding: 2.15rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 0.7rem;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.15;
+    }
+
+    h1 {
+      max-width: 820px;
+      font-size: clamp(2rem, 4vw, 3.8rem);
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-top: 2.5rem;
+      font-size: clamp(1.35rem, 2vw, 2rem);
+    }
+
+    h3 {
+      font-size: 1.08rem;
+    }
+
+    p {
+      margin: 0.65rem 0 0;
+    }
+
+    .hero p,
+    .section-note,
+    .card p,
+    .panel p,
+    .path-list span {
+      color: var(--muted);
+    }
+
+    .hero p {
+      max-width: 870px;
+      font-size: 1.05rem;
+    }
+
+    .section-note {
+      max-width: 900px;
+      margin: 0.65rem 0 1.1rem;
+    }
+
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 1.35rem;
+    }
+
+    .toc a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.2rem;
+      padding: 0.45rem 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fbfcfd;
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .meta-grid,
+    .cards,
+    .split {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .meta-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-top: 1.45rem;
+    }
+
+    .cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .split {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .card,
+    .meta,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      background: var(--surface);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+    }
+
+    .card,
+    .meta {
+      padding: 1rem;
+    }
+
+    .meta {
+      background: var(--soft);
+      box-shadow: none;
+    }
+
+    .meta strong {
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .meta span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .panel {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
+      gap: 1rem;
+      margin-top: 1rem;
+      padding: 1rem;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 0.65rem;
+      padding: 0.22rem 0.5rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .tag.blue {
+      background: var(--blue-soft);
+      color: #1e40af;
+    }
+
+    .tag.amber {
+      background: var(--amber-soft);
+      color: #92400e;
+    }
+
+    .matrix {
+      width: 100%;
+      margin-top: 1rem;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+      border-collapse: collapse;
+      background: var(--surface);
+    }
+
+    .matrix th,
+    .matrix td {
+      padding: 0.82rem 0.9rem;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .matrix th {
+      background: #edf2f7;
+      color: #1f2937;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+    }
+
+    .matrix tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .path-list {
+      display: grid;
+      gap: 0.7rem;
+      margin: 1rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .path-list li {
+      padding: 0.8rem;
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+      background: #fbfcfd;
+    }
+
+    .path-list strong {
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .callout {
+      margin-top: 1rem;
+      padding: 1rem 1.1rem;
+      border-left: 4px solid var(--accent);
+      border-radius: 0.65rem;
+      background: #ecfdf5;
+      color: #064e3b;
+    }
+
+    .callout.warning {
+      border-left-color: var(--amber);
+      background: #fffbeb;
+      color: #78350f;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 900px) {
+      .page {
+        width: min(100% - 1rem, 1180px);
+        padding-top: 0.5rem;
+      }
+
+      .hero {
+        padding: 1.25rem;
+      }
+
+      .meta-grid,
+      .cards,
+      .split,
+      .panel {
+        grid-template-columns: 1fr;
+      }
+
+      .matrix {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Frontend developer map</p>
+      <h1><code>frontend_vanilla</code> Folder Structure</h1>
+      <p>
+        This document maps the static vanilla frontend: pages, CSS
+        manifests, JavaScript entry scripts, ordered support modules, and the
+        places to edit common frontend behavior.
+      </p>
+
+      <div class="meta-grid" aria-label="Frontend facts">
+        <div class="meta">
+          <strong>Runtime</strong>
+          <span>Plain HTML, CSS, and JavaScript</span>
+        </div>
+        <div class="meta">
+          <strong>Build</strong>
+          <span>No bundler, no transpiler, no runtime deps</span>
+        </div>
+        <div class="meta">
+          <strong>Pages</strong>
+          <span>One folder, one <code>index.html</code>, one boot script</span>
+        </div>
+        <div class="meta">
+          <strong>Modules</strong>
+          <span>No-boot IIFEs attached to page namespaces</span>
+        </div>
+      </div>
+
+      <nav class="toc" aria-label="Table of contents">
+        <a href="#overview">Overview</a>
+        <a href="#tree">Tree</a>
+        <a href="#pages">Pages</a>
+        <a href="#css">CSS</a>
+        <a href="#javascript">JavaScript</a>
+        <a href="#chat">Chat Modules</a>
+        <a href="#load-order">Load Order</a>
+        <a href="#where-to-edit">Where to Edit</a>
+        <a href="#rules">Rules</a>
+      </nav>
+    </section>
+
+    <section id="overview">
+      <h2>Overview</h2>
+      <p class="section-note">
+        The frontend is a static browser app. It renders the TLM pages,
+        calls the chat-to-intent server for natural-language chat, and submits
+        confirmed write forms directly to <code>backend_main</code>.
+      </p>
+
+      <div class="cards">
+        <article class="card">
+          <span class="tag">Static contract</span>
+          <h3>No build step</h3>
+          <p>
+            Every file is served as written. Do not add a framework, bundler,
+            transpiler, ES module graph, or committed runtime dependency.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag blue">Page contract</span>
+          <h3>One boot script</h3>
+          <p>
+            Each page has one entry/controller script under <code>js/</code>.
+            Complex pages can load support modules first, but those modules do
+            not boot the page.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag amber">Localization</span>
+          <h3>EN and KO dictionaries</h3>
+          <p>
+            Runtime UI copy belongs in <code>js/i18n/en.js</code> and
+            <code>js/i18n/ko.js</code>. <code>js/i18n.js</code> stays the
+            registry/helper module.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="tree">
+      <h2>Current Tree</h2>
+      <p class="section-note">
+        This tree lists the active frontend files and omits local cache,
+        deployment, and Git internals.
+      </p>
+
+      <pre><code>frontend/frontend_vanilla/
+|-- README.md
+|-- wrangler.jsonc
+|-- frontend_vanilla_folder_structure.html
+|-- index.html
+|-- create-league/
+|   `-- index.html
+|-- find-league/
+|   `-- index.html
+|-- find-league-prefix/
+|   `-- index.html
+|-- league/
+|   `-- index.html
+|-- demo/
+|   `-- index.html
+|-- css/
+|   |-- styles.css
+|   |-- base.css
+|   |-- shell.css
+|   |-- theme-toggle.css
+|   |-- find-league.css
+|   |-- chat.css
+|   |-- chat-shell.css
+|   |-- chat-panels.css
+|   |-- chat-roster.css
+|   |-- chat-tables.css
+|   |-- chat-forms.css
+|   |-- chat-composer.css
+|   |-- chat-match-actions.css
+|   |-- chat-intents.css
+|   |-- create-league.css
+|   |-- create-league-form.css
+|   |-- create-league-roster.css
+|   |-- create-league-actions.css
+|   |-- create-league-success.css
+|   `-- create-league-help.css
+`-- js/
+    |-- config.js
+    |-- i18n.js
+    |-- site-header.js
+    |-- user-facing-errors.js
+    |-- i18n/
+    |   |-- en.js
+    |   `-- ko.js
+    |-- create-league.js
+    |-- create-league/
+    |   |-- core.js
+    |   |-- model.js
+    |   |-- widgets.js
+    |   |-- api.js
+    |   `-- render.js
+    |-- find-league.js
+    |-- find-league-prefix.js
+    |-- find-league/
+    |   |-- core.js
+    |   |-- api.js
+    |   `-- render.js
+    |-- chat.js
+    `-- chat/
+        |-- core.js
+        |-- api.js
+        |-- roster-model.js
+        |-- render-*.js
+        |-- composer*.js
+        |-- *-interactions.js
+        |-- roster-actions.js
+        |-- write-actions.js
+        |-- write-success.js
+        `-- write-errors.js</code></pre>
+    </section>
+
+    <section id="pages">
+      <h2>Pages</h2>
+      <p class="section-note">
+        Page folders are the user-facing routes. Page entry scripts live under
+        <code>js/</code>; support modules live under <code>js/&lt;page&gt;/</code>
+        when a page needs more structure.
+      </p>
+
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Route</th>
+            <th>HTML file</th>
+            <th>Entry script</th>
+            <th>Primary responsibility</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/</code></td>
+            <td><code>index.html</code></td>
+            <td>Inline shell init only</td>
+            <td>Landing page and navigation to create/find/demo flows.</td>
+          </tr>
+          <tr>
+            <td><code>/create-league/</code></td>
+            <td><code>create-league/index.html</code></td>
+            <td><code>js/create-league.js</code></td>
+            <td>Create a league, collect optional roster, render host/player URLs.</td>
+          </tr>
+          <tr>
+            <td><code>/find-league/</code></td>
+            <td><code>find-league/index.html</code></td>
+            <td><code>js/find-league.js</code></td>
+            <td>Search leagues by title prefix and open a selected player chat.</td>
+          </tr>
+          <tr>
+            <td><code>/find-league-prefix/?prefix=...</code></td>
+            <td><code>find-league-prefix/index.html</code></td>
+            <td><code>js/find-league-prefix.js</code></td>
+            <td>Auto-run title-prefix search from the URL query string.</td>
+          </tr>
+          <tr>
+            <td><code>/league/?league_id=...</code></td>
+            <td><code>league/index.html</code></td>
+            <td><code>js/chat.js</code></td>
+            <td>Per-league chat. Player mode by default, admin mode with <code>host_token</code>.</td>
+          </tr>
+          <tr>
+            <td><code>/demo</code></td>
+            <td><code>demo/index.html</code></td>
+            <td><code>js/chat.js</code></td>
+            <td>Demo chat page with preconfigured sample league values.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Page rule:</strong>
+        support modules can prepare helpers and attach them to a namespace, but
+        the page entry script owns booting, route parsing, state creation, and
+        event wiring.
+      </div>
+    </section>
+
+    <section id="css">
+      <h2>CSS Structure</h2>
+      <p class="section-note">
+        Every page links only <code>/css/styles.css</code>. That file is an
+        ordered manifest. Chat and create-league have their own nested
+        manifests so large surfaces stay split without changing the HTML links.
+      </p>
+
+      <div class="panel">
+        <div>
+          <span class="tag">Global manifest</span>
+          <h3><code>css/styles.css</code></h3>
+          <p>
+            Controls the top-level cascade. Keep this file as import ordering
+            only; place actual rules in focused modules.
+          </p>
+        </div>
+        <pre><code>@import url("./base.css");
+@import url("./chat.css");
+@import url("./shell.css");
+@import url("./chat-intents.css");
+@import url("./theme-toggle.css");
+@import url("./create-league.css");
+@import url("./find-league.css");</code></pre>
+      </div>
+
+      <div class="split">
+        <article class="card">
+          <span class="tag blue">Chat manifest</span>
+          <h3><code>css/chat.css</code></h3>
+          <p>
+            Imports chat shell, panels, roster, tables, forms, composer, and
+            match-action styles in dependency/cascade order.
+          </p>
+          <p>
+            Modules: <code>chat-shell.css</code>, <code>chat-panels.css</code>,
+            <code>chat-roster.css</code>, <code>chat-tables.css</code>,
+            <code>chat-forms.css</code>, <code>chat-composer.css</code>,
+            <code>chat-match-actions.css</code>.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag amber">Create manifest</span>
+          <h3><code>css/create-league.css</code></h3>
+          <p>
+            Imports create-league form, roster, action, success, and help-modal
+            styles in a stable order.
+          </p>
+          <p>
+            Modules: <code>create-league-form.css</code>,
+            <code>create-league-roster.css</code>,
+            <code>create-league-actions.css</code>,
+            <code>create-league-success.css</code>,
+            <code>create-league-help.css</code>.
+          </p>
+        </article>
+      </div>
+
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>CSS file</th>
+            <th>Use it for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>base.css</code></td>
+            <td>Design tokens, reset-like baseline, global element defaults.</td>
+          </tr>
+          <tr>
+            <td><code>shell.css</code></td>
+            <td>Shared app shell, header/footer, page chrome.</td>
+          </tr>
+          <tr>
+            <td><code>theme-toggle.css</code></td>
+            <td>Theme toggle control and related states.</td>
+          </tr>
+          <tr>
+            <td><code>find-league.css</code></td>
+            <td>Find-league and find-league-prefix page surfaces.</td>
+          </tr>
+          <tr>
+            <td><code>chat-intents.css</code></td>
+            <td>Help/commands and chat intent helper UI shared by chat surfaces.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="javascript">
+      <h2>JavaScript Structure</h2>
+      <p class="section-note">
+        JavaScript is organized by shared support scripts, page entry scripts,
+        and optional page-specific support modules. Files are loaded directly by
+        HTML, so dependency order is explicit in each page.
+      </p>
+
+      <div class="split">
+        <article class="card">
+          <span class="tag">Shared runtime</span>
+          <h3><code>js/</code> shared files</h3>
+          <p><code>config.js</code> owns production API defaults and query overrides.</p>
+          <p><code>i18n.js</code> owns the locale registry, <code>t()</code>, and page init helpers.</p>
+          <p><code>site-header.js</code> renders shared header/localization controls where used.</p>
+          <p><code>user-facing-errors.js</code> maps technical errors to localized user copy.</p>
+        </article>
+        <article class="card">
+          <span class="tag blue">Locale dictionaries</span>
+          <h3><code>js/i18n/</code></h3>
+          <p>
+            <code>en.js</code> and <code>ko.js</code> register dictionaries with
+            <code>window.TLCHAT_I18N</code>. Runtime UI strings should be added
+            to both files.
+          </p>
+        </article>
+      </div>
+
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Namespace</th>
+            <th>Entry script</th>
+            <th>Support modules</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Create league</td>
+            <td><code>window.TLCHAT_CREATE_LEAGUE</code></td>
+            <td><code>js/create-league.js</code></td>
+            <td><code>js/create-league/core.js</code>, <code>model.js</code>, <code>widgets.js</code>, <code>api.js</code>, <code>render.js</code></td>
+          </tr>
+          <tr>
+            <td>Find league</td>
+            <td><code>window.TLCHAT_FIND_LEAGUE</code></td>
+            <td><code>js/find-league.js</code>, <code>js/find-league-prefix.js</code></td>
+            <td><code>js/find-league/core.js</code>, <code>api.js</code>, <code>render.js</code></td>
+          </tr>
+          <tr>
+            <td>Chat</td>
+            <td><code>window.TLCHAT_CHAT</code></td>
+            <td><code>js/chat.js</code></td>
+            <td><code>js/chat/*.js</code> loaded in dependency order by <code>league/index.html</code> and <code>demo/index.html</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="chat">
+      <h2>Chat Module Map</h2>
+      <p class="section-note">
+        <code>js/chat.js</code> is the chat boot/controller for both
+        <code>/league</code> and <code>/demo</code>. The support modules below
+        are no-boot IIFEs under <code>window.TLCHAT_CHAT</code>.
+      </p>
+
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Responsibility</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>core.js</code></td>
+            <td>Namespace setup, translation helper, escaping, date/JSON helpers, URL guards, title helpers, safe display fallback helpers.</td>
+          </tr>
+          <tr>
+            <td><code>api.js</code></td>
+            <td>Chat/backend fetch adapters for roster, admin info, standings, match history, and chat posts.</td>
+          </tr>
+          <tr>
+            <td><code>roster-model.js</code></td>
+            <td>Pure roster/player/alias/match normalization, participation counts, duplicate/rematch helpers.</td>
+          </tr>
+          <tr>
+            <td><code>render-shell.js</code>, <code>render-quick-actions.js</code>, <code>render-intents.js</code></td>
+            <td>Chat shell, quick action tiles, header/composer/footer, help-command catalog.</td>
+          </tr>
+          <tr>
+            <td><code>render-forms.js</code></td>
+            <td>Write forms, score picker, form collection/validation, match-submit roster notes.</td>
+          </tr>
+          <tr>
+            <td><code>render-standings.js</code>, <code>render-matches.js</code>, <code>render-roster.js</code></td>
+            <td>Focused read-panel renderers for standings, match history, roster/player surfaces.</td>
+          </tr>
+          <tr>
+            <td><code>render-panels.js</code></td>
+            <td>Dispatch by chat response <code>data_type</code> and panel title resolution.</td>
+          </tr>
+          <tr>
+            <td><code>message-thread.js</code></td>
+            <td>User bubbles, assistant bubbles, loading state, and friendly error bubbles.</td>
+          </tr>
+          <tr>
+            <td><code>composer-autocomplete.js</code>, <code>composer.js</code></td>
+            <td>Roster-backed nickname candidates, form autocomplete, textarea behavior, IME-safe Enter, <code>@</code> mention popover.</td>
+          </tr>
+          <tr>
+            <td><code>standings-interactions.js</code></td>
+            <td>Standings date filters, latest-match defaults, Apply/Clear refetch behavior.</td>
+          </tr>
+          <tr>
+            <td><code>interactions.js</code></td>
+            <td>Shared tooltip positioning and common interaction helpers.</td>
+          </tr>
+          <tr>
+            <td><code>roster-actions.js</code></td>
+            <td>Low-level admin HTTP adapters for roster add/remove actions.</td>
+          </tr>
+          <tr>
+            <td><code>players-panel-interactions.js</code>, <code>roster-interactions.js</code></td>
+            <td>Get Players panel filtering/add/refresh lifecycle and delegated roster/alias message actions.</td>
+          </tr>
+          <tr>
+            <td><code>match-interactions.js</code></td>
+            <td>Match history Update/Delete buttons, admin-vs-player URL fork, delete confirmation modal.</td>
+          </tr>
+          <tr>
+            <td><code>match-submit-interactions.js</code></td>
+            <td>Match-submit confirmation helpers, duplicate and same-day rematch warnings.</td>
+          </tr>
+          <tr>
+            <td><code>write-actions.js</code>, <code>write-success.js</code>, <code>write-errors.js</code></td>
+            <td>Confirmed backend write submission, success rendering, duplicate/roster/window recovery rendering.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="load-order">
+      <h2>Load Order</h2>
+      <p class="section-note">
+        There are no ES imports, so script order is the dependency graph.
+        Keep page HTML order stable unless you have verified every downstream
+        namespace reference.
+      </p>
+
+      <div class="panel">
+        <div>
+          <span class="tag">Shared baseline</span>
+          <h3>Common script pattern</h3>
+          <p>
+            Most pages load the i18n registry, dictionaries, optional shared
+            header, configuration, user-facing errors, support modules, then
+            the entry script.
+          </p>
+        </div>
+        <pre><code>js/i18n.js
+js/i18n/en.js
+js/i18n/ko.js
+js/site-header.js              # where the page uses the shared header
+js/config.js                   # API URLs and query overrides
+js/user-facing-errors.js
+js/&lt;page&gt;/*.js                # optional no-boot support modules
+js/&lt;page&gt;.js                  # one page entry/controller
+TLCHAT_I18N.initPage()</code></pre>
+      </div>
+
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Page</th>
+            <th>Support module order</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/create-league/</code></td>
+            <td><code>core.js</code> &rarr; <code>model.js</code> &rarr; <code>widgets.js</code> &rarr; <code>api.js</code> &rarr; <code>render.js</code> &rarr; <code>create-league.js</code></td>
+          </tr>
+          <tr>
+            <td><code>/find-league/</code></td>
+            <td><code>find-league/core.js</code> &rarr; <code>api.js</code> &rarr; <code>render.js</code> &rarr; <code>find-league.js</code></td>
+          </tr>
+          <tr>
+            <td><code>/find-league-prefix/</code></td>
+            <td><code>find-league/core.js</code> &rarr; <code>api.js</code> &rarr; <code>render.js</code> &rarr; <code>find-league-prefix.js</code></td>
+          </tr>
+          <tr>
+            <td><code>/league/</code> and <code>/demo</code></td>
+            <td>
+              <code>chat/core.js</code>, <code>api.js</code>, <code>roster-model.js</code>,
+              renderers, message-thread, panel dispatch, interaction modules,
+              write modules, then <code>chat.js</code>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="where-to-edit">
+      <h2>Where to Edit</h2>
+      <p class="section-note">
+        Start in the narrowest owner for the behavior you are changing. The
+        entry scripts should stay focused on booting, state, route parsing, and
+        orchestration.
+      </p>
+
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Primary files</th>
+            <th>Check also</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Add or change a runtime string</td>
+            <td><code>js/i18n/en.js</code>, <code>js/i18n/ko.js</code></td>
+            <td>Use <code>TLCHAT_I18N.t()</code>; do not add dictionary data to <code>js/i18n.js</code>.</td>
+          </tr>
+          <tr>
+            <td>Change API base URL behavior</td>
+            <td><code>js/config.js</code></td>
+            <td>Keep <code>?chatApi=</code> and <code>?backendApi=</code> as absolute-origin overrides.</td>
+          </tr>
+          <tr>
+            <td>Add a chat read panel</td>
+            <td><code>js/chat/render-panels.js</code> plus a focused <code>render-*.js</code></td>
+            <td>i18n dictionaries, chat CSS module, chat-server <code>data_type</code> contract.</td>
+          </tr>
+          <tr>
+            <td>Change match history UI</td>
+            <td><code>js/chat/render-matches.js</code>, <code>js/chat/match-interactions.js</code></td>
+            <td><code>css/chat-tables.css</code>, <code>css/chat-match-actions.css</code>, write success/error paths.</td>
+          </tr>
+          <tr>
+            <td>Change confirmed write behavior</td>
+            <td><code>js/chat/write-actions.js</code></td>
+            <td><code>write-success.js</code>, <code>write-errors.js</code>, admin/player URL split.</td>
+          </tr>
+          <tr>
+            <td>Change chat input behavior</td>
+            <td><code>js/chat/composer.js</code>, <code>js/chat/composer-autocomplete.js</code></td>
+            <td><code>css/chat-composer.css</code>, roster candidate loading.</td>
+          </tr>
+          <tr>
+            <td>Change Get Players or roster actions</td>
+            <td><code>js/chat/players-panel-interactions.js</code>, <code>roster-actions.js</code>, <code>roster-interactions.js</code></td>
+            <td><code>render-roster.js</code>, <code>css/chat-roster.css</code>, admin-only affordances.</td>
+          </tr>
+          <tr>
+            <td>Change create-league form behavior</td>
+            <td><code>js/create-league/model.js</code>, <code>widgets.js</code>, <code>api.js</code>, <code>render.js</code></td>
+            <td><code>js/create-league.js</code> only for boot/orchestration.</td>
+          </tr>
+          <tr>
+            <td>Change league search behavior</td>
+            <td><code>js/find-league/core.js</code>, <code>api.js</code>, <code>render.js</code></td>
+            <td>The two entry scripts for page-specific route/DOM behavior.</td>
+          </tr>
+          <tr>
+            <td>Change layout or styling</td>
+            <td>Focused file under <code>css/</code></td>
+            <td>Manifest import order in <code>styles.css</code>, <code>chat.css</code>, or <code>create-league.css</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="rules">
+      <h2>Frontend Rules</h2>
+      <p class="section-note">
+        These are the boundaries that keep the static frontend maintainable.
+      </p>
+
+      <ul class="path-list">
+        <li>
+          <strong>No build step.</strong>
+          <span>No framework, bundler, transpiler, ES module import/export, or committed runtime dependencies.</span>
+        </li>
+        <li>
+          <strong>One entry script per page.</strong>
+          <span>Support modules are ordered no-boot IIFEs attached to <code>window.TLCHAT_*</code> namespaces.</span>
+        </li>
+        <li>
+          <strong>Runtime UI strings must be localized.</strong>
+          <span>Add English and Korean entries under <code>js/i18n/</code>, then render through <code>TLCHAT_I18N</code>.</span>
+        </li>
+        <li>
+          <strong>The chat page never writes through the chat server.</strong>
+          <span>Write intents render confirmation forms; confirmed requests go directly to <code>backend_main</code>.</span>
+        </li>
+        <li>
+          <strong>Admin writes use <code>/admin/*</code> URLs.</strong>
+          <span><code>route.hostToken</code> is the role signal. Player writes use non-admin <code>/leagues/...</code> URLs.</span>
+        </li>
+        <li>
+          <strong>Do not show technical IDs to users.</strong>
+          <span>IDs stay in URLs, request bodies, and <code>data-*</code> attributes, not visible success/error UI.</span>
+        </li>
+      </ul>
+
+      <div class="callout warning">
+        <strong>Verification habit:</strong>
+        for JavaScript changes, run <code>node --check</code> on touched files.
+        For page behavior, serve <code>frontend/frontend_vanilla</code> locally
+        and smoke the affected route.
+      </div>
+    </section>
+
+    <footer>
+      Standalone developer document for <code>frontend/frontend_vanilla/</code>.
+      Last updated: 2026-05-29.
+    </footer>
+  </main>
+</body>
+</html>

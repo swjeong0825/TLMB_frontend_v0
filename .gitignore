@@ -1,1 +1,17 @@
 commands.txt
+.DS_Store
+**/.DS_Store
+node_modules
+
+# Wrangler local state/cache
+.wrangler
+.dev.vars
+.dev.vars.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+*.swp
+.idea

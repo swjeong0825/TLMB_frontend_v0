@@ -1,0 +1,172 @@
+.match-form-roster-notes {
+  margin-top: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.match-form-roster-notes p {
+  margin: 0.4em 0;
+}
+
+.match-form-roster-notes p:first-child {
+  margin-top: 0;
+}
+
+.match-form-roster-notes .roster-note-warn {
+  color: var(--warn);
+}
+
+.action-card {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.action-card .row {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.8rem;
+}
+
+.action-card .row label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.action-card .method-url {
+  word-break: break-all;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+.action-card fieldset {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+}
+
+.action-card fieldset legend {
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 0 0.35rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.form-grid input {
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.form-grid .nick-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+  min-width: 0;
+}
+
+.form-grid .nick-pair label {
+  min-width: 0;
+}
+
+/* Wraps a write-form nickname input so its autocomplete popover can be
+ * absolutely positioned below the input without escaping the form grid. */
+.nick-input-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+/* Nickname autocomplete popover: visually identical to .chat-mention-popover
+ * but anchored BELOW the input (forms are read top-down) instead of above. */
+.nick-ac-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: min(220px, 40vh);
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+}
+
+[data-theme="dark"] .nick-ac-popover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.form-scores-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-scores-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.form-scores-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+  min-width: 0;
+}
+
+.form-scores-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  min-width: 0;
+}
+
+/* Match score picker: <select> renders as a native wheel on iOS and a
+ * list/dropdown elsewhere, all of which prevent free-form typing. */
+.form-score-select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  appearance: auto;
+}
+
+@media (max-width: 520px) {
+  .form-score-select {
+    font-size: 1rem;
+  }
+}

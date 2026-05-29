@@ -1,0 +1,11 @@
+/*
+ * Ordered chat stylesheet manifest. Keep imports in this order; each file
+ * preserves the original cascade from the pre-split chat.css.
+ */
+@import url("./chat-shell.css");
+@import url("./chat-panels.css");
+@import url("./chat-roster.css");
+@import url("./chat-tables.css");
+@import url("./chat-forms.css");
+@import url("./chat-composer.css");
+@import url("./chat-match-actions.css");

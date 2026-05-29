@@ -1,0 +1,51 @@
+.data-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.data-panel h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.server-message {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-bottom: 0.35rem;
+}
+
+.response-callout {
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.response-callout-clarify {
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(201, 162, 39, 0.4);
+  border-left-width: 3px;
+  border-left-color: var(--warn);
+}
+
+.response-callout-success {
+  background: rgba(61, 154, 106, 0.12);
+  border-color: var(--accent);
+}
+
+.response-json {
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+

@@ -1,6 +1,8 @@
 # TLM Frontend (Vanilla)
 
-Static, no-build-step browser client for the **Tennis League Manager (TLM)** system. Plain HTML, CSS, and JavaScript — no framework, no bundler, no `npm install`. Each page is a `<page>/index.html` plus a single per-page entry script under `js/`, sharing a common `js/i18n.js`, `js/config.js`, `js/site-header.js`, and `js/user-facing-errors.js`.
+deploy with `npx wrangler deploy`
+
+Static, no-build-step browser client for the **Tennis League Manager (TLM)** system. Plain HTML, CSS, and JavaScript — no framework, no bundler, no `npm install`. Each page is a `<page>/index.html` plus a single per-page boot script under `js/`, sharing a common `js/i18n.js` registry, `js/i18n/*.js` locale dictionaries, `js/config.js`, `js/site-header.js`, and `js/user-facing-errors.js`. Complex pages may also load ordered no-boot support modules from `js/<page>/*.js` before the boot script.
 
 **Live service:** [https://tlmb.swjapps.com](https://tlmb.swjapps.com)
 
@@ -31,7 +33,7 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-The chat page never writes through the Chat-to-Intent Server. When the chat returns a write intent, the browser renders the pre-filled form, the user confirms, and the page submits the request directly to the TLM Backend Main.
+The chat page never writes through the Chat-to-Intent Server. When the chat returns a write intent, the browser renders the pre-filled form, the user confirms, and `js/chat/write-actions.js` submits the request directly to the TLM Backend Main.
 
 ## Pages
 
@@ -107,16 +109,31 @@ Any other static file server (`python -m http.server`, Caddy, nginx, etc.) works
 ├── find-league-prefix/index.html  # URL-driven prefix search
 ├── league/index.html          # Per-league chat (player / admin)
 ├── demo/index.html            # Pre-wired chat for a sample league
-├── css/styles.css             # Single shared stylesheet
+├── css/styles.css             # Ordered stylesheet manifest
+├── css/base.css               # Design tokens, resets, shared base layout
+├── css/chat.css               # Ordered chat stylesheet manifest
+├── css/chat-*.css             # Focused chat shell/panel/roster/table/form modules
+├── css/shell.css              # Shared footer/header/locale shell
+├── css/chat-intents.css       # Chat quick-command helper and HELP accordion
+├── css/theme-toggle.css       # Theme toggle button
+├── css/create-league.css      # Ordered create-league stylesheet manifest
+├── css/create-league-*.css    # Focused create-league form/roster/action modules
+├── css/find-league.css        # Find-league pages
 └── js/
     ├── config.js              # Backend URLs + ?chatApi / ?backendApi overrides
-    ├── i18n.js                # Locale dictionary, t(), initPage(), language picker
+    ├── i18n.js                # Locale registry, t(), initPage(), language picker
+    ├── i18n/                  # Locale dictionaries registered with TLCHAT_I18N
     ├── site-header.js         # Shared site header (locale dropdown)
     ├── user-facing-errors.js  # Maps technical errors to short, localised copy
+    ├── create-league/         # Ordered no-boot create-league support modules
     ├── create-league.js       # Entry script for /create-league/
+    ├── find-league/           # Ordered no-boot support shared by find-league pages
     ├── find-league.js         # Entry script for /find-league/
     ├── find-league-prefix.js  # Entry script for /find-league-prefix/
-    └── chat.js                # Entry script for /league and /demo
+    ├── chat/                  # Ordered no-boot chat support modules
+    └── chat.js                # Entry/controller script for /league and /demo
 ```
 
-Per-page HTML loads its scripts in this order: `js/i18n.js` → `js/site-header.js` (where present) → `js/config.js` → `js/user-facing-errors.js` → the page-specific entry script. `TLCHAT_I18N.initPage()` is called inline at the end of `<body>` to apply translations to the rendered DOM.
+Per-page HTML still links only `/css/styles.css`; that file is an ordered `@import` manifest. Keep CSS imports in manifest order so the cascade stays stable: `base.css`, `chat.css`, `shell.css`, `chat-intents.css`, `theme-toggle.css`, `create-league.css`, `find-league.css`. `chat.css` is itself an ordered manifest for chat surface modules: `chat-shell.css`, `chat-panels.css`, `chat-roster.css`, `chat-tables.css`, `chat-forms.css`, `chat-composer.css`, and `chat-match-actions.css`. `create-league.css` is also a manifest: `create-league-form.css`, `create-league-roster.css`, `create-league-actions.css`, `create-league-success.css`, and `create-league-help.css`.
+
+Per-page HTML loads its scripts in this order: `js/i18n.js` → `js/i18n/en.js` → `js/i18n/ko.js` → `js/site-header.js` (where present) → `js/config.js` → `js/user-facing-errors.js` → optional no-boot support modules → the page-specific entry script. Add user-visible strings to both locale dictionary files, not the registry. `/create-league/` loads `js/create-league/*.js` before `js/create-league.js`; payload/rule helpers live in `model.js`, chips/help/timezone widgets in `widgets.js`, the backend adapter in `api.js`, and success rendering in `render.js`. `/find-league/` and `/find-league-prefix/` load `js/find-league/*.js` before their boot scripts; shared prefix-search helpers live in `core.js`, the backend adapter in `api.js`, and result rendering in `render.js`. `/league` and `/demo` load `js/chat/*.js` in dependency order, then `js/chat.js` boots the chat controller. Help-command intent catalog rendering lives in `js/chat/render-intents.js`; quick-action tile data/rendering lives in `js/chat/render-quick-actions.js`; header/composer/footer shell rendering plus theme/title helpers live in `js/chat/render-shell.js`. Roster-backed nickname candidate filtering and write-form nickname autocomplete live in `js/chat/composer-autocomplete.js`; the chat textarea, IME-safe Enter, and `@` mention popover live in `js/chat/composer.js`; message thread DOM helpers live in `js/chat/message-thread.js`; standings date filters live in `js/chat/standings-interactions.js`; shared tooltip wiring lives in `js/chat/interactions.js`; roster admin HTTP calls live in `js/chat/roster-actions.js`; Get Players panel filtering/add/refresh behavior lives in `js/chat/players-panel-interactions.js`; delegated roster/alias message actions live in `js/chat/roster-interactions.js`; match-history Update/Delete actions live in `js/chat/match-interactions.js`; match-submit confirmation helpers live in `js/chat/match-submit-interactions.js`; confirmed backend write submission lives in `js/chat/write-actions.js`, with success rendering in `js/chat/write-success.js` and write-error recovery in `js/chat/write-errors.js`. `TLCHAT_I18N.initPage()` is called inline at the end of `<body>` to apply translations to the rendered DOM.

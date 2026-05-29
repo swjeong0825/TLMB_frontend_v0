@@ -1,0 +1,228 @@
+.match-picker .match-picker-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.match-picker .match-picker-heading-label {
+  margin-right: 0.15rem;
+}
+
+.match-picker .match-picker-filter {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.match-picker-table td.match-picker-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.btn-edit-row {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-edit-row:hover {
+  background: rgba(61, 154, 106, 0.15);
+}
+
+.btn-match-delete {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-match-delete:hover:not(:disabled) {
+  background: rgba(201, 76, 76, 0.15);
+}
+
+.match-picker-edit-row > td {
+  padding: 0.25rem 0 0.65rem;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.match-picker-edit-card {
+  margin-top: 0.35rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Per-row "Update" button on match history panels.
+ *
+ * Shape and behavior mirror `.roster-remove-wrap` so we get a single
+ * hover/focus/touch tooltip pattern for "this action is disabled, here
+ * is why" across the whole UI. The wrap is the positioned anchor for
+ * the absolute tooltip; the tooltip only becomes visible on hover,
+ * focus, focus-within, or the JS-toggled --tip-open class (touch).
+ * ───────────────────────────────────────────────────────────────────── */
+
+.col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.match-row-actions {
+  position: relative;
+}
+
+.match-update-wrap,
+.match-delete-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+/* Small gap so Update and Delete don't touch each other in the
+   per-row Actions cell. Margin on the second wrap keeps the
+   single-button case (no Delete column on synthetic rows) unaffected. */
+.match-update-wrap + .match-delete-wrap {
+  margin-left: 0.4rem;
+}
+
+.match-update-wrap--disabled,
+.match-delete-wrap--disabled {
+  cursor: help;
+}
+
+.match-update-wrap--disabled .btn-match-update:disabled,
+.match-delete-wrap--disabled .btn-match-delete:disabled {
+  pointer-events: none;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The Confirm-delete button in the modal uses --danger tint so the
+   destructive action reads distinctly. Cancel keeps neutral styling. */
+.match-delete-modal-confirm {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.same-day-rematch-modal-confirm {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.match-delete-modal-actions,
+.same-day-rematch-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.match-delete-modal-warning {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.same-day-rematch-modal-warning {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--warn);
+}
+
+.same-day-rematch-modal-detail {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* Positioned `fixed` (not `absolute`) so the tip escapes any
+ * overflow / clipping ancestor (the match-history table can be
+ * narrow on mobile and the row's actions cell would otherwise clip
+ * the tip past the viewport edge). `top`/`left` are owned by
+ * `positionDisabledTip()` in `chat.js`, which measures the wrap with
+ * `getBoundingClientRect()` and clamps to the viewport. The CSS
+ * `:hover` / `:focus` / `--tip-open` rules keep owning visibility. */
+.match-update-tip,
+.match-delete-tip {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 16px));
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  box-sizing: border-box;
+}
+
+.match-update-wrap--disabled:hover .match-update-tip,
+.match-update-wrap--disabled:focus .match-update-tip,
+.match-update-wrap--disabled:focus-within .match-update-tip,
+.match-update-wrap--disabled.match-update-wrap--tip-open .match-update-tip,
+.match-delete-wrap--disabled:hover .match-delete-tip,
+.match-delete-wrap--disabled:focus .match-delete-tip,
+.match-delete-wrap--disabled:focus-within .match-delete-tip,
+.match-delete-wrap--disabled.match-delete-wrap--tip-open .match-delete-tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 520px) {
+  .col-actions {
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .match-row-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .match-row-actions .btn-match-update,
+  .match-row-actions .btn-match-delete {
+    margin-top: 0;
+  }
+
+  .match-update-wrap + .match-delete-wrap {
+    margin-left: 0;
+  }
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  white-space: pre-line;
+}
+

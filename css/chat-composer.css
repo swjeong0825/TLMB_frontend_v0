@@ -1,0 +1,128 @@
+
+.composer {
+  flex-shrink: 0;
+  padding: 0.85rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.composer form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.composer-input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.chat-mention-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 6px;
+  max-height: min(220px, 40vh);
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+}
+
+[data-theme="dark"] .chat-mention-popover {
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
+}
+
+.chat-mention-item {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-mention-item:last-child {
+  border-bottom: none;
+}
+
+.chat-mention-item[role="option"]:hover,
+.chat-mention-item[role="option"].is-active {
+  background: rgba(61, 154, 106, 0.14);
+}
+
+.chat-mention-item.chat-mention-status {
+  cursor: default;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.chat-mention-item.chat-mention-status:hover {
+  background: transparent;
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: none;
+  overflow-y: hidden;
+  padding: 0.55rem 3rem 0.55rem 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.composer button[type="submit"] {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.65rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.composer button[type="submit"]:hover {
+  background: var(--accent-dim);
+}
+
+.composer button[type="submit"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  margin-top: 0.65rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: rgba(61, 154, 106, 0.15);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

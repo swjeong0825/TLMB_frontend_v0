@@ -1,0 +1,9 @@
+wrangler.jsonc
+.assetsignore
+.git
+.gitignore
+.DS_Store
+**/.DS_Store
+node_modules
+README.md
+commands.txt

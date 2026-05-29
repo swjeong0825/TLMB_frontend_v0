@@ -1,0 +1,58 @@
+/* ── Create league page ─────────────────────────────────────────────────── */
+
+.create-league-page .create-league-back {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.create-league-intro {
+  color: var(--muted);
+  margin-bottom: 1.25rem;
+}
+
+.create-league-form {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.create-league-form .form-grid textarea,
+.create-league-form .form-grid select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+}
+
+.create-league-form .form-grid textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.req {
+  color: var(--danger);
+  font-weight: 600;
+  margin-left: 0.15em;
+}
+
+.optional-label {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.checkbox-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-row input {
+  width: auto !important;
+  margin: 0;
+}
+
