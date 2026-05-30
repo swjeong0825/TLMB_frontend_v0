@@ -10,6 +10,7 @@
   function panelTitleForDataType() { return api.panelTitleForDataType.apply(api, arguments); }
   function renderFallbackData() { return api.renderFallbackData.apply(api, arguments); }
   function renderStandingsSubjectChooser() { return api.renderStandingsSubjectChooser.apply(api, arguments); }
+  function renderStandingsScopeControls() { return api.renderStandingsScopeControls.apply(api, arguments); }
   function renderStandingsDateControls() { return api.renderStandingsDateControls.apply(api, arguments); }
   function renderStandings() { return api.renderStandings.apply(api, arguments); }
   function renderMatches() { return api.renderMatches.apply(api, arguments); }
@@ -44,6 +45,51 @@
       '<p class="read-panel-filter hint">' +
       escapeHtml(tr("filterFor", { name: String(name).trim() }) || "Showing results for " + String(name).trim() + ".") +
       "</p>"
+    );
+  }
+
+  function renderHistoryScopeControls(data, dataType) {
+    if (data && data._hide_history_scope_controls) return "";
+    var scope =
+      data && data._history_scope != null ? String(data._history_scope).trim() : "doubles";
+    if (scope !== "singles" && scope !== "both") scope = "doubles";
+    var playerName =
+      dataType === "GET_MATCH_HISTORY_BY_PLAYER" && data && data.player_name != null
+        ? String(data.player_name).trim()
+        : "";
+    var opts = [
+      ["doubles", tr("scopeDoubles") || "Doubles"],
+      ["singles", tr("scopeSingles") || "Singles"],
+      ["both", tr("scopeBoth") || "Both"],
+    ];
+    var buttons = opts.map(function (opt) {
+      var key = opt[0];
+      return (
+        '<button type="button" class="btn-secondary history-scope-option' +
+        (scope === key ? " is-active" : "") +
+        '" data-history-scope="' +
+        escapeAttr(key) +
+        '">' +
+        escapeHtml(opt[1]) +
+        "</button>"
+      );
+    }).join("");
+    return (
+      '<div class="history-scope-controls" data-history-scope-controls' +
+      ' data-history-type="' +
+      escapeAttr(dataType || "") +
+      '" data-player-name="' +
+      escapeAttr(playerName) +
+      '">' +
+      '<span class="history-scope-label">' +
+      escapeHtml(tr("historyScopeLabel") || "Format") +
+      "</span>" +
+      '<div class="history-scope-options" role="group" aria-label="' +
+      escapeAttr(tr("historyChooseScope") || "Choose match history format") +
+      '">' +
+      buttons +
+      "</div>" +
+      "</div>"
     );
   }
 
@@ -117,10 +163,12 @@
       inner =
         dataType === "GET_STANDINGS" && data && data._standings_show_subject_chooser
           ? renderStandingsSubjectChooser(data)
-          : renderStandingsDateControls(data, dataType) + renderStandings(data);
+          : renderStandingsScopeControls(data, dataType) +
+            renderStandingsDateControls(data, dataType) +
+            renderStandings(data);
     } else if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";
-      inner = renderMatches(data, !!isAdmin);
+      inner = renderHistoryScopeControls(data, dataType) + renderMatches(data, !!isAdmin);
     } else if (dataType === "GET_ROSTER") inner = renderRoster(data, !!isAdmin);
     else if (dataType === "HELP") inner = renderHelpPanel(data, !!isAdmin);
     else inner = renderFallbackData(data);
@@ -145,6 +193,7 @@
 
   api.assistantContentFromResponse = assistantContentFromResponse;
   api.renderReadPanelFilterNote = renderReadPanelFilterNote;
+  api.renderHistoryScopeControls = renderHistoryScopeControls;
   api.orderIntentsByCanonical = orderIntentsByCanonical;
   api.renderHelpPanel = renderHelpPanel;
   api.renderReadPanelBody = renderReadPanelBody;

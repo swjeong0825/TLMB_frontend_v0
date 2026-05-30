@@ -106,8 +106,12 @@
       pair2_player_nicknames: tr("fieldPair2Players"),
       pair1_nicknames: tr("fieldPair1Nicknames"),
       pair2_nicknames: tr("fieldPair2Nicknames"),
+      player1_nickname: tr("fieldSinglesPlayer1"),
+      player2_nickname: tr("fieldSinglesPlayer2"),
       pair1_score: tr("fieldPair1Score"),
       pair2_score: tr("fieldPair2Score"),
+      player1_score: tr("fieldSinglesPlayer1Score"),
+      player2_score: tr("fieldSinglesPlayer2Score"),
       method: tr("fieldMethod"),
       url: tr("fieldUrl"),
       nicknames: tr("fieldNicknames") || "Player nicknames",
@@ -344,6 +348,12 @@
     return /\/matches$/.test(withoutQuery);
   }
 
+  function isSinglesMatchCreationCall(method, url) {
+    if (method !== "POST" || typeof url !== "string") return false;
+    var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
+    return /\/singles-matches$/.test(withoutQuery);
+  }
+
   /**
    * Match-score-edit PATCH detector. Covers both the player route
    * (`/leagues/{lid}/matches/{mid}`) and the admin route
@@ -358,6 +368,12 @@
     if (method !== "PATCH" || typeof url !== "string") return false;
     var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
     return /\/matches\/[^/]+$/.test(withoutQuery);
+  }
+
+  function isSinglesMatchEditCall(method, url) {
+    if (method !== "PATCH" || typeof url !== "string") return false;
+    var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
+    return /\/singles-matches\/[^/]+$/.test(withoutQuery);
   }
 
   /**
@@ -375,10 +391,16 @@
     return /\/matches\/[^/]+$/.test(withoutQuery);
   }
 
+  function isSinglesMatchDeleteCall(method, url) {
+    if (method !== "DELETE" || typeof url !== "string") return false;
+    var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
+    return /\/singles-matches\/[^/]+$/.test(withoutQuery);
+  }
+
   function extractMatchIdFromEditUrl(url) {
     if (typeof url !== "string") return "";
     var withoutQuery = url.split("?")[0].replace(/\/+$/, "");
-    var m = withoutQuery.match(/\/matches\/([^/]+)$/);
+    var m = withoutQuery.match(/\/(?:singles-)?matches\/([^/]+)$/);
     return m ? decodeURIComponent(m[1]) : "";
   }
 
@@ -463,8 +485,11 @@
   api.dateOnlyOrNull = dateOnlyOrNull;
   api.leagueApiJsonErrorCode = leagueApiJsonErrorCode;
   api.isMatchCreationCall = isMatchCreationCall;
+  api.isSinglesMatchCreationCall = isSinglesMatchCreationCall;
   api.isMatchEditCall = isMatchEditCall;
+  api.isSinglesMatchEditCall = isSinglesMatchEditCall;
   api.isMatchDeleteCall = isMatchDeleteCall;
+  api.isSinglesMatchDeleteCall = isSinglesMatchDeleteCall;
   api.extractMatchIdFromEditUrl = extractMatchIdFromEditUrl;
   api.responseLooksLikeStaticHtml = responseLooksLikeStaticHtml;
   api.isFieldSpec = isFieldSpec;

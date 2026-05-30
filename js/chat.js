@@ -5,6 +5,7 @@
   var READ_TYPES = api.READ_TYPES;
   var WRITE_TYPES = api.WRITE_TYPES;
   var escapeHtml = api.escapeHtml;
+  var escapeAttr = api.escapeAttr;
   var setPlayerEditWindowSeconds = api.setPlayerEditWindowSeconds;
   var setPlayerMatchDeleteWindowSeconds = api.setPlayerMatchDeleteWindowSeconds;
   var tr = api.tr;
@@ -88,6 +89,8 @@
       rules: null,
       league_timezone: "America/Los_Angeles",
       latest_match_date: null,
+      latest_match_date_single: null,
+      latest_activity_date: null,
       fetchedAt: null,
     };
 
@@ -99,6 +102,13 @@
         result.league_timezone || "America/Los_Angeles";
       leagueRoster.latest_match_date =
         dateOnlyOrNull(result.latest_match_date) || null;
+      leagueRoster.latest_match_date_single =
+        dateOnlyOrNull(result.latest_match_date_single) || null;
+      leagueRoster.latest_activity_date =
+        dateOnlyOrNull(result.latest_activity_date) ||
+        leagueRoster.latest_match_date ||
+        leagueRoster.latest_match_date_single ||
+        null;
       leagueRoster.status = "ok";
       leagueRoster.fetchedAt = Date.now();
       // Cache the server-config player-edit window for the
@@ -199,6 +209,7 @@
       messagesEl: messagesEl,
     });
     var bindStandingsDateControls = standingsInteractions.bindStandingsDateControls;
+    var bindStandingsScopeControls = standingsInteractions.bindStandingsScopeControls;
     var bindStandingsSubjectChooserActions =
       standingsInteractions.bindStandingsSubjectChooserActions;
     var isStandingsDataType = standingsInteractions.isStandingsDataType;
@@ -226,6 +237,7 @@
       bindActionCardAutocomplete: bindActionCardAutocomplete,
     });
     var renderEditMatchScorePickerMessage = matchInteractions.renderEditMatchScorePickerMessage;
+    var bindHistoryScopeControls = matchInteractions.bindHistoryScopeControls;
     var bindMatchRowUpdateButtons = matchInteractions.bindMatchRowUpdateButtons;
     var bindMatchRowDeleteButtons = matchInteractions.bindMatchRowDeleteButtons;
 
@@ -243,6 +255,7 @@
       ensureLeagueRosterForRematchConfirmation: ensureLeagueRosterForRematchConfirmation,
       openPlayersPanelWithNicknames: openPlayersPanelWithNicknames,
       bindMatchDateGroupToggles: bindMatchDateGroupToggles,
+      bindHistoryScopeControls: bindHistoryScopeControls,
       bindMatchRowUpdateButtons: bindMatchRowUpdateButtons,
       bindMatchRowDeleteButtons: bindMatchRowDeleteButtons,
     });
@@ -292,12 +305,14 @@
         parts.push(renderReadPanel(resp.data_type, readData, !!route.hostToken));
         var readWrap = appendAssistant(parts.join(""));
         if (isStandingsDataType(resp.data_type)) {
+          bindStandingsScopeControls(readWrap, resp.data_type, !!route.hostToken);
           bindStandingsDateControls(readWrap, resp.data_type, !!route.hostToken);
         }
         if (
           resp.data_type === "GET_MATCH_HISTORY" ||
           resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
         ) {
+          bindHistoryScopeControls(readWrap);
           bindMatchDateGroupToggles(readWrap);
           bindMatchRowUpdateButtons(readWrap);
           bindMatchRowDeleteButtons(readWrap);
@@ -454,6 +469,60 @@
      * `conversationHistory` so any subsequent composer messages still
      * carry the same context the LLM would otherwise have seen.
      */
+    function doublesMatchBodySpec() {
+      return {
+        pair1_nicknames: { type: "array[string]", required: true, value: null },
+        pair2_nicknames: { type: "array[string]", required: true, value: null },
+        pair1_score: { type: "string", required: true, value: null },
+        pair2_score: { type: "string", required: true, value: null },
+      };
+    }
+
+    function singlesMatchBodySpec() {
+      return {
+        player1_nickname: { type: "string", required: true, value: null },
+        player2_nickname: { type: "string", required: true, value: null },
+        player1_score: { type: "string", required: true, value: null },
+        player2_score: { type: "string", required: true, value: null },
+      };
+    }
+
+    function renderLocalMatchSubmitForm(container, format) {
+      var base = backendMainBase();
+      if (!base) {
+        appendErrorPlain(tr("requestFailed") || "Request failed.");
+        return;
+      }
+      var isSingles = format === "singles";
+      var url =
+        base +
+        "/leagues/" +
+        encodeURIComponent(route.leagueId) +
+        (isSingles ? "/singles-matches" : "/matches");
+      var method = "POST";
+      var bodySpec = isSingles ? singlesMatchBodySpec() : doublesMatchBodySpec();
+      var html = "";
+      if (!isSingles) {
+        html += renderMatchSubmitRosterNotes(bodySpec, leagueRoster);
+      }
+      html +=
+        '<div class="match-format-submit">' +
+        renderWriteForm(bodySpec) +
+        '<button type="button" class="btn-secondary" data-submit-write>' +
+        escapeHtml(tr("submitToLeague") || "Submit to league API") +
+        "</button>" +
+        "</div>";
+      container.innerHTML = html;
+      var card = container.querySelector(".match-format-submit");
+      if (card) {
+        var submitBtn = card.querySelector("[data-submit-write]");
+        submitBtn.addEventListener("click", function () {
+          submitBackendAction(card, method, url, bodySpec);
+        });
+        bindActionCardAutocomplete(card);
+      }
+    }
+
     function deliverEmptyMatchSubmitForm() {
       var base = backendMainBase();
       if (!base) {
@@ -462,33 +531,31 @@
       }
       var prompt = "record a match";
       appendUser(prompt);
-      var url = base + "/leagues/" + encodeURIComponent(route.leagueId) + "/matches";
-      var method = "POST";
-      var bodySpec = {
-        pair1_nicknames: { type: "array[string]", required: true, value: null },
-        pair2_nicknames: { type: "array[string]", required: true, value: null },
-        pair1_score:     { type: "string",        required: true, value: null },
-        pair2_score:     { type: "string",        required: true, value: null },
-      };
-      var parts = [];
-      parts.push(renderMatchSubmitRosterNotes(bodySpec, leagueRoster));
-      parts.push(
-        '<div class="action-card">' +
-          renderWriteForm(bodySpec) +
-          '<button type="button" class="btn-secondary" data-submit-write>' +
-          escapeHtml(tr("submitToLeague") || "Submit to league API") +
+      var wrap = appendAssistant(
+        '<div class="match-format-card">' +
+          '<div class="match-format-options" role="group" aria-label="' +
+          escapeAttr(tr("matchFormatChooserLabel") || "Choose match format") +
+          '">' +
+          '<button type="button" class="btn-secondary match-format-option" data-local-match-format="doubles">' +
+          escapeHtml(tr("matchFormatDoubles") || "Doubles") +
           "</button>" +
+          '<button type="button" class="btn-secondary match-format-option" data-local-match-format="singles">' +
+          escapeHtml(tr("matchFormatSingles") || "Singles") +
+          "</button>" +
+          "</div>" +
+          '<div class="match-format-form-slot" data-match-format-form-slot></div>' +
           "</div>"
       );
-      var wrap = appendAssistant(parts.join(""));
-      var card = wrap.querySelector(".action-card");
-      if (card) {
-        var submitBtn = card.querySelector("[data-submit-write]");
-        submitBtn.addEventListener("click", function () {
-          submitBackendAction(card, method, url, bodySpec);
+      var slot = wrap.querySelector("[data-match-format-form-slot]");
+      wrap.querySelectorAll("[data-local-match-format]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var format = btn.getAttribute("data-local-match-format") || "doubles";
+          wrap.querySelectorAll("[data-local-match-format]").forEach(function (other) {
+            other.classList.toggle("is-active", other === btn);
+          });
+          renderLocalMatchSubmitForm(slot, format);
         });
-        bindActionCardAutocomplete(card);
-      }
+      });
       conversationHistory.push({ role: "user", content: prompt });
       conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
     }

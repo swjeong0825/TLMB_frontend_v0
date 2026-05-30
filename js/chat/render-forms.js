@@ -215,13 +215,47 @@
     );
   }
 
-  function isScorePairBodyFields(bodySpec) {
-    var s1 = bodySpec.pair1_score;
-    var s2 = bodySpec.pair2_score;
+  function renderNicknameInput(fieldName, value) {
+    var popId = nextNickAcId();
+    var ariaLabel = escapeAttr(tr("nickAcPopoverLabel") || "Pick a player");
+    return (
+      '<div class="nick-input-wrap">' +
+      '<input type="text" data-field="' +
+      escapeAttr(fieldName) +
+      '" value="' +
+      escapeHtml(value || "") +
+      '" autocomplete="off"' +
+      ' aria-controls="' +
+      popId +
+      '" aria-autocomplete="list" aria-expanded="false" />' +
+      '<div id="' +
+      popId +
+      '" class="nick-ac-popover" hidden role="listbox" aria-label="' +
+      ariaLabel +
+      '"></div>' +
+      "</div>"
+    );
+  }
+
+  function isNicknameFieldName(key) {
+    return key === "player1_nickname" || key === "player2_nickname";
+  }
+
+  function isScoreBodyFields(bodySpec, score1Key, score2Key) {
+    var s1 = bodySpec[score1Key];
+    var s2 = bodySpec[score2Key];
     if (!isFieldSpec(s1) || !isFieldSpec(s2)) return false;
     if (s1.type && s1.type.indexOf("array") === 0) return false;
     if (s2.type && s2.type.indexOf("array") === 0) return false;
     return true;
+  }
+
+  function isScorePairBodyFields(bodySpec) {
+    return isScoreBodyFields(bodySpec, "pair1_score", "pair2_score");
+  }
+
+  function isSinglesScoreBodyFields(bodySpec) {
+    return isScoreBodyFields(bodySpec, "player1_score", "player2_score");
   }
 
   var SCORE_PICKER_MAX = 21;
@@ -265,14 +299,27 @@
       var spec = bodySpec[key];
       if (!isFieldSpec(spec)) continue;
 
-      if (
+      var isPairScoreGroup =
         (key === "pair1_score" || key === "pair2_score") &&
         isScorePairBodyFields(bodySpec) &&
         !handled.pair1_score &&
-        !handled.pair2_score
-      ) {
-        var sc1 = bodySpec.pair1_score;
-        var sc2 = bodySpec.pair2_score;
+        !handled.pair2_score;
+      var isSinglesScoreGroup =
+        (key === "player1_score" || key === "player2_score") &&
+        isSinglesScoreBodyFields(bodySpec) &&
+        !handled.player1_score &&
+        !handled.player2_score;
+      if (isPairScoreGroup || isSinglesScoreGroup) {
+        var leftKey = isSinglesScoreGroup ? "player1_score" : "pair1_score";
+        var rightKey = isSinglesScoreGroup ? "player2_score" : "pair2_score";
+        var leftLabel = isSinglesScoreGroup
+          ? tr("formScoreSinglesPlayer1") || "Player 1"
+          : tr("formScorePair1") || "Pair 1";
+        var rightLabel = isSinglesScoreGroup
+          ? tr("formScoreSinglesPlayer2") || "Player 2"
+          : tr("formScorePair2") || "Pair 2";
+        var sc1 = bodySpec[leftKey];
+        var sc2 = bodySpec[rightKey];
         var req1 = sc1.required ? " *" : "";
         var req2 = sc2.required ? " *" : "";
         var v1 = sc1.value == null ? "" : String(sc1.value);
@@ -284,21 +331,21 @@
             "</div>" +
             '<div class="form-scores-row">' +
             "<label><span>" +
-            escapeHtml(tr("formScorePair1") || "Pair 1") +
+            escapeHtml(leftLabel) +
             req1 +
             "</span>" +
-            renderScorePicker("pair1_score", v1) +
+            renderScorePicker(leftKey, v1) +
             "</label>" +
             "<label><span>" +
-            escapeHtml(tr("formScorePair2") || "Pair 2") +
+            escapeHtml(rightLabel) +
             req2 +
             "</span>" +
-            renderScorePicker("pair2_score", v2) +
+            renderScorePicker(rightKey, v2) +
             "</label>" +
             "</div></div>"
         );
-        handled.pair1_score = true;
-        handled.pair2_score = true;
+        handled[leftKey] = true;
+        handled[rightKey] = true;
         continue;
       }
 
@@ -311,6 +358,17 @@
         parts.push("</label>");
       } else {
         var val = spec.value == null ? "" : String(spec.value);
+        if (isNicknameFieldName(key)) {
+          parts.push(
+            "<label><span>" +
+              escapeHtml(labelForFormField(key)) +
+              req +
+              "</span>" +
+              renderNicknameInput(key, val) +
+              "</label>"
+          );
+          continue;
+        }
         parts.push(
           "<label><span>" +
             escapeHtml(labelForFormField(key)) +
@@ -375,7 +433,9 @@
   api.renderMatchSubmitRosterNotes = renderMatchSubmitRosterNotes;
   api.nextNickAcId = nextNickAcId;
   api.arrayToInputs = arrayToInputs;
+  api.renderNicknameInput = renderNicknameInput;
   api.isScorePairBodyFields = isScorePairBodyFields;
+  api.isSinglesScoreBodyFields = isSinglesScoreBodyFields;
   api.renderScorePicker = renderScorePicker;
   api.renderWriteForm = renderWriteForm;
   api.collectWriteForm = collectWriteForm;

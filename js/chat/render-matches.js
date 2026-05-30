@@ -153,6 +153,92 @@
     );
   }
 
+  function matchFormat(match) {
+    return match && match.match_format === "singles" ? "singles" : "doubles";
+  }
+
+  function matchScoreValues(match) {
+    if (matchFormat(match) === "singles") {
+      return {
+        left: match.player1_score,
+        right: match.player2_score,
+      };
+    }
+    return {
+      left: match.pair1_score,
+      right: match.pair2_score,
+    };
+  }
+
+  function renderMatchParticipants(match) {
+    if (matchFormat(match) === "singles") {
+      var p1 =
+        '<span class="match-player match-player--1">' +
+        escapeHtml(match.player1_nickname || "") +
+        "</span>";
+      var p2 =
+        '<span class="match-player match-player--2">' +
+        escapeHtml(match.player2_nickname || "") +
+        "</span>";
+      return (
+        '<span class="match-pairs match-pairs--singles">' +
+        p1 +
+        '<span class="match-vs">' +
+        escapeHtml(tr("vs") || "vs") +
+        "</span>" +
+        p2 +
+        "</span>"
+      );
+    }
+    var t1 =
+      '<span class="match-pair match-pair--1">' +
+      escapeHtml(match.pair1_player1_nickname) +
+      ' <span class="match-pair-plus">+</span> ' +
+      escapeHtml(match.pair1_player2_nickname) +
+      "</span>";
+    var t2 =
+      '<span class="match-pair match-pair--2">' +
+      escapeHtml(match.pair2_player1_nickname) +
+      ' <span class="match-pair-plus">+</span> ' +
+      escapeHtml(match.pair2_player2_nickname) +
+      "</span>";
+    return (
+      '<span class="match-pairs">' +
+      t1 +
+      '<span class="match-vs">' +
+      escapeHtml(tr("vs") || "vs") +
+      "</span>" +
+      t2 +
+      "</span>"
+    );
+  }
+
+  function matchRowDataAttrs(match, matchId) {
+    if (!matchId) return "";
+    var scores = matchScoreValues(match);
+    var attrs =
+      ' data-match-row-id="' + escapeAttr(matchId) + '"' +
+      ' data-match-format="' + escapeAttr(matchFormat(match)) + '"' +
+      ' data-score-left="' + escapeAttr(scores.left || "") + '"' +
+      ' data-score-right="' + escapeAttr(scores.right || "") + '"';
+    if (match.created_at) {
+      attrs += ' data-match-created-at="' + escapeAttr(String(match.created_at)) + '"';
+    }
+    if (matchFormat(match) === "singles") {
+      attrs +=
+        ' data-player1="' + escapeAttr(match.player1_nickname || "") + '"' +
+        ' data-player2="' + escapeAttr(match.player2_nickname || "") + '"';
+      return attrs;
+    }
+    return (
+      attrs +
+      ' data-pair1-p1="' + escapeAttr(match.pair1_player1_nickname || "") + '"' +
+      ' data-pair1-p2="' + escapeAttr(match.pair1_player2_nickname || "") + '"' +
+      ' data-pair2-p1="' + escapeAttr(match.pair2_player1_nickname || "") + '"' +
+      ' data-pair2-p2="' + escapeAttr(match.pair2_player2_nickname || "") + '"'
+    );
+  }
+
   function renderMatches(data, isAdmin) {
     var rows = data.matches || [];
     if (!rows.length) {
@@ -163,9 +249,10 @@
     // (e.g. the previous post-submit success branch) thus keep their
     // existing 3-column shape.
     var hasAnyId = rows.some(function (m) { return m && m.match_id; });
+    var hasSingles = rows.some(function (m) { return matchFormat(m) === "singles"; });
     var h =
       "<div class=\"match-history-table-wrap\"><table class=\"data match-history-table\"><thead><tr><th>" +
-      escapeHtml(tr("tablePairs") || "Pairs") +
+      escapeHtml(hasSingles ? (tr("tableMatchup") || "Matchup") : (tr("tablePairs") || "Pairs")) +
       "</th><th>" +
       escapeHtml(tr("tableScore") || "Score") +
       "</th>" +
@@ -181,20 +268,9 @@
     var colCount = hasAnyId ? 4 : 3;
     var lastDateGroupKey = null;
     rows.forEach(function (m) {
-      var t1 =
-        '<span class="match-pair match-pair--1">' +
-        escapeHtml(m.pair1_player1_nickname) +
-        ' <span class="match-pair-plus">+</span> ' +
-        escapeHtml(m.pair1_player2_nickname) +
-        "</span>";
-      var t2 =
-        '<span class="match-pair match-pair--2">' +
-        escapeHtml(m.pair2_player1_nickname) +
-        ' <span class="match-pair-plus">+</span> ' +
-        escapeHtml(m.pair2_player2_nickname) +
-        "</span>";
       var when = m.created_at ? formatWhen(m.created_at) : escapeHtml(tr("emDash") || "—");
       var matchId = m.match_id ? String(m.match_id) : "";
+      var scores = matchScoreValues(m);
       var dateGroup = matchDateGroupForCreatedAt(m.created_at);
       if (dateGroup.key !== lastDateGroupKey) {
         h +=
@@ -216,29 +292,16 @@
       // user-visible UI"). Only attached when we have a match_id;
       // synthetic rows without ids stay 3-column and never offer
       // Update, so they don't need the metadata.
-      var rowDataAttrs = matchId
-        ? " data-match-row-id=\"" + escapeAttr(matchId) + "\"" +
-          (m.created_at
-            ? " data-match-created-at=\"" + escapeAttr(String(m.created_at)) + "\""
-            : "") +
-          " data-pair1-p1=\"" + escapeAttr(m.pair1_player1_nickname || "") + "\"" +
-          " data-pair1-p2=\"" + escapeAttr(m.pair1_player2_nickname || "") + "\"" +
-          " data-pair2-p1=\"" + escapeAttr(m.pair2_player1_nickname || "") + "\"" +
-          " data-pair2-p2=\"" + escapeAttr(m.pair2_player2_nickname || "") + "\""
-        : "";
+      var rowDataAttrs = matchRowDataAttrs(m, matchId);
       h +=
         "<tr class=\"match-row\"" +
         rowDataAttrs +
-        "><td class=\"col-pairs\"><span class=\"match-pairs\">" +
-        t1 +
-        '<span class="match-vs">' +
-        escapeHtml(tr("vs") || "vs") +
-        "</span>" +
-        t2 +
-        "</span></td><td>" +
-        escapeHtml(m.pair1_score) +
+        "><td class=\"col-pairs\">" +
+        renderMatchParticipants(m) +
+        "</td><td>" +
+        escapeHtml(scores.left) +
         " – " +
-        escapeHtml(m.pair2_score) +
+        escapeHtml(scores.right) +
         "</td>" +
         (hasAnyId
           ? "<td class=\"col-actions match-row-actions\">" +

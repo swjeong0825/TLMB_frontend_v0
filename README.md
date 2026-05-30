@@ -1,6 +1,8 @@
 # TLM Frontend (Vanilla)
 
-deploy with `npx wrangler deploy`
+deploy with 
+`npx wrangler login`
+`npx wrangler deploy`
 
 Static, no-build-step browser client for the **Tennis League Manager (TLM)** system. Plain HTML, CSS, and JavaScript — no framework, no bundler, no `npm install`. Each page is a `<page>/index.html` plus a single per-page boot script under `js/`, sharing a common `js/i18n.js` registry, `js/i18n/*.js` locale dictionaries, `js/config.js`, `js/site-header.js`, and `js/user-facing-errors.js`. Complex pages may also load ordered no-boot support modules from `js/<page>/*.js` before the boot script.
 

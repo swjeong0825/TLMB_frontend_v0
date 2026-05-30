@@ -126,23 +126,118 @@
     return next;
   }
 
+  function renderSubjectOption(subjectKey, title) {
+    return (
+      '<button type="button" class="btn-secondary standings-subject-option" data-standings-subject="' +
+      escapeAttr(subjectKey) +
+      '">' +
+      escapeHtml(title) +
+      "</button>"
+    );
+  }
+
+  // Singles/Both can be locked (when the chosen subject is "pair"); the wrap
+  // hosts a fixed-position tooltip positioned by `bindDisabledTipPositioning`.
+  function renderLockableScopeOption(scopeKey, label) {
+    return (
+      '<span class="standings-scope-wrap" data-standings-scope-wrap="' +
+      escapeAttr(scopeKey) +
+      '">' +
+      '<button type="button" class="btn-secondary standings-scope-option" data-standings-scope="' +
+      escapeAttr(scopeKey) +
+      '" disabled>' +
+      escapeHtml(label) +
+      "</button>" +
+      '<span class="standings-scope-tip" role="tooltip">' +
+      escapeHtml(
+        tr("standingsPairDoublesOnly") || "Pair standings only support Doubles."
+      ) +
+      "</span>" +
+      "</span>"
+    );
+  }
+
   function renderStandingsSubjectChooser() {
     return (
       '<div class="standings-subject-chooser">' +
-      '<p class="hint standings-subject-copy">' +
-      escapeHtml(tr("standingsChooseSubject") || "Choose how to view standings.") +
-      "</p>" +
+      '<div class="standings-subject-group">' +
       '<div class="standings-subject-options" role="group" aria-label="' +
       escapeAttr(tr("standingsChooseSubject") || "Choose how to view standings.") +
       '">' +
-      '<button type="button" class="btn-secondary standings-subject-option" data-standings-subject="pair">' +
-      escapeHtml(tr("standingsPairOption") || "Pair standings") +
-      "</button>" +
-      '<button type="button" class="btn-secondary standings-subject-option" data-standings-subject="player">' +
-      escapeHtml(tr("standingsPlayerOption") || "Player standings") +
-      "</button>" +
+      renderSubjectOption("pair", tr("standingsPairOption") || "Pair") +
+      renderSubjectOption("player", tr("standingsPlayerOption") || "Player") +
+      "</div>" +
       "</div>" +
       '<p class="standings-subject-message" data-standings-subject-message hidden></p>' +
+      '<div class="standings-scope-chooser" data-standings-scope-chooser data-selected-subject="" data-selected-scope="doubles" hidden>' +
+      '<div class="standings-scope-options" role="group" aria-label="' +
+      escapeAttr(tr("standingsChooseScope") || "Choose match format") +
+      '">' +
+      '<button type="button" class="btn-secondary standings-scope-option" data-standings-scope="doubles" disabled>' +
+      escapeHtml(tr("scopeDoubles") || "Doubles") +
+      "</button>" +
+      renderLockableScopeOption("singles", tr("scopeSingles") || "Singles") +
+      renderLockableScopeOption("both", tr("scopeBoth") || "Both") +
+      "</div>" +
+      '<p class="hint standings-scope-helper" hidden>' +
+      escapeHtml(
+        tr("standingsPairDoublesOnly") || "Pair standings only support Doubles."
+      ) +
+      "</p>" +
+      "</div>" +
+      "</div>"
+    );
+  }
+
+  function renderStandingsScopeControls(data, dataType) {
+    var subject =
+      dataType === "GET_STANDINGS" && data && data._standings_subject != null
+        ? String(data._standings_subject).trim()
+        : "player";
+    if (subject === "pair") return "";
+    var scope =
+      data && data._standings_scope != null
+        ? String(data._standings_scope).trim()
+        : "doubles";
+    if (scope !== "singles" && scope !== "both") scope = "doubles";
+    var playerName =
+      dataType === "GET_STANDINGS_BY_PLAYER" && data && data.player_name != null
+        ? String(data.player_name).trim()
+        : "";
+    var opts = [
+      ["doubles", tr("scopeDoubles") || "Doubles"],
+      ["singles", tr("scopeSingles") || "Singles"],
+      ["both", tr("scopeBoth") || "Both"],
+    ];
+    var buttons = opts.map(function (opt) {
+      var key = opt[0];
+      return (
+        '<button type="button" class="btn-secondary standings-inline-scope-option' +
+        (scope === key ? " is-active" : "") +
+        '" data-standings-inline-scope="' +
+        escapeAttr(key) +
+        '">' +
+        escapeHtml(opt[1]) +
+        "</button>"
+      );
+    }).join("");
+    return (
+      '<div class="standings-inline-scope" data-standings-inline-scope-controls' +
+      ' data-standings-type="' +
+      escapeAttr(dataType || "") +
+      '" data-player-name="' +
+      escapeAttr(playerName) +
+      '" data-standings-subject="' +
+      escapeAttr(subject) +
+      '">' +
+      '<span class="standings-inline-scope-label">' +
+      escapeHtml(tr("standingsScopeLabel") || "Format") +
+      "</span>" +
+      '<div class="standings-inline-scope-options" role="group" aria-label="' +
+      escapeAttr(tr("standingsChooseScope") || "Choose match format") +
+      '">' +
+      buttons +
+      "</div>" +
       "</div>"
     );
   }
@@ -154,6 +249,11 @@
       dataType === "GET_STANDINGS" && data && data._standings_subject != null
         ? String(data._standings_subject).trim()
         : "";
+    var scope =
+      data && data._standings_scope != null
+        ? String(data._standings_scope).trim()
+        : "doubles";
+    if (scope !== "singles" && scope !== "both") scope = "doubles";
     var playerName =
       dataType === "GET_STANDINGS_BY_PLAYER" && data && data.player_name != null
         ? String(data.player_name).trim()
@@ -166,6 +266,8 @@
       escapeAttr(playerName) +
       '" data-standings-subject="' +
       escapeAttr(subject) +
+      '" data-standings-scope="' +
+      escapeAttr(scope) +
       '">' +
       '<div class="standings-date-fields">' +
       '<label class="standings-date-field">' +
@@ -310,6 +412,7 @@
   api.formatMetricValue = formatMetricValue;
   api.cloneStandingsDataWithDateFilter = cloneStandingsDataWithDateFilter;
   api.renderStandingsSubjectChooser = renderStandingsSubjectChooser;
+  api.renderStandingsScopeControls = renderStandingsScopeControls;
   api.renderStandingsDateControls = renderStandingsDateControls;
   api.standingsRowsWithMatches = standingsRowsWithMatches;
   api.renderStandings = renderStandings;

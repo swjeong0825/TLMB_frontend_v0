@@ -50,6 +50,14 @@
           data && typeof data.latest_match_date === "string"
             ? dateOnlyOrNull(data.latest_match_date)
             : null,
+        latest_match_date_single:
+          data && typeof data.latest_match_date_single === "string"
+            ? dateOnlyOrNull(data.latest_match_date_single)
+            : null,
+        latest_activity_date:
+          data && typeof data.latest_activity_date === "string"
+            ? dateOnlyOrNull(data.latest_activity_date)
+            : null,
         rules: data && typeof data.rules === "object" && data.rules !== null ? data.rules : null,
         players: Array.isArray(data.players) ? data.players : [],
         pairs: Array.isArray(data.pairs) ? data.pairs : [],
@@ -98,7 +106,8 @@
     playerName,
     startDate,
     endDate,
-    subject
+    subject,
+    scope
   ) {
     var base = backendMainBase();
     if (!base || !leagueId) {
@@ -123,6 +132,14 @@
     }
     if (dateOnlyOrNull(startDate)) params.set("start_date", startDate);
     if (dateOnlyOrNull(endDate)) params.set("end_date", endDate);
+    var selectedScope = String(scope == null ? "" : scope).trim();
+    if (
+      selectedScope === "doubles" ||
+      selectedScope === "singles" ||
+      selectedScope === "both"
+    ) {
+      params.set("scope", selectedScope);
+    }
 
     try {
       var url = base + path + (params.toString() ? "?" + params.toString() : "");
@@ -138,12 +155,42 @@
   }
 
   /** GET /leagues/{id}/matches — full history, same origin as roster (no host token). */
-  async function fetchLeagueMatchHistory(leagueId) {
+  async function fetchLeagueMatchHistory(leagueId, dataTypeOrScope, playerName, scope) {
     var base = backendMainBase();
     if (!base || !leagueId) {
       return { ok: false, error: "missing_config_or_league" };
     }
-    var url = base + "/leagues/" + encodeURIComponent(leagueId) + "/matches";
+    var dataType = "GET_MATCH_HISTORY";
+    var selectedScope = "doubles";
+    if (
+      dataTypeOrScope === "GET_MATCH_HISTORY" ||
+      dataTypeOrScope === "GET_MATCH_HISTORY_BY_PLAYER"
+    ) {
+      dataType = dataTypeOrScope;
+      selectedScope = String(scope || "doubles");
+    } else if (typeof dataTypeOrScope === "string" && dataTypeOrScope) {
+      selectedScope = dataTypeOrScope;
+    }
+    var isByPlayer = dataType === "GET_MATCH_HISTORY_BY_PLAYER";
+    var path =
+      "/leagues/" +
+      encodeURIComponent(leagueId) +
+      "/matches" +
+      (isByPlayer ? "/by-player" : "");
+    var params = new URLSearchParams();
+    if (isByPlayer) {
+      var name = String(playerName == null ? "" : playerName).trim();
+      if (!name) return { ok: false, error: "missing_player_name" };
+      params.set("player_name", name);
+    }
+    if (
+      selectedScope === "doubles" ||
+      selectedScope === "singles" ||
+      selectedScope === "both"
+    ) {
+      params.set("scope", selectedScope);
+    }
+    var url = base + path + (params.toString() ? "?" + params.toString() : "");
     var res = await fetch(url);
     var text = await res.text();
     if (!res.ok) {

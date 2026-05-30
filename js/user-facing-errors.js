@@ -93,12 +93,23 @@
 
     if (
       low.indexOf("duplicatepairpairmatcherror") !== -1 ||
+      low.indexOf("duplicatepairmatchupmatcherror") !== -1 ||
       low.indexOf("a match between these two pairs already exists") !== -1
     ) {
       if (low.indexOf("already exists today") !== -1) {
         return t("errors.duplicateMatchToday") || genericMessage();
       }
       return t("errors.duplicateMatch") || genericMessage();
+    }
+
+    if (
+      low.indexOf("duplicatesinglesmatchupmatcherror") !== -1 ||
+      low.indexOf("a singles match between these two players already exists") !== -1
+    ) {
+      if (low.indexOf("already exists today") !== -1) {
+        return t("errors.duplicateSinglesMatchToday") || genericMessage();
+      }
+      return t("errors.duplicateSinglesMatch") || genericMessage();
     }
 
     if (

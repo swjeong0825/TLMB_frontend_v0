@@ -2,12 +2,15 @@
   "use strict";
 
   var api = global.TLCHAT_CHAT = global.TLCHAT_CHAT || {};
+  var canonicalizeNicknameNorm = api.canonicalizeNicknameNorm;
   var canonicalizedNickPair = api.canonicalizedNickPair;
   var escapeHtml = api.escapeHtml;
   var fetchLeagueMatchHistory = api.fetchLeagueMatchHistory;
   var findMatchRecordForSubmittedPair = api.findMatchRecordForSubmittedPair;
+  var findMatchRecordForSubmittedSingles = api.findMatchRecordForSubmittedSingles;
   var humanDetailFromHttpBody = api.humanDetailFromHttpBody;
   var isMatchCreationCall = api.isMatchCreationCall;
+  var isSinglesMatchCreationCall = api.isSinglesMatchCreationCall;
   var leagueApiJsonErrorCode = api.leagueApiJsonErrorCode;
   var normalizeMatchNickname = api.normalizeMatchNickname;
   var renderReadPanel = api.renderReadPanel;
@@ -42,7 +45,12 @@
     }
 
     function rosterMembershipRecovery(method, url, res, text) {
-      if (!(isMatchCreationCall(method, url) && res.status === 422)) {
+      if (
+        !(
+          (isMatchCreationCall(method, url) || isSinglesMatchCreationCall(method, url)) &&
+          res.status === 422
+        )
+      ) {
         return { isRosterMembershipRequired: false };
       }
       var ufe = window.TLCHAT_USER_FACING_ERRORS;
@@ -118,6 +126,26 @@
       return false;
     }
 
+    function handleSamePlayerSingles(text) {
+      if (leagueApiJsonErrorCode(text) !== "SamePlayerOnBothSidesError") {
+        return false;
+      }
+      var msg =
+        tr("sameSinglesPlayerError") ||
+        "Choose two different players for a singles match.";
+      appendAssistant(
+        '<div class="response-callout response-callout-clarify"><strong>' +
+          escapeHtml(msg) +
+          "</strong></div>",
+        "msg-error"
+      );
+      conversationHistory.push({
+        role: "assistant",
+        content: msg,
+      });
+      return true;
+    }
+
     async function handleDuplicateMatch(payload, text) {
       var hist = await fetchLeagueMatchHistory(route.leagueId);
       var pt1 = Array.isArray(payload.pair1_nicknames) ? payload.pair1_nicknames : [];
@@ -169,6 +197,59 @@
       });
     }
 
+    async function handleDuplicateSinglesMatch(payload, text) {
+      var hist = await fetchLeagueMatchHistory(route.leagueId, "singles");
+      var rosterStateForDuplicate = await ensureLeagueRosterForRematchConfirmation();
+      var duplicateCanonicalMap = rosterCanonicalNormMap(rosterStateForDuplicate.players);
+      var p1 = canonicalizeNicknameNorm(
+        normalizeMatchNickname(payload.player1_nickname),
+        duplicateCanonicalMap
+      );
+      var p2 = canonicalizeNicknameNorm(
+        normalizeMatchNickname(payload.player2_nickname),
+        duplicateCanonicalMap
+      );
+      var existingRow = hist.ok
+        ? findMatchRecordForSubmittedSingles(hist.matches, p1, p2)
+        : null;
+      var duplicateText = String(text || "").toLowerCase();
+      var shortMsg =
+        duplicateText.indexOf("already exists today") !== -1
+          ? tr("singlesMatchAlreadyExistsToday")
+          : tr("singlesMatchAlreadyExistsInLeague");
+      if (!shortMsg) {
+        shortMsg =
+          tr("singlesMatchAlreadyExists") ||
+          "Singles match already exists. Record not saved.";
+      }
+      var calloutHtml =
+        '<div class="response-callout response-callout-clarify"><strong>' +
+        escapeHtml(shortMsg) +
+        "</strong></div>";
+      if (!hist.ok) {
+        console.warn("[TLCHAT] Duplicate singles match \u2014 match history fetch failed", hist);
+      } else if (!existingRow) {
+        console.warn(
+          "[TLCHAT] Duplicate singles match \u2014 no matching row in history (unexpected)"
+        );
+      }
+      if (existingRow) {
+        var dupWrap = appendAssistant(
+          calloutHtml +
+            renderReadPanel("GET_MATCH_HISTORY", { matches: [existingRow] }, !!route.hostToken)
+        );
+        bindMatchDateGroupToggles(dupWrap);
+        bindMatchRowUpdateButtons(dupWrap);
+        bindMatchRowDeleteButtons(dupWrap);
+      } else {
+        appendAssistant(calloutHtml);
+      }
+      conversationHistory.push({
+        role: "assistant",
+        content: shortMsg,
+      });
+    }
+
     async function handleWriteError(method, url, payload, res, text) {
       var rosterMembershipResult = rosterMembershipRecovery(method, url, res, text);
       if (rosterMembershipResult.isRosterMembershipRequired) {
@@ -178,12 +259,23 @@
       if (res.status === 422 && handleWindowExpired(text)) {
         return;
       }
+      if (res.status === 422 && handleSamePlayerSingles(text)) {
+        return;
+      }
       var failedMatchCreate =
         isMatchCreationCall(method, url) &&
         res.status === 409 &&
         leagueApiJsonErrorCode(text) === "DuplicatePairMatchupMatchError";
       if (failedMatchCreate) {
         await handleDuplicateMatch(payload, text);
+        return;
+      }
+      var failedSinglesMatchCreate =
+        isSinglesMatchCreationCall(method, url) &&
+        res.status === 409 &&
+        leagueApiJsonErrorCode(text) === "DuplicateSinglesMatchupMatchError";
+      if (failedSinglesMatchCreate) {
+        await handleDuplicateSinglesMatch(payload, text);
         return;
       }
       appendErrorTechnical(technicalLine(res, text), "League API error");

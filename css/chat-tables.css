@@ -50,6 +50,11 @@ table.data td {
   white-space: nowrap;
 }
 
+.match-player {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .match-pair-plus {
   color: var(--muted);
   font-weight: 400;
@@ -184,8 +189,17 @@ tr.match-date-group-hidden {
   gap: 0.65rem;
 }
 
-.standings-subject-copy {
+.standings-subject-group {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.standings-subject-title {
   margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.2;
 }
 
 .standings-subject-options {
@@ -202,6 +216,103 @@ tr.match-date-group-hidden {
   margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.standings-scope-chooser,
+.standings-inline-scope,
+.history-scope-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.standings-scope-options,
+.standings-inline-scope-options,
+.history-scope-options {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.standings-inline-scope,
+.history-scope-controls {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.standings-inline-scope-label,
+.history-scope-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.standings-scope-helper {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.standings-subject-option.is-active,
+.standings-scope-option.is-active,
+.standings-inline-scope-option.is-active,
+.history-scope-option.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.standings-scope-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.standings-scope-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.standings-scope-wrap--disabled {
+  cursor: help;
+}
+
+.standings-scope-wrap--disabled .standings-scope-option:disabled {
+  pointer-events: none;
+}
+
+/* Positioned `fixed` (not `absolute`) so the tip escapes any overflow /
+ * clipping ancestor; `top`/`left` are owned by `positionDisabledTip()` in
+ * `js/chat/interactions.js`. The `:hover` / `:focus-within` rules below keep
+ * owning visibility. */
+.standings-scope-tip {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 16px));
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  box-sizing: border-box;
+}
+
+.standings-scope-wrap--disabled:hover .standings-scope-tip,
+.standings-scope-wrap--disabled:focus-within .standings-scope-tip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .standings-date-filter {

@@ -21,7 +21,8 @@
     ".alias-remove-wrap--disabled, " +
     ".roster-remove-wrap--disabled, " +
     ".match-update-wrap--disabled, " +
-    ".match-delete-wrap--disabled";
+    ".match-delete-wrap--disabled, " +
+    ".standings-scope-wrap--disabled";
 
   function disabledTipNodeFor(wrap) {
     if (!wrap) return null;
@@ -33,6 +34,9 @@
     }
     if (wrap.matches(".match-delete-wrap--disabled")) {
       return wrap.querySelector(".match-delete-tip");
+    }
+    if (wrap.matches(".standings-scope-wrap--disabled")) {
+      return wrap.querySelector(".standings-scope-tip");
     }
     return wrap.querySelector(".alias-tip");
   }
@@ -100,7 +104,9 @@
           ".match-update-wrap--tip-open, " +
           ".match-delete-wrap--disabled:hover, " +
           ".match-delete-wrap--disabled:focus-within, " +
-          ".match-delete-wrap--tip-open"
+          ".match-delete-wrap--tip-open, " +
+          ".standings-scope-wrap--disabled:hover, " +
+          ".standings-scope-wrap--disabled:focus-within"
       );
       visibleWraps.forEach(positionDisabledTip);
     }

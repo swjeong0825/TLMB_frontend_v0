@@ -22,7 +22,7 @@
 
     function bindActionCardAutocomplete(card) {
       if (!card) return;
-      var inputs = card.querySelectorAll('.nick-input-wrap > input[data-array-index]');
+      var inputs = card.querySelectorAll('.nick-input-wrap > input');
       inputs.forEach(function (inputEl) {
         var popId = inputEl.getAttribute("aria-controls");
         if (!popId) return;

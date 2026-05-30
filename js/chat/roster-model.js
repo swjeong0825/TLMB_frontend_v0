@@ -171,6 +171,20 @@
     return (kA === s0 && kB === s1) || (kA === s1 && kB === s0);
   }
 
+  function matchRecordSinglesMatchupKey(record) {
+    if (!record) return "";
+    return rosterPairMatchupKey(
+      normalizeMatchNickname(record.player1_nickname),
+      normalizeMatchNickname(record.player2_nickname)
+    );
+  }
+
+  function matchRecordMatchesSubmittedSingles(record, player1Norm, player2Norm) {
+    var submittedKey = rosterPairMatchupKey(player1Norm, player2Norm);
+    if (!submittedKey) return false;
+    return matchRecordSinglesMatchupKey(record) === submittedKey;
+  }
+
   function leagueLocalDateKey(value, leagueTimezone) {
     var date = value instanceof Date ? value : new Date(Date.parse(String(value)));
     if (!date || !isFinite(date.getTime())) return "";
@@ -208,6 +222,15 @@
   function findMatchRecordForSubmittedPair(matches, t1Norms, t2Norms) {
     for (var i = 0; i < (matches || []).length; i++) {
       if (matchRecordMatchesSubmittedPair(matches[i], t1Norms, t2Norms)) {
+        return matches[i];
+      }
+    }
+    return null;
+  }
+
+  function findMatchRecordForSubmittedSingles(matches, player1Norm, player2Norm) {
+    for (var i = 0; i < (matches || []).length; i++) {
+      if (matchRecordMatchesSubmittedSingles(matches[i], player1Norm, player2Norm)) {
         return matches[i];
       }
     }
@@ -280,8 +303,11 @@
   api.rosterPairMatchupKey = rosterPairMatchupKey;
   api.matchRecordPairMatchupKeys = matchRecordPairMatchupKeys;
   api.matchRecordMatchesSubmittedPair = matchRecordMatchesSubmittedPair;
+  api.matchRecordSinglesMatchupKey = matchRecordSinglesMatchupKey;
+  api.matchRecordMatchesSubmittedSingles = matchRecordMatchesSubmittedSingles;
   api.leagueLocalDateKey = leagueLocalDateKey;
   api.findMatchRecordForSubmittedPair = findMatchRecordForSubmittedPair;
+  api.findMatchRecordForSubmittedSingles = findMatchRecordForSubmittedSingles;
   api.findSameDayMatchRecordForSubmittedPair = findSameDayMatchRecordForSubmittedPair;
   api.rosterPairKeysFromPairs = rosterPairKeysFromPairs;
   api.findRosterPairForPlayer = findRosterPairForPlayer;

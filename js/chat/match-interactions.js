@@ -7,7 +7,9 @@
   var tr = api.tr;
   var needsHostTokenForUrl = api.needsHostTokenForUrl;
   var backendMainBase = api.backendMainBase;
+  var fetchLeagueMatchHistory = api.fetchLeagueMatchHistory;
   var renderEditMatchScorePicker = api.renderEditMatchScorePicker;
+  var renderReadPanelBody = api.renderReadPanelBody;
   var renderWriteForm = api.renderWriteForm;
   var cssEscapeAttrValue = api.cssEscapeAttrValue;
   var positionDisabledTip = api.positionDisabledTip;
@@ -38,6 +40,8 @@
       var initialValues = {
         pair1_score: match.pair1_score == null ? "" : String(match.pair1_score),
         pair2_score: match.pair2_score == null ? "" : String(match.pair2_score),
+        player1_score: match.player1_score == null ? "" : String(match.player1_score),
+        player2_score: match.player2_score == null ? "" : String(match.player2_score),
       };
       var bodySpec = {};
       Object.keys(bodySchema || {}).forEach(function (key) {
@@ -131,6 +135,10 @@
       pair1_score: { type: "string", required: true },
       pair2_score: { type: "string", required: true },
     };
+    var DEFAULT_EDIT_SINGLES_MATCH_SCORE_BODY_SCHEMA = {
+      player1_score: { type: "string", required: true },
+      player2_score: { type: "string", required: true },
+    };
 
     function bindMatchRowUpdateButtons(wrap) {
       if (!wrap) return;
@@ -143,13 +151,22 @@
           '.match-row[data-match-row-id="' + cssEscapeAttrValue(id) + '"]'
         );
         if (!row) return null;
-        var scoreCell = row.querySelectorAll("td")[1];
-        if (!scoreCell) return null;
-        var parts = scoreCell.textContent.split("\u2013");
-        if (parts.length !== 2) parts = scoreCell.textContent.split("-");
+        var format = row.getAttribute("data-match-format") === "singles"
+          ? "singles"
+          : "doubles";
+        var left = row.getAttribute("data-score-left") || "";
+        var right = row.getAttribute("data-score-right") || "";
+        if (format === "singles") {
+          return {
+            match_format: "singles",
+            player1_score: left,
+            player2_score: right,
+          };
+        }
         return {
-          pair1_score: (parts[0] || "").trim(),
-          pair2_score: (parts[1] || "").trim(),
+          match_format: "doubles",
+          pair1_score: left,
+          pair2_score: right,
         };
       }
 
@@ -165,11 +182,12 @@
           if (!id) return;
           var match = rowDataForMatchId(id);
           if (!match) return;
+          var isSingles = match.match_format === "singles";
           var url =
             base +
             matchEditPrefix +
             encodeURIComponent(leagueId) +
-            "/matches/" +
+            (isSingles ? "/singles-matches/" : "/matches/") +
             encodeURIComponent(id);
           toggleEditMatchScoreForm(
             panel.querySelector("table.data") || panel,
@@ -177,7 +195,9 @@
             match,
             url,
             "PATCH",
-            DEFAULT_EDIT_MATCH_SCORE_BODY_SCHEMA,
+            isSingles
+              ? DEFAULT_EDIT_SINGLES_MATCH_SCORE_BODY_SCHEMA
+              : DEFAULT_EDIT_MATCH_SCORE_BODY_SCHEMA,
             4
           );
         });
@@ -343,11 +363,16 @@
         deleteBtn.addEventListener("click", function () {
           var id = deleteBtn.getAttribute("data-delete-match-id");
           if (!id) return;
+          var row = panel.querySelector(
+            '.match-row[data-match-row-id="' + cssEscapeAttrValue(id) + '"]'
+          );
+          var isSingles =
+            row && row.getAttribute("data-match-format") === "singles";
           var url =
             base +
             matchDeletePrefix +
             encodeURIComponent(leagueId) +
-            "/matches/" +
+            (isSingles ? "/singles-matches/" : "/matches/") +
             encodeURIComponent(id);
           openDeleteConfirmModal(deleteBtn, url);
         });
@@ -372,7 +397,56 @@
       });
     }
 
+    function bindHistoryScopeControls(wrap) {
+      if (!wrap) return;
+      var panel = wrap.querySelector(".data-panel") || wrap;
+      var controls = panel.querySelector("[data-history-scope-controls]");
+      if (!controls) return;
+      controls.querySelectorAll("[data-history-scope]").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var scope = btn.getAttribute("data-history-scope") || "doubles";
+          var dataType = controls.getAttribute("data-history-type") || "GET_MATCH_HISTORY";
+          var playerName = controls.getAttribute("data-player-name") || "";
+          controls.querySelectorAll("button").forEach(function (b) {
+            b.disabled = true;
+          });
+          try {
+            var result = await fetchLeagueMatchHistory(
+              route.leagueId,
+              dataType,
+              playerName,
+              scope
+            );
+            if (!result || !result.ok) return;
+            var nextData = {
+              matches: result.matches || [],
+              _history_scope: scope,
+            };
+            if (playerName) nextData.player_name = playerName;
+            panel.innerHTML = renderReadPanelBody(
+              dataType,
+              nextData,
+              !!route.hostToken
+            );
+            bindHistoryScopeControls(panel);
+            api.bindMatchDateGroupToggles(panel);
+            bindMatchRowUpdateButtons(panel);
+            bindMatchRowDeleteButtons(panel);
+          } catch (err) {
+            console.warn("[TLCHAT] History scope fetch failed:", err);
+          } finally {
+            if (document.body.contains(controls)) {
+              controls.querySelectorAll("button").forEach(function (b) {
+                b.disabled = false;
+              });
+            }
+          }
+        });
+      });
+    }
+
     return {
+      bindHistoryScopeControls: bindHistoryScopeControls,
       bindMatchRowDeleteButtons: bindMatchRowDeleteButtons,
       bindMatchRowUpdateButtons: bindMatchRowUpdateButtons,
       renderEditMatchScorePickerMessage: renderEditMatchScorePickerMessage,
