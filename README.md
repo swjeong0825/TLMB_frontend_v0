@@ -12,8 +12,8 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 
 | Project | Role |
 |---|---|
-| **[TLMB_backend_main](https://github.com/swjeong0825/TLMB_backend_main)** | Domain logic, PostgreSQL persistence, and REST API. Called directly from the browser for league creation, league lookup, and confirmed write submissions. |
-| **[TLMB_chat_to_intent](https://github.com/swjeong0825/TLMB_chat_to_intent)** | LLM-powered intermediary. Called from the chat page (`/league`, `/demo`) to classify natural-language messages into intents and to fetch reshaped read data or pre-filled write form payloads. |
+| **[TLMB_backend_main](https://github.com/swjeong0825/TLMB_backend_main)** | Domain logic, PostgreSQL persistence, and REST API. Called directly from the browser for league creation, league lookup, match history, and confirmed write submissions. |
+| **[TLMB_chat_to_intent](https://github.com/swjeong0825/TLMB_chat_to_intent)** | LLM-powered intermediary. Called from the chat page (`/league`, `/demo`) to classify natural-language messages into intents and to fetch other read data or pre-filled write form payloads. |
 | **[ai-agent-guidelines](https://github.com/swjeong0825/ai-agent-guidelines)** | AI agent coding guidelines used during development. |
 
 ## System Architecture
@@ -26,8 +26,9 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 │   /find-league/            ──► TLM Backend Main  (GET  /leagues) │
 │   /find-league-prefix/     ──► TLM Backend Main  (GET  /leagues) │
 │                                                                  │
-│   /league?league_id=...    ──► Chat-to-Intent Server  (POST /chat)
-│   /demo                    ──► Chat-to-Intent Server  (POST /chat)
+│   /league?league_id=...    ──► Chat-to-Intent Server  (POST /chat) │
+│   /demo                    ──► Chat-to-Intent Server  (POST /chat) │
+│   Match history controls   ──► TLM Backend Main  (GET /matches)  │
 │                                                                  │
 │   Confirmed write forms    ──► TLM Backend Main                  │
 │   (built from intent       (POST/PATCH/DELETE; X-Host-Token       │
@@ -37,6 +38,8 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 
 The chat page never writes through the Chat-to-Intent Server. When the chat returns a write intent, the browser renders the pre-filled form, the user confirms, and `js/chat/write-actions.js` submits the request directly to the TLM Backend Main.
 
+“Show Match History” and the equivalent `show me all the matches` message load directly from Backend Main. The format and player filters call `GET /leagues/{id}/matches` or `GET /leagues/{id}/matches/by-player` with the selected `scope` and optional `player_name`. Other free-form chat messages still use Chat-to-Intent for intent recognition, but match-history rows are fetched from Backend Main before rendering; the chat server's match data is not displayed.
+
 ## Pages
 
 | Path | Purpose | Talks to |
@@ -45,8 +48,8 @@ The chat page never writes through the Chat-to-Intent Server. When the chat retu
 | `/create-league/` | Form to create a new league; returns the secret `host_token` and shareable player/admin URLs. | TLM Backend Main |
 | `/find-league/` | Search leagues by title prefix and open the player chat for a result. | TLM Backend Main |
 | `/find-league-prefix/?prefix=...` | URL-driven variant of `find-league` that auto-runs the search from the `prefix` query param. | TLM Backend Main |
-| `/league?league_id={id}[&host_token={token}]` | Per-league chat UI. Player mode without `host_token`; admin mode with it. | Chat-to-Intent Server (+ Backend Main for confirmed writes) |
-| `/demo` | Same chat UI as `/league`, hard-coded to a sample league so visitors can try it without creating one. | Chat-to-Intent Server |
+| `/league?league_id={id}[&host_token={token}]` | Per-league chat UI. Player mode without `host_token`; admin mode with it. | Chat-to-Intent Server + Backend Main for match history and confirmed writes |
+| `/demo` | Same chat UI as `/league`, hard-coded to a sample league so visitors can try it without creating one. | Chat-to-Intent Server + Backend Main for match history and confirmed writes |
 
 ### Theming and locale
 

@@ -402,47 +402,92 @@
       var panel = wrap.querySelector(".data-panel") || wrap;
       var controls = panel.querySelector("[data-history-scope-controls]");
       if (!controls) return;
-      controls.querySelectorAll("[data-history-scope]").forEach(function (btn) {
-        btn.addEventListener("click", async function () {
-          var scope = btn.getAttribute("data-history-scope") || "doubles";
-          var dataType = controls.getAttribute("data-history-type") || "GET_MATCH_HISTORY";
-          var playerName = controls.getAttribute("data-player-name") || "";
-          controls.querySelectorAll("button").forEach(function (b) {
-            b.disabled = true;
-          });
-          try {
-            var result = await fetchLeagueMatchHistory(
-              route.leagueId,
-              dataType,
-              playerName,
-              scope
+      async function loadHistory(playerName, scope) {
+        var name = String(playerName || "").trim();
+        var dataType = name ? "GET_MATCH_HISTORY_BY_PLAYER" : "GET_MATCH_HISTORY";
+        var errorEl = controls.querySelector("[data-history-fetch-error]");
+        if (errorEl) {
+          errorEl.textContent = "";
+          errorEl.hidden = true;
+        }
+        controls.querySelectorAll("button, input").forEach(function (el) {
+          el.disabled = true;
+        });
+        try {
+          var result = await fetchLeagueMatchHistory(
+            route.leagueId,
+            dataType,
+            name,
+            scope
+          );
+          if (!result || !result.ok) {
+            throw new Error(
+              "Match history fetch failed: " +
+              ((result && (result.status || result.error)) || "unknown error")
             );
-            if (!result || !result.ok) return;
-            var nextData = {
-              matches: result.matches || [],
-              _history_scope: scope,
-            };
-            if (playerName) nextData.player_name = playerName;
-            panel.innerHTML = renderReadPanelBody(
-              dataType,
-              nextData,
-              !!route.hostToken
-            );
-            bindHistoryScopeControls(panel);
-            api.bindMatchDateGroupToggles(panel);
-            bindMatchRowUpdateButtons(panel);
-            bindMatchRowDeleteButtons(panel);
-          } catch (err) {
-            console.warn("[TLCHAT] History scope fetch failed:", err);
-          } finally {
-            if (document.body.contains(controls)) {
-              controls.querySelectorAll("button").forEach(function (b) {
-                b.disabled = false;
-              });
-            }
           }
+          var nextData = {
+            matches: result.matches || [],
+            _history_scope: scope,
+          };
+          if (name) nextData.player_name = name;
+          panel.setAttribute("data-read-type", dataType);
+          panel.innerHTML = renderReadPanelBody(
+            dataType,
+            nextData,
+            !!route.hostToken
+          );
+          bindHistoryScopeControls(panel);
+          api.bindMatchDateGroupToggles(panel);
+          bindMatchRowUpdateButtons(panel);
+          bindMatchRowDeleteButtons(panel);
+        } catch (err) {
+          console.warn("[TLCHAT] History fetch failed:", err);
+          if (errorEl) {
+            errorEl.textContent =
+              tr("historyFetchFailed") ||
+              "Could not load match history. Please try again.";
+            errorEl.hidden = false;
+          }
+        } finally {
+          if (document.body.contains(controls)) {
+            controls.querySelectorAll("button, input").forEach(function (el) {
+              el.disabled = false;
+            });
+            var clearBtn = controls.querySelector("[data-history-clear-player]");
+            if (clearBtn) clearBtn.disabled = !controls.getAttribute("data-player-name");
+          }
+        }
+      }
+      controls.querySelectorAll("[data-history-scope]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var scope = btn.getAttribute("data-history-scope") || "doubles";
+          var playerName = controls.getAttribute("data-player-name") || "";
+          loadHistory(playerName, scope);
         });
       });
+      var playerForm = controls.querySelector("[data-history-player-form]");
+      if (playerForm) {
+        playerForm.addEventListener("submit", function (e) {
+          e.preventDefault();
+          var input = playerForm.querySelector('[name="player_name"]');
+          var active = controls.querySelector("[data-history-scope].is-active");
+          loadHistory(
+            input ? input.value : "",
+            active ? active.getAttribute("data-history-scope") : "doubles"
+          );
+        });
+      }
+      var clearBtn = controls.querySelector("[data-history-clear-player]");
+      if (clearBtn) {
+        clearBtn.addEventListener("click", function () {
+          var active = controls.querySelector("[data-history-scope].is-active");
+          loadHistory(
+            "",
+            active ? active.getAttribute("data-history-scope") : "doubles"
+          );
+        });
+      }
     }
 
     return {

@@ -89,6 +89,24 @@
       '">' +
       buttons +
       "</div>" +
+      '<form class="history-player-filter" data-history-player-form>' +
+      '<span class="history-player-label">' +
+      escapeHtml(tr("historyPlayerLabel") || "Player") +
+      "</span>" +
+      '<input type="text" name="player_name" value="' + escapeAttr(playerName) +
+      '" placeholder="' + escapeAttr(tr("historyPlayerPlaceholder") || "Nickname") +
+      '" aria-label="' + escapeAttr(tr("historyPlayerLabel") || "Player") +
+      '" autocomplete="off">' +
+      '<button type="submit" class="btn-secondary">' +
+      escapeHtml(tr("historyPlayerSearch") || "Search") +
+      "</button>" +
+      '<button type="button" class="btn-secondary" data-history-clear-player' +
+      (playerName ? "" : " disabled") +
+      ">" +
+      escapeHtml(tr("historyAllPlayers") || "All players") +
+      "</button>" +
+      "</form>" +
+      '<p class="history-fetch-error" data-history-fetch-error role="alert" hidden></p>' +
       "</div>"
     );
   }

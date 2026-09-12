@@ -41,6 +41,7 @@
       },
       {
         message: "show me all the matches",
+        mode: "local-match-history",
         title: tr("quickActionShowMatchHistoryTitle") || "Show Match History",
         desc: tr("quickActionShowMatchHistoryDesc") || "Browse all recent matches",
         icon:

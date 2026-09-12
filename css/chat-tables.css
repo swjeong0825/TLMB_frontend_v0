@@ -261,6 +261,38 @@ tr.match-date-group-hidden {
   color: var(--bg);
 }
 
+.history-player-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.history-player-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.history-player-filter input {
+  min-width: 0;
+  max-width: 12rem;
+  padding: 0.42rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.history-fetch-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--warn);
+  font-size: 0.78rem;
+}
+
 .standings-scope-option:disabled {
   opacity: 0.55;
   cursor: not-allowed;

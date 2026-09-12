@@ -16,6 +16,8 @@
   var needsHostTokenForUrl = api.needsHostTokenForUrl;
   var fetchLeagueRoster = api.fetchLeagueRoster;
   var fetchLeagueAdminInfo = api.fetchLeagueAdminInfo;
+  var fetchLeagueMatchHistory = api.fetchLeagueMatchHistory;
+  var humanDetailFromHttpBody = api.humanDetailFromHttpBody;
   var renderMatchSubmitRosterNotes = api.renderMatchSubmitRosterNotes;
   var renderWriteForm = api.renderWriteForm;
   var bindMatchDateGroupToggles = api.bindMatchDateGroupToggles;
@@ -298,6 +300,18 @@
           appendAssistant(parts.join(""));
           return;
         }
+        if (
+          resp.data_type === "GET_MATCH_HISTORY" ||
+          resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
+        ) {
+          var playerName = resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
+            ? String((resp.data && resp.data.player_name) || "").trim()
+            : "";
+          var historyScope = resp.data && (resp.data._history_scope || resp.data.scope);
+          if (historyScope !== "doubles" && historyScope !== "singles") historyScope = "both";
+          await deliverMatchHistory(null, resp.data_type, playerName, historyScope, parts.join(""));
+          return;
+        }
         var readData = await resolveInitialStandingsData(
           resp.data_type,
           resp.data || {}
@@ -307,15 +321,6 @@
         if (isStandingsDataType(resp.data_type)) {
           bindStandingsScopeControls(readWrap, resp.data_type, !!route.hostToken);
           bindStandingsDateControls(readWrap, resp.data_type, !!route.hostToken);
-        }
-        if (
-          resp.data_type === "GET_MATCH_HISTORY" ||
-          resp.data_type === "GET_MATCH_HISTORY_BY_PLAYER"
-        ) {
-          bindHistoryScopeControls(readWrap);
-          bindMatchDateGroupToggles(readWrap);
-          bindMatchRowUpdateButtons(readWrap);
-          bindMatchRowDeleteButtons(readWrap);
         }
         return;
       }
@@ -398,6 +403,10 @@
       var silent = opts && opts.silent;
       var trimmed = String(rawMessage || "").trim();
       if (!trimmed) return;
+      if (trimmed.toLowerCase() === "show me all the matches") {
+        await deliverMatchHistory(silent ? null : trimmed, "GET_MATCH_HISTORY", "", "both");
+        return;
+      }
       var submittedText = normalizePlusForIntentServer(trimmed);
       sendBtn.disabled = true;
       var loadingNode = null;
@@ -438,6 +447,48 @@
       );
       conversationHistory.push({ role: "user", content: text });
       conversationHistory.push({ role: "assistant", content: "[GET_STANDINGS]" });
+    }
+
+    async function deliverMatchHistory(prompt, dataType, playerName, scope, prefixHtml) {
+      var isByPlayer = dataType === "GET_MATCH_HISTORY_BY_PLAYER";
+      if (prompt) appendUser(prompt);
+      var loadingNode = appendLoadingBubble();
+      sendBtn.disabled = true;
+      try {
+        var result = await fetchLeagueMatchHistory(
+          route.leagueId,
+          dataType,
+          playerName,
+          scope
+        );
+        if (!result.ok) {
+          var detail = result.body ? humanDetailFromHttpBody(result.body) : "";
+          throw new Error(
+            "Could not fetch match history" +
+            (isByPlayer ? " for player" : "") +
+            ": " + (result.status || result.error || "unknown error") +
+            (detail ? " " + detail : "")
+          );
+        }
+        var data = { matches: result.matches, _history_scope: scope };
+        if (isByPlayer) data.player_name = playerName;
+        var wrap = appendAssistant(
+          (prefixHtml || "") + renderReadPanel(dataType, data, !!route.hostToken)
+        );
+        bindHistoryScopeControls(wrap);
+        bindMatchDateGroupToggles(wrap);
+        bindMatchRowUpdateButtons(wrap);
+        bindMatchRowDeleteButtons(wrap);
+        if (prompt) {
+          conversationHistory.push({ role: "user", content: prompt });
+          conversationHistory.push({ role: "assistant", content: "[GET_MATCH_HISTORY]" });
+        }
+      } catch (err) {
+        appendErrorTechnical(err.message || String(err), "Match history fetch failed");
+      } finally {
+        removeLoadingBubble(loadingNode);
+        sendBtn.disabled = false;
+      }
     }
 
     form.addEventListener("submit", function (e) {
@@ -592,6 +643,15 @@
       if (mode === "local-standings-choice") {
         deliverStandingsSubjectChooser(
           tile.getAttribute("data-quick-action") || "show me the standings"
+        );
+        return;
+      }
+      if (mode === "local-match-history") {
+        deliverMatchHistory(
+          tile.getAttribute("data-quick-action") || "show me all the matches",
+          "GET_MATCH_HISTORY",
+          "",
+          "both"
         );
         return;
       }
