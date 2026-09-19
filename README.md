@@ -13,7 +13,7 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 | Project | Role |
 |---|---|
 | **[TLMB_backend_main](https://github.com/swjeong0825/TLMB_backend_main)** | Domain logic, PostgreSQL persistence, and REST API. Called directly from the browser for league creation, league lookup, match history, and confirmed write submissions. |
-| **[TLMB_chat_to_intent](https://github.com/swjeong0825/TLMB_chat_to_intent)** | LLM-powered intermediary. Used by the existing Show More Commands shortcut on `/league` and `/demo`; the primary league actions use Backend Main directly. |
+| **[TLMB_chat_to_intent](https://github.com/swjeong0825/TLMB_chat_to_intent)** | Legacy LLM-powered intermediary. Current league buttons use Backend Main or local frontend actions. |
 | **[ai-agent-guidelines](https://github.com/swjeong0825/ai-agent-guidelines)** | AI agent coding guidelines used during development. |
 
 ## System Architecture
@@ -28,7 +28,7 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 │                                                                  │
 │   /league?league_id=...    ──► TLM Backend Main                 │
 │   /demo                    ──► TLM Backend Main                 │
-│   Show More Commands       ──► Chat-to-Intent Server (POST /chat) │
+│   /league/plan/            ──► Local drafts + roster read        │
 │   Match history controls   ──► TLM Backend Main  (GET /matches)  │
 │                                                                  │
 │   Confirmed write forms    ──► TLM Backend Main                  │
@@ -39,7 +39,7 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 
 The league page is driven by buttons. The header shortcuts, starter tiles, and persistent bottom actions share the same handlers. Record Match, Standings, and Match History replace the chat composer. Selecting an action clears the previous panel; only assistant forms, results, and feedback are shown. Match forms retain nickname autocomplete and submit directly to TLM Backend Main through `js/chat/write-actions.js`.
 
-“Show Match History” loads directly from Backend Main. The format and player filters call `GET /leagues/{id}/matches` or `GET /leagues/{id}/matches/by-player` with the selected `scope` and optional `player_name`. Standings and player controls also use Backend Main directly. The existing Show More Commands shortcut still uses Chat-to-Intent; there is no free-form message input.
+“Show Match History” loads directly from Backend Main. The format and player filters call `GET /leagues/{id}/matches` or `GET /leagues/{id}/matches/by-player` with the selected `scope` and optional `player_name`. Standings and player controls also use Backend Main directly. Plan Match replaces the former command-help shortcut; there is no free-form message input.
 
 ## Pages
 
@@ -49,8 +49,9 @@ The league page is driven by buttons. The header shortcuts, starter tiles, and p
 | `/create-league/` | Form to create a new league; returns the secret `host_token` and shareable player/admin URLs. | TLM Backend Main |
 | `/find-league/` | Search leagues by title prefix and open the league page for a result. | TLM Backend Main |
 | `/find-league-prefix/?prefix=...` | URL-driven variant of `find-league` that auto-runs the search from the `prefix` query param. | TLM Backend Main |
-| `/league?league_id={id}[&host_token={token}]` | Button-driven league UI. Player mode without `host_token`; admin mode with it. | Backend Main; Chat-to-Intent for Show More Commands |
-| `/demo` | Same league UI as `/league`, hard-coded to a sample league so visitors can try it without creating one. | Backend Main; Chat-to-Intent for Show More Commands |
+| `/league?league_id={id}[&host_token={token}]` | Button-driven league UI. Player mode without `host_token`; admin mode with it. | Backend Main |
+| `/league/plan/?league_id={id}` | Local singles/doubles plans, editing/removal, and upload stub. | Backend Main roster read only |
+| `/demo` | Same league UI as `/league`, hard-coded to a sample league so visitors can try it without creating one. | Backend Main |
 
 ### Theming and locale
 
@@ -74,6 +75,33 @@ Run formula, ranking, state, and rendering tests with:
 ```bash
 node --test tests/standings-formula.test.js
 ```
+
+### Planned matches
+
+**Plan Match** in the header and starter tiles opens `/league/plan/` in the same tab,
+preserving the league, language, host token, and API overrides. Select singles or
+doubles, enter names, and **Save**. Saved plans can be edited or removed. There are
+no score, date, time, or court fields, and no result-recording integration yet.
+
+Drafts persist in versioned browser storage, isolated by backend URL and league.
+Each record contains only `{id, value}`: singles use `Alice Bob`, doubles use
+`Alice,Bob Charlie,Diana`. IDs stay stable through editing. Tokens are not stored.
+`js/plan/model.js` handles strict parsing/serialization, `storage.js` handles local
+persistence, `render.js` renders the page, and `js/plan.js` controls interactions.
+
+Unknown players are allowed. Closed-roster leagues show a warning that recording
+will fail unless those players are registered first. Alias matching follows the
+existing roster rules. **Upload matches** currently reports that uploading is
+unavailable and keeps all drafts; its adapter in `js/plan/api.js` makes no request.
+The standalone [backend API request](docs/planned-matches-api-request.md) specifies
+minimal batch upsert/read support and the backend acceptance tests.
+
+`js/nicknames.js` validates all newly submitted nicknames and aliases. Surrounding
+whitespace is trimmed, then empty names, internal whitespace, and commas are rejected.
+Bulk registration still accepts comma/newline-separated names. Existing names remain
+readable and can be identified for renaming; no automatic migration is performed.
+
+Run all frontend tests with `node --test tests/*.test.js`.
 
 ## Configuration
 

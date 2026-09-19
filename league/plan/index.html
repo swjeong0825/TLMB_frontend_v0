@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan Match</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="/css/plan.css" />
+    <script>
+      (function () {
+        var theme;
+        try { theme = localStorage.getItem("tlchat-theme"); } catch (_e) {}
+        document.documentElement.setAttribute("data-theme", theme ||
+          (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+      })();
+    </script>
+  </head>
+  <body class="plan-page" data-i18n-title-key="meta.titlePlanMatch">
+    <div id="app-root"></div>
+    <script src="/js/i18n.js"></script>
+    <script src="/js/i18n/en.js"></script>
+    <script src="/js/i18n/ko.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/nicknames.js"></script>
+    <script src="/js/league-navigation.js"></script>
+    <script src="/js/chat/core.js"></script>
+    <script src="/js/chat/api.js"></script>
+    <script src="/js/chat/roster-model.js"></script>
+    <script src="/js/chat/render-forms.js"></script>
+    <script src="/js/chat/render-shell.js"></script>
+    <script src="/js/chat/composer-autocomplete.js"></script>
+    <script src="/js/plan/model.js"></script>
+    <script src="/js/plan/storage.js"></script>
+    <script src="/js/plan/api.js"></script>
+    <script src="/js/plan/render.js"></script>
+    <script>TLCHAT_I18N.initPage();</script>
+    <script src="/js/plan.js"></script>
+  </body>
+</html>

@@ -148,7 +148,7 @@
 
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("tlchat-theme", theme);
+    try { localStorage.setItem("tlchat-theme", theme); } catch (_e) { /* Theme still works without storage. */ }
     var btn = document.getElementById("theme-toggle-btn");
     if (!btn) return;
     var isLight = theme === "light";
@@ -161,4 +161,5 @@
   api.applyChatHeaderTitle = applyChatHeaderTitle;
   api.renderChatShell = renderChatShell;
   api.applyTheme = applyTheme;
+  api.renderHeader = renderHeader;
 })(typeof window !== "undefined" ? window : this);

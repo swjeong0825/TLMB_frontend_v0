@@ -112,6 +112,12 @@
   }
 
   function validateCreateLeagueForm(form, payload) {
+    var playersWrap = form.querySelector("[data-initial-players-chips]");
+    var pendingName = playersWrap && playersWrap.querySelector(".chips-input-field");
+    if ((payload.initial_players && !global.TLCHAT_NICKNAMES.validatePayload(payload)) ||
+        (pendingName && pendingName.value.trim() && !global.TLCHAT_NICKNAMES.isValid(pendingName.value))) {
+      return { ok: false, message: global.TLCHAT_NICKNAMES.message(), focusEl: pendingName };
+    }
     if (!payload.title) {
       return { ok: false, message: api.t("enterTitle") };
     }

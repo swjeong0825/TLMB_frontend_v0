@@ -66,6 +66,10 @@
         appendErrorPlain(requiredFieldMessage(missing));
         return;
       }
+      if (!global.TLCHAT_NICKNAMES.validatePayload(payload)) {
+        appendErrorPlain(global.TLCHAT_NICKNAMES.message());
+        return;
+      }
       if (needsHostTokenForUrl(url) && !route.hostToken) {
         appendErrorPlain(
           tr("adminEndpointHint") ||

@@ -145,10 +145,7 @@
         addBtn.addEventListener("click", async function () {
           var raw = (addInput.value || "").trim();
           if (!raw) return;
-          var nicknames = raw
-            .split(",")
-            .map(function (n) { return n.trim(); })
-            .filter(Boolean);
+          var nicknames = global.TLCHAT_NICKNAMES.splitList(raw);
           if (!nicknames.length) return;
 
           addBtn.disabled = true;

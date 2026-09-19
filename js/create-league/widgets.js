@@ -159,6 +159,12 @@
   function commitChipFromText(chipsContainer, fieldEl, rawText) {
     var trimmed = String(rawText || "").trim();
     if (!trimmed) return false;
+    if (!global.TLCHAT_NICKNAMES.isValid(trimmed)) {
+      fieldEl.setCustomValidity(global.TLCHAT_NICKNAMES.message());
+      fieldEl.reportValidity();
+      return false;
+    }
+    fieldEl.setCustomValidity("");
     var key = chipNormalizeKey(trimmed);
     if (!key) return false;
     if (findChipByKey(chipsContainer, key)) {
@@ -170,7 +176,13 @@
   }
 
   function commitMultipleChipsFromText(chipsContainer, fieldEl, text) {
-    var parts = String(text || "").split(/[,\n\r\t]+/);
+    var parts = global.TLCHAT_NICKNAMES.splitList(text);
+    if (parts.some(function (name) { return !global.TLCHAT_NICKNAMES.isValid(name); })) {
+      fieldEl.value = text;
+      fieldEl.setCustomValidity(global.TLCHAT_NICKNAMES.message());
+      fieldEl.reportValidity();
+      return 0;
+    }
     var added = 0;
     for (var i = 0; i < parts.length; i++) {
       if (commitChipFromText(chipsContainer, fieldEl, parts[i])) added++;
@@ -183,6 +195,7 @@
     if (!wrap) return;
     var field = wrap.querySelector(".chips-input-field");
     if (!field) return;
+    field.addEventListener("input", function () { field.setCustomValidity(""); });
 
     wrap.addEventListener("click", function (ev) {
       if (ev.target.closest && ev.target.closest(".chip")) return;
@@ -202,12 +215,10 @@
 
     field.addEventListener("keydown", function (ev) {
       var key = ev.key;
-      if (key === "Enter" || key === " " || key === ",") {
+      if (key === "Enter" || key === ",") {
         if (field.value && field.value.trim().length > 0) {
           ev.preventDefault();
           if (commitChipFromText(wrap, field, field.value)) {
-            field.value = "";
-          } else {
             field.value = "";
           }
         } else if (key === "Enter") {
@@ -230,7 +241,7 @@
         ? ev.clipboardData.getData("text")
         : "";
       if (!data) return;
-      if (!/[,\n\r\t]/.test(data)) return;
+      if (!/[,\n\r]/.test(data)) return;
       ev.preventDefault();
       commitMultipleChipsFromText(wrap, field, data);
     });

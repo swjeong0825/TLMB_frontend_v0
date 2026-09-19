@@ -1,0 +1,34 @@
+.plan-main {
+  width: 100%;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.plan-main h2 { font-size: 1.2rem; margin: 1rem 0 0.5rem; }
+.plan-back { display: inline-block; margin-bottom: 0.5rem; }
+.plan-editor { padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+#plan-form { margin-top: 1rem; }
+.plan-form-actions, .plan-item-actions, .plan-list-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.plan-list-heading { justify-content: space-between; }
+.plan-list-heading h2 { margin: 0; }
+.plan-saved { margin-top: 1.5rem; }
+.plan-list { list-style: none; margin: 0.75rem 0; padding: 0; display: grid; gap: 0.75rem; }
+.plan-item { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+.plan-item-info { flex: 1 1 15rem; min-width: 0; }
+.plan-matchup { overflow-wrap: anywhere; margin: 0.25rem 0; font-weight: 600; }
+.plan-format { color: var(--muted); font-size: 0.8rem; }
+.plan-warning, .plan-error { font-size: 0.85rem; overflow-wrap: anywhere; }
+.plan-warning { color: var(--warn); }
+.plan-error { color: var(--danger); }
+.plan-main .btn-secondary { margin-top: 0; }
+.plan-main .match-format-option.is-active { background: var(--accent); color: var(--bg); }
+.plan-page #theme-toggle-btn { display: inline-flex; }
+.plan-main .hint { font-size: 0.85rem; }
+.plan-main button:focus-visible, .plan-main a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 520px) {
+  .plan-main { padding: 1rem; }
+  .plan-item-actions { width: 100%; }
+  .plan-item-actions button { flex: 1; }
+}

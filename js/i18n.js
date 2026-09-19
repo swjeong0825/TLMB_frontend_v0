@@ -163,7 +163,9 @@
       var cur = getLocale();
       if (cur === next) return;
       setLocale(next);
-      global.location.reload();
+      var url = new URL(global.location.href);
+      url.searchParams.set("lang", next);
+      global.location.replace(url.href);
     });
   }
 

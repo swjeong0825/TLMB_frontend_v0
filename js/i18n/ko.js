@@ -11,6 +11,7 @@
 
   global.TLCHAT_I18N.registerLocale("ko", {
       meta: {
+        titlePlanMatch: "경기 계획",
         titleHome: "테니스 리그 관리 봇",
         titleFindLeague: "리그 찾기 — 테니스 리그 관리 봇",
         titleCreateLeague: "리그 만들기 — 테니스 리그 관리 봇",
@@ -30,9 +31,41 @@
         linkFind: "리그 찾기",
       },
       common: {
+        invalidNickname: "선수 이름은 필수이며 공백이나 쉼표를 포함할 수 없습니다.",
         homeLink: "← 홈",
         configHint:
           "API 기본 URL은 <code>js/config.js</code>에 설정하거나 <code>?backendApi=https://your-host</code>로 덮어쓸 수 있습니다.",
+      },
+      plan: {
+        "title": "경기 계획",
+        "back": "← 리그로 돌아가기",
+        "intro": "점수 없이 경기를 미리 계획하세요. 저장한 계획은 삭제할 때까지 이 브라우저에 보관됩니다.",
+        "editor": "경기 계획하기",
+        "chooseFormat": "단식 또는 복식을 선택해 경기를 계획하세요.",
+        "singles": "단식",
+        "doubles": "복식",
+        "savedPlans": "저장한 경기 계획",
+        "save": "저장",
+        "saveChanges": "변경 사항 저장",
+        "cancel": "취소",
+        "edit": "수정",
+        "remove": "삭제",
+        "empty": "저장한 경기 계획이 없습니다.",
+        "saved": "경기 계획을 이 브라우저에 저장했습니다.",
+        "updated": "경기 계획을 수정했습니다.",
+        "removed": "경기 계획을 삭제했습니다.",
+        "upload": "경기 업로드 ({count})",
+        "uploadUnavailable": "아직 업로드를 지원하지 않습니다. 경기 계획은 이 브라우저에 계속 보관됩니다.",
+        "unregistered": "등록되지 않은 선수: {names}. 이 선수들을 먼저 등록하지 않으면 경기 결과 기록에 실패합니다.",
+        "registrationUnavailable": "선수 등록 여부를 확인할 수 없습니다. 경기 계획은 저장할 수 있습니다.",
+        "missingLeague": "리그가 지정되지 않았습니다. 리그 페이지에서 경기 계획을 여세요.",
+        "invalidPlan": "유효하지 않은 경기 계획입니다. 삭제한 후 새로 만드세요.",
+        "invalidUpload": "유효하지 않은 경기 계획을 삭제한 후 업로드하세요. 저장한 계획은 유지됩니다.",
+        "planMissing": "다른 탭에서 이 계획이 변경되었습니다. 저장 목록을 확인하고 다시 시도하세요.",
+        "storageUnreadable": "저장한 경기 계획을 읽을 수 없습니다. 기존 데이터를 덮어쓰지 않았으며 저장할 수 없습니다.",
+        "storageUnavailable": "브라우저 저장소를 사용할 수 없어 계획을 불러오거나 저장할 수 없습니다.",
+        "storageWriteFailed": "변경 사항을 이 브라우저에 저장하지 못했습니다. 이전에 저장한 계획은 유지됩니다.",
+        "saveFailed": "경기 계획을 저장하지 못했습니다. 다시 시도하세요."
       },
       findLeague: {
         h1: "리그 찾기",
@@ -98,7 +131,7 @@
           "닉네임을 입력하고 Enter를 누르세요",
         initialPlayersChipsAria: "시작 명단에 선수 닉네임 추가",
         initialPlayersChipsHint:
-          "닉네임을 입력하고 Enter를 누르세요.\n또는 \"Federer, Sinner, Alcaraz, Djokovic\"처럼 쉼표나 공백으로 구분된 목록을 붙여 넣으세요.",
+          "닉네임을 입력하고 Enter를 누르세요.\n또는 \"Federer, Sinner, Alcaraz, Djokovic\"처럼 쉼표나 줄바꿈으로 구분된 목록을 붙여 넣으세요. 이름에는 공백이나 쉼표를 포함할 수 없습니다.",
         initialPlayersChipRemoveAria: "{name}을(를) 명단에서 제거",
         initialPlayersRequiredError:
           "자동 등록이 꺼져 있어요. 사전 등록할 닉네임을 한 명 이상 추가하거나, 자동 등록을 다시 켜 주세요.",
@@ -407,8 +440,8 @@
         quickActionShowMatchHistoryDesc: "최근 경기들을 살펴봅니다",
         quickActionGetPlayersTitle: "선수 보기",
         quickActionGetPlayersDesc: "선수 검색·추가",
-        quickActionShowMoreCommandsTitle: "더 많은 명령 보기",
-        quickActionShowMoreCommandsDesc: "할 수 있는 모든 작업 보기",
+        quickActionPlanMatchTitle: "경기 계획",
+        quickActionPlanMatchDesc: "경기를 미리 계획하고 저장하세요",
         placeholderMobile: '"help"를 입력하면 모든 명령을 볼 수 있습니다',
         placeholderDesktop: '"help"를 입력하면 모든 명령을 볼 수 있습니다',
         h1: "테니스 리그 관리 봇",

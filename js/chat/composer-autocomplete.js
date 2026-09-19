@@ -209,6 +209,8 @@
       function applyPick(nickname) {
         input.value = nickname;
         hide();
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        hide();
         try {
           var len = nickname.length;
           input.setSelectionRange(len, len);
@@ -270,6 +272,9 @@
     return {
       bindActionCardAutocomplete: function (card) {
         if (!card) return;
+        card.querySelectorAll('input[data-field="new_nickname"], .nick-input-wrap > input').forEach(function (input) {
+          global.TLCHAT_NICKNAMES.bindInput(input);
+        });
         card.querySelectorAll('.nick-input-wrap > input').forEach(function (input) {
           var popover = document.getElementById(input.getAttribute("aria-controls"));
           if (popover) bindNickAutocomplete(input, popover);

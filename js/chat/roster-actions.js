@@ -47,6 +47,7 @@
     }
 
     async function addPlayers(nicknames) {
+      nicknames = global.TLCHAT_NICKNAMES.assertNames(nicknames);
       var url = adminLeaguePath() + "/players";
       var res = await fetch(url, {
         method: "POST",
@@ -91,6 +92,7 @@
     }
 
     async function addAlias(playerId, alias) {
+      alias = global.TLCHAT_NICKNAMES.assertNames([alias])[0];
       var url =
         adminLeaguePath() +
         "/players/" +

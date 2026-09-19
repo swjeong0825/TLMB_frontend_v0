@@ -102,7 +102,10 @@
       var inputEl = formRow.querySelector(".alias-add-input");
       var submitBtn = formRow.querySelector(".alias-add-submit");
       var cancelBtn = formRow.querySelector(".alias-add-cancel");
-      if (inputEl) inputEl.focus();
+      if (inputEl) {
+        global.TLCHAT_NICKNAMES.bindInput(inputEl);
+        inputEl.focus();
+      }
       if (cancelBtn) {
         cancelBtn.addEventListener("click", function () {
           if (formRow.parentNode) formRow.parentNode.removeChild(formRow);

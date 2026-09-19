@@ -11,6 +11,7 @@
 
   global.TLCHAT_I18N.registerLocale("en", {
       meta: {
+        titlePlanMatch: "Plan Match",
         titleHome: "Tennis League Management Bot",
         titleFindLeague: "Find a league — Tennis League Management Bot",
         titleCreateLeague: "Create league — Tennis League Management Bot",
@@ -30,9 +31,41 @@
         linkFind: "Find league",
       },
       common: {
+        invalidNickname: "Player names are required and cannot contain whitespace or commas.",
         homeLink: "← Home",
         configHint:
           "API base URL is set in <code>js/config.js</code> or override with <code>?backendApi=https://your-host</code>.",
+      },
+      plan: {
+        "title": "Plan Match",
+        "back": "← Back to league",
+        "intro": "Prepare matches without scores. Saved plans stay in this browser until you remove them.",
+        "editor": "Plan a match",
+        "chooseFormat": "Choose singles or doubles to start planning.",
+        "singles": "Singles",
+        "doubles": "Doubles",
+        "savedPlans": "Saved plans",
+        "save": "Save",
+        "saveChanges": "Save changes",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "remove": "Remove",
+        "empty": "No planned matches yet.",
+        "saved": "Match plan saved in this browser.",
+        "updated": "Match plan updated.",
+        "removed": "Match plan removed.",
+        "upload": "Upload matches ({count})",
+        "uploadUnavailable": "Uploading is not available yet. Your planned matches are still saved in this browser.",
+        "unregistered": "These players are not registered: {names}. Recording this match will fail unless they are registered first.",
+        "registrationUnavailable": "Registration could not be checked. You can still save this plan.",
+        "missingLeague": "No league specified. Open Plan Match from a league page.",
+        "invalidPlan": "This saved plan is invalid. Remove it and create a new one.",
+        "invalidUpload": "Some saved plans are invalid. Remove them before uploading. Your plans have been kept.",
+        "planMissing": "This plan changed in another tab. Check the saved list and try again.",
+        "storageUnreadable": "Saved plans could not be read. They have not been overwritten; saving is unavailable.",
+        "storageUnavailable": "Browser storage is unavailable. Plans cannot be loaded or saved.",
+        "storageWriteFailed": "The change could not be saved in this browser. Your previously saved plans are unchanged.",
+        "saveFailed": "The plan could not be saved. Please try again."
       },
       findLeague: {
         h1: "Find a league",
@@ -98,7 +131,7 @@
           "Type a nickname and press Enter",
         initialPlayersChipsAria: "Add player nicknames to the starting roster",
         initialPlayersChipsHint:
-          "Type a nickname and press Enter.\nOr, paste a comma/space separated list like \"Federer, Sinner, Alcaraz, Djokovic\".",
+          "Type a nickname and press Enter.\nOr paste names separated by commas or newlines, like \"Federer, Sinner, Alcaraz, Djokovic\". Names cannot contain whitespace or commas.",
         initialPlayersChipRemoveAria: "Remove {name} from the roster",
         initialPlayersRequiredError:
           "Auto-register is off, so add at least one nickname to pre-register, or turn auto-register back on.",
@@ -413,8 +446,8 @@
         quickActionShowMatchHistoryDesc: "Browse all recent matches",
         quickActionGetPlayersTitle: "Get Players",
         quickActionGetPlayersDesc: "Search and add players",
-        quickActionShowMoreCommandsTitle: "Show More Commands",
-        quickActionShowMoreCommandsDesc: "See everything I can do",
+        quickActionPlanMatchTitle: "Plan Match",
+        quickActionPlanMatchDesc: "Prepare matches and save them for later",
         placeholderMobile:
           'Type "help" to see all commands',
         placeholderDesktop: 'Type "help" to see all commands',

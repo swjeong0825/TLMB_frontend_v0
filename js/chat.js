@@ -565,6 +565,11 @@
       var message = tile.getAttribute("data-quick-action") || "";
       if (!mode && !message) return;
 
+      if (mode === "local-plan-match") {
+        window.location.assign(window.TLCHAT_NAVIGATION.leagueUrl("/league/plan/", window.location.search, route.leagueId));
+        return;
+      }
+
       messageThread.reset();
       root.querySelectorAll(".quick-action-trigger").forEach(function (button) {
         var selected = mode

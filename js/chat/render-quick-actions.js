@@ -67,9 +67,10 @@
           "</svg>",
       },
       {
-        message: "help",
-        title: tr("quickActionShowMoreCommandsTitle") || "Show More Commands",
-        desc: tr("quickActionShowMoreCommandsDesc") || "See everything I can do",
+        message: "plan a match",
+        mode: "local-plan-match",
+        title: tr("quickActionPlanMatchTitle") || "Plan Match",
+        desc: tr("quickActionPlanMatchDesc") || "Prepare matches and save them for later",
         icon:
           '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">' +
           '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/>' +
