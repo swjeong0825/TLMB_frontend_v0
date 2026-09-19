@@ -81,7 +81,7 @@ node --test tests/standings-formula.test.js
 **Plan Match** in the header and starter tiles opens `/league/plan/` in the same tab,
 preserving the league, language, host token, and API overrides. Select singles or
 doubles, enter names, and **Save**. Saved plans can be edited or removed. There are
-no score, date, time, or court fields, and no result-recording integration yet.
+no score, date, time, or court fields on the planning page.
 
 Drafts persist in versioned browser storage, isolated by backend URL and league.
 Each record contains only `{id, value}`: singles use `Alice Bob`, doubles use
@@ -98,10 +98,24 @@ success. Requests time out after 30 seconds, and failed or uncertain uploads can
 retried with the same IDs. The button remains disabled while a request is running.
 Local copies remain after both success and failure. Edit and upload again to update
 server plans; removing a local plan does not delete the server copy. New local edits
-made during an upload need another upload. Displaying the server's shared plan list
-is separate from this upload integration.
+made during an upload need another upload.
 The standalone [backend API request](docs/planned-matches-api-request.md) specifies
 minimal batch upsert/read support and the backend acceptance tests.
+
+**Record Match** first asks **Scheduled Match?**, with **Yes** for a planned match
+and **No** for manual entry.
+The planned path loads the shared list directly from Backend Main's
+`GET /leagues/{league_id}/planned-matches`. It shows fixed singles/doubles participants
+and two score selectors per plan, without editing controls. Refresh retains entered
+scores for unchanged plans; unreadable entries are skipped with a warning. Scores
+remain only in the open panel and are not persisted.
+
+Planned **Record result** is deliberately a no-write stub: it validates score selection
+and explains that recording is unavailable. It sends no result and removes no plan.
+`js/plan/record.js` is the future integration point. The standalone
+[atomic recording API request](docs/record-planned-match-api-request.md) specifies
+submitting a result and hard-deleting its plan in one backend transaction, with
+concurrency and retry protection. The manual path retains existing recording behavior.
 
 `js/nicknames.js` validates all newly submitted nicknames and aliases. Surrounding
 whitespace is trimmed, then empty names, internal whitespace, and commas are rejected.

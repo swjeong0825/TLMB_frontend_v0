@@ -2,8 +2,10 @@
 
 This contract is implemented in Backend Main. The frontend upload adapter now calls
 the batch POST endpoint below, verifies the acknowledgement, and keeps local drafts
-for editing and retry. Chat-to-Intent is not involved. The shared server-list viewer
-remains separate; the frontend does not yet call the planned-match GET endpoint.
+for editing and retry. Chat-to-Intent is not involved. Record Match now uses the GET
+endpoint to show shared plans with score inputs. Planned result submission remains
+a no-write stub; its separate contract is in
+[Record a planned match atomically](record-planned-match-api-request.md).
 
 ## Purpose and permissions
 
@@ -155,5 +157,6 @@ prevent correcting that player's name.
 10. Cover the nickname-rule examples on every affected player-write path, including
     aliases, initial registration, and preserving access to legacy records.
 
-No server-side delete endpoint, scheduling fields, result-recording integration,
-or server-plan UI is requested in this version.
+No independent delete endpoint or scheduling fields are requested in this contract.
+The separate atomic recording request linked above extends it to consume a plan
+only when its actual result is committed successfully.

@@ -2,6 +2,35 @@
   "use strict";
   var api = global.TLCHAT_PLAN = global.TLCHAT_PLAN || {};
 
+  async function loadMatches(leagueId) {
+    var base = global.TLCHAT_CHAT.backendMainBase();
+    if (!base || !leagueId) return { ok: false, error: "plannedLoadFailed" };
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 30000);
+    try {
+      var response = await fetch(base.replace(/\/+$/, "") + "/leagues/" + encodeURIComponent(leagueId) + "/planned-matches", {
+        method: "GET", credentials: "omit", headers: { Accept: "application/json" },
+        cache: "no-store", signal: controller.signal,
+      });
+      if (!response.ok) return { ok: false, error: response.status === 404 ? "plannedLeagueMissing" : "plannedLoadFailed" };
+      var data = await response.json();
+      if (!data || !Array.isArray(data.matches)) return { ok: false, error: "plannedLoadFailed" };
+      var seen = Object.create(null);
+      var invalidCount = 0;
+      var matches = [];
+      data.matches.forEach(function (record) {
+        if (!api.isValidRecord(record)) { invalidCount++; return; }
+        var key = record.id.toLowerCase();
+        if (seen[key]) { invalidCount++; return; }
+        seen[key] = true;
+        matches.push({ id: record.id, value: record.value });
+      });
+      return { ok: true, matches: matches, invalidCount: invalidCount };
+    } catch (_err) {
+      return { ok: false, error: "plannedLoadFailed" };
+    } finally { clearTimeout(timeout); }
+  }
+
   // Public batch upsert: stable IDs make retries safe, including uncertain responses.
   async function uploadMatches(leagueId, payload) {
     var request;
@@ -46,4 +75,5 @@
   }
 
   api.uploadMatches = uploadMatches;
+  api.loadMatches = loadMatches;
 })(typeof window !== "undefined" ? window : this);

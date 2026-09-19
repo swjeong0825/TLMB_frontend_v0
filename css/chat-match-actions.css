@@ -226,3 +226,22 @@
   white-space: pre-line;
 }
 
+.record-source-choice .match-format-option.is-active { background: var(--accent); color: var(--bg); }
+.record-source-choice h3 { margin: 0 0 0.65rem; font-size: 1rem; }
+[data-record-source-slot] { margin-top: 1rem; }
+.planned-results-heading { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; }
+.planned-results-heading h3 { margin: 0; }
+.planned-results .btn-secondary { margin-top: 0; }
+.planned-score-list { list-style: none; padding: 0; margin: 0.75rem 0 0; display: grid; gap: 0.65rem; }
+.planned-score-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 1rem; align-items: end; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
+.planned-score-format { grid-column: 1 / -1; color: var(--muted); font-size: 0.75rem; }
+.planned-score-sides { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.planned-score-sides label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.planned-score-team { flex: 1; font-size: 0.85rem; font-weight: 600; overflow-wrap: anywhere; }
+.planned-score-sides .hint { margin: 0; }
+.planned-score-sides select { width: 100%; }
+.planned-row-status { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 520px) {
+  .planned-score-row { grid-template-columns: minmax(0, 1fr); }
+  .planned-score-row > button { justify-self: start; }
+}

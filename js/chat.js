@@ -520,12 +520,38 @@
     }
 
     function deliverEmptyMatchSubmitForm() {
+      var wrap = appendAssistant('<div class="record-source-choice"><h3>' +
+        escapeHtml(tr("recordSourceTitle")) + '</h3><div class="match-format-options" role="group" aria-label="' +
+        escapeAttr(tr("recordSourceTitle")) + '">' +
+        '<button type="button" class="btn-secondary match-format-option" data-record-source="planned" aria-pressed="false">' +
+        escapeHtml(tr("recordPlannedChoice")) + '</button>' +
+        '<button type="button" class="btn-secondary match-format-option" data-record-source="manual" aria-pressed="false">' +
+        escapeHtml(tr("recordManualChoice")) + '</button></div><div data-record-source-slot></div></div>');
+      var sourceSlot = wrap.querySelector("[data-record-source-slot]");
+      var selectedSource = "";
+      wrap.querySelectorAll("[data-record-source]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var source = button.getAttribute("data-record-source");
+          if (source === selectedSource) return;
+          selectedSource = source;
+          wrap.querySelectorAll("[data-record-source]").forEach(function (other) {
+            other.setAttribute("aria-pressed", String(other === button));
+            other.classList.toggle("is-active", other === button);
+          });
+          if (source === "planned") api.mountPlannedMatchResults(sourceSlot, route);
+          else renderUnplannedMatchChooser(sourceSlot);
+        });
+      });
+    }
+
+    function renderUnplannedMatchChooser(container) {
       var base = backendMainBase();
       if (!base) {
         appendErrorPlain(tr("requestFailed") || "Request failed.");
         return;
       }
-      var wrap = appendAssistant(
+      var wrap = container;
+      wrap.innerHTML =
         '<div class="match-format-card">' +
           '<div class="match-format-options" role="group" aria-label="' +
           escapeAttr(tr("matchFormatChooserLabel") || "Choose match format") +
@@ -538,8 +564,7 @@
           "</button>" +
           "</div>" +
           '<div class="match-format-form-slot" data-match-format-form-slot></div>' +
-          "</div>"
-      );
+          "</div>";
       var slot = wrap.querySelector("[data-match-format-form-slot]");
       wrap.querySelectorAll("[data-local-match-format]").forEach(function (btn) {
         btn.addEventListener("click", function () {
