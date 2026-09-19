@@ -1,8 +1,9 @@
 # Backend Main request: planned matches
 
-Implement the API described here in Backend Main. The frontend already supports local
-drafts and an upload stub; no planned-match endpoints are called yet. Chat-to-Intent
-is not involved. Backend implementation and deployment are separate from this frontend change.
+This contract is implemented in Backend Main. The frontend upload adapter now calls
+the batch POST endpoint below, verifies the acknowledgement, and keeps local drafts
+for editing and retry. Chat-to-Intent is not involved. The shared server-list viewer
+remains separate; the frontend does not yet call the planned-match GET endpoint.
 
 ## Purpose and permissions
 

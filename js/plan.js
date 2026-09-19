@@ -28,13 +28,14 @@
     var autocomplete = chat.createNicknameAutocomplete({ leagueRoster: roster });
     var format = "";
     var editingId = null;
+    var uploading = false;
     var snapshot = { ok: true, records: [] };
     var slot = document.getElementById("plan-form-slot");
     var list = document.getElementById("plan-list");
     var upload = document.getElementById("plan-upload");
     var storageError = document.getElementById("plan-storage-error");
 
-    function status(key) { document.getElementById("plan-status").textContent = key ? t(key) : ""; }
+    function status(key, params) { document.getElementById("plan-status").textContent = key ? t(key, params) : ""; }
     function formError(message) {
       var node = document.getElementById("plan-form-error");
       if (node) { node.textContent = message || ""; node.hidden = !message; }
@@ -60,8 +61,9 @@
       storageError.textContent = snapshot.ok ? "" : t(snapshot.error);
       storageError.hidden = snapshot.ok;
       list.innerHTML = api.renderList(snapshot.records, roster);
-      upload.textContent = t("upload", { count: snapshot.records.length });
-      upload.disabled = !snapshot.ok || !snapshot.records.length;
+      upload.textContent = uploading ? t("uploading") : t("upload", { count: snapshot.records.length });
+      upload.disabled = uploading || !snapshot.ok || !snapshot.records.length;
+      upload.setAttribute("aria-busy", String(uploading));
     }
     function focusNickname() {
       var input = slot.querySelector("input");
@@ -134,15 +136,22 @@
       }
     });
     upload.addEventListener("click", async function () {
+      if (uploading) return;
       var state = store.read();
       if (!state.ok) { renderSaved(); return; }
-      upload.disabled = true;
+      uploading = true;
+      renderSaved();
+      status("uploading");
       try {
-        var result = await api.uploadMatches(api.uploadPayload(state.records));
-        status(result.error);
+        var result = await api.uploadMatches(route.leagueId, { matches: state.records });
+        if (result.ok) status("uploaded", { count: result.matches.length });
+        else status(result.error);
       } catch (_err) {
-        status("invalidUpload");
-      } finally { renderSaved(); }
+        status("uploadUnconfirmed");
+      } finally {
+        uploading = false;
+        renderSaved();
+      }
     });
     window.addEventListener("storage", function (event) {
       if (event.key === store.key || event.key === null) renderSaved();

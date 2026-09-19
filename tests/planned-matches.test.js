@@ -162,12 +162,12 @@ test('registration warnings recognize aliases/case and never prevent saving unkn
   assert.equal(plan.createDraftStore(() => memoryStorage(), 'api', 'league', randomUUID).save('Guest Other').ok, true);
 });
 
-test('upload payload uses only id/value, does not mutate data, and the stub makes no requests', async () => {
+test('upload payload uses only id/value without mutating local records', () => {
   const records = Object.freeze([Object.freeze({ id: id1, value: 'Alice Bob', extra: 'ignored' })]);
   const payload = plan.uploadPayload(records);
   assert.deepEqual(plain(payload), { matches: [{ id: id1, value: 'Alice Bob' }] });
-  assert.deepEqual(plain(await plan.uploadMatches(payload)), { ok: false, error: 'uploadUnavailable' });
-  for (const rows of [[], [null], [{ id: 'bad', value: 'Alice Bob' }], [{ id: id1, value: 'bad' }], [records[0], records[0]]]) {
+  for (const rows of [[], [null], [{ id: 'bad', value: 'Alice Bob' }], [{ id: id1, value: 'bad' }], [records[0], records[0]],
+    [records[0], { id: id1.toUpperCase(), value: 'Alice Bob' }]]) {
     assert.throws(() => plan.uploadPayload(rows));
   }
   assert.equal(records[0].extra, 'ignored');

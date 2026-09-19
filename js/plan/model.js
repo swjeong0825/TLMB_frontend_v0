@@ -33,8 +33,8 @@
     var seen = Object.create(null);
     if (!Array.isArray(records) || !records.length) throw new Error("invalid_plan");
     return { matches: records.map(function (record) {
-      if (!isValidRecord(record) || seen[record.id]) throw new Error("invalid_plan");
-      seen[record.id] = true;
+      if (!isValidRecord(record) || seen[record.id.toLowerCase()]) throw new Error("invalid_plan");
+      seen[record.id.toLowerCase()] = true;
       return { id: record.id, value: record.value };
     }) };
   }

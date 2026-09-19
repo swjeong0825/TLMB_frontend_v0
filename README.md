@@ -28,7 +28,7 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 │                                                                  │
 │   /league?league_id=...    ──► TLM Backend Main                 │
 │   /demo                    ──► TLM Backend Main                 │
-│   /league/plan/            ──► Local drafts + roster read        │
+│   /league/plan/            ──► Local drafts + Backend Main       │
 │   Match history controls   ──► TLM Backend Main  (GET /matches)  │
 │                                                                  │
 │   Confirmed write forms    ──► TLM Backend Main                  │
@@ -50,7 +50,7 @@ The league page is driven by buttons. The header shortcuts, starter tiles, and p
 | `/find-league/` | Search leagues by title prefix and open the league page for a result. | TLM Backend Main |
 | `/find-league-prefix/?prefix=...` | URL-driven variant of `find-league` that auto-runs the search from the `prefix` query param. | TLM Backend Main |
 | `/league?league_id={id}[&host_token={token}]` | Button-driven league UI. Player mode without `host_token`; admin mode with it. | Backend Main |
-| `/league/plan/?league_id={id}` | Local singles/doubles plans, editing/removal, and upload stub. | Backend Main roster read only |
+| `/league/plan/?league_id={id}` | Local singles/doubles plans, editing/removal, and batch upload. | Backend Main roster and planned-matches API |
 | `/demo` | Same league UI as `/league`, hard-coded to a sample league so visitors can try it without creating one. | Backend Main |
 
 ### Theming and locale
@@ -91,8 +91,15 @@ persistence, `render.js` renders the page, and `js/plan.js` controls interaction
 
 Unknown players are allowed. Closed-roster leagues show a warning that recording
 will fail unless those players are registered first. Alias matching follows the
-existing roster rules. **Upload matches** currently reports that uploading is
-unavailable and keeps all drafts; its adapter in `js/plan/api.js` makes no request.
+existing roster rules. **Upload matches** sends one batch to Backend Main's
+`POST /leagues/{league_id}/planned-matches`, without a host token or cookies.
+The adapter in `js/plan/api.js` confirms the returned IDs and values before reporting
+success. Requests time out after 30 seconds, and failed or uncertain uploads can be
+retried with the same IDs. The button remains disabled while a request is running.
+Local copies remain after both success and failure. Edit and upload again to update
+server plans; removing a local plan does not delete the server copy. New local edits
+made during an upload need another upload. Displaying the server's shared plan list
+is separate from this upload integration.
 The standalone [backend API request](docs/planned-matches-api-request.md) specifies
 minimal batch upsert/read support and the backend acceptance tests.
 
