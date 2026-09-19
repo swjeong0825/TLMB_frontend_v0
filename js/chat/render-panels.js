@@ -183,6 +183,7 @@
           ? renderStandingsSubjectChooser(data)
           : renderStandingsScopeControls(data, dataType) +
             renderStandingsDateControls(data, dataType) +
+            api.renderStandingsFormulaControls(data) +
             renderStandings(data);
     } else if (dataType === "GET_MATCH_HISTORY" || dataType === "GET_MATCH_HISTORY_BY_PLAYER") {
       filterNote = dataType === "GET_MATCH_HISTORY_BY_PLAYER" ? renderReadPanelFilterNote(data) : "";

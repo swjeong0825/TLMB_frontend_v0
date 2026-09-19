@@ -300,14 +300,54 @@
     );
   }
 
-  function standingsRowsWithMatches(rows) {
-    return (rows || []).filter(function (r) {
-      return (Number(r.matches_played) || 0) > 0;
-    });
+  var standingsRowsWithMatches = api.standingsRowsWithMatches;
+  var formulaControlId = 0;
+
+  function renderStandingsFormulaControls(data) {
+    var state = data._standings_formula || {};
+    var id = "standings-formula-" + (++formulaControlId);
+    var reference = api.STANDINGS_FORMULA_STATS.map(function (stat) {
+      return '<span><code>{' + escapeHtml(stat.id) + '}</code> ' +
+        escapeHtml(tr(stat.labelKey) || stat.id) + "</span>";
+    }).join("");
+    return (
+      '<details class="standings-formula-disclosure"' +
+      (state.expanded || state.error ? " open" : "") + '>' +
+      '<summary id="' + id + '-label">' +
+      escapeHtml(tr("standingsFormulaLabel") || "Stats formula") + "</summary>" +
+      '<form class="standings-formula" data-standings-formula>' +
+      '<div class="standings-formula-fields">' +
+      '<input id="' + id + '" name="formula" type="text" autocomplete="off" spellcheck="false"' +
+      ' autocapitalize="off" aria-labelledby="' + id + '-label" aria-describedby="' + id + '-help ' + id + '-error"' +
+      (state.error ? ' aria-invalid="true"' : "") +
+      ' placeholder="({GamesWon} - {GamesLost}) / {Played} + 3 * {W}" value="' +
+      escapeAttr(state.formula || "") + '">' +
+      '<div class="standings-formula-actions">' +
+      '<button type="submit" class="btn-secondary">' +
+      escapeHtml(tr("standingsFormulaApply") || "Apply Formula") + "</button>" +
+      '<button type="button" class="btn-secondary" data-standings-formula-reset>' +
+      escapeHtml(tr("standingsFormulaReset") || "Reset") + "</button></div></div>" +
+      '<p class="hint" id="' + id + '-help">' +
+      escapeHtml(tr("standingsFormulaHelp") ||
+        "Use +, -, *, / and parentheses. Spaces and letter case are ignored. Higher values rank first.") +
+      "</p>" +
+      '<details class="standings-formula-reference"><summary>' +
+      escapeHtml(tr("standingsFormulaStats") || "Available stats") +
+      '</summary><div class="standings-formula-stats">' + reference + "</div></details>" +
+      '<p class="standings-formula-status" role="status">' +
+      escapeHtml(state.active
+        ? tr("standingsFormulaActive") || "Ranked by User Metric."
+        : tr("standingsFormulaDefault") || "Using the league ranking.") + "</p>" +
+      '<p class="standings-formula-error" id="' + id + '-error" data-standings-formula-error role="alert"' +
+      (state.error ? "" : " hidden") + ">" +
+      (state.error ? escapeHtml(tr("standingsFormulaError") || "There is an issue with this formula.") : "") +
+      "</p></form></details>"
+    );
   }
 
   function renderStandings(data) {
     var rows = standingsRowsWithMatches(data.standings);
+    var customMetric = !!(data._standings_formula && data._standings_formula.active);
     if (!rows.length) {
       return "<p class=\"hint\">" + escapeHtml(tr("standingsEmpty") || "No standings yet.") + "</p>";
     }
@@ -327,12 +367,17 @@
       "</th><th>" +
       subjectHeader +
       "</th>";
+    if (customMetric) {
+      h += '<th class="standings-metric-rank" aria-sort="descending"><strong>' +
+        escapeHtml(tr("standingsUserMetric") || "User Metric") + "</strong></th>";
+    }
     var hi;
     for (hi = 0; hi < rankKeys.length; hi++) {
       var rk = rankKeys[hi];
       var rankColDef = METRIC_COLUMN[rk];
       var rankHdr = escapeHtml(tr(rankColDef.headerKey) || rankColDef.headerFallback);
-      h += "<th class=\"standings-metric-rank\"><strong>" + rankHdr + "</strong></th>";
+      h += customMetric ? "<th>" + rankHdr + "</th>"
+        : "<th class=\"standings-metric-rank\"><strong>" + rankHdr + "</strong></th>";
     }
     h +=
       "<th>" +
@@ -372,14 +417,17 @@
         "</td><td>" +
         subjectLabel +
         "</td>";
+      if (customMetric) {
+        h += '<td class="standings-metric-rank"><strong>' +
+          escapeHtml(api.formatUserMetric(r._user_metric_value)) + "</strong></td>";
+      }
       var ci;
       for (ci = 0; ci < rankKeys.length; ci++) {
         var rck = rankKeys[ci];
         var rcdef = METRIC_COLUMN[rck];
-        h +=
-          "<td class=\"standings-metric-rank\"><strong>" +
-          escapeHtml(formatMetricValue(rcdef, r)) +
-          "</strong></td>";
+        var value = escapeHtml(formatMetricValue(rcdef, r));
+        h += customMetric ? "<td>" + value + "</td>"
+          : '<td class="standings-metric-rank"><strong>' + value + "</strong></td>";
       }
       h +=
         "<td>" +
@@ -414,6 +462,7 @@
   api.renderStandingsSubjectChooser = renderStandingsSubjectChooser;
   api.renderStandingsScopeControls = renderStandingsScopeControls;
   api.renderStandingsDateControls = renderStandingsDateControls;
+  api.renderStandingsFormulaControls = renderStandingsFormulaControls;
   api.standingsRowsWithMatches = standingsRowsWithMatches;
   api.renderStandings = renderStandings;
 })(typeof window !== "undefined" ? window : this);

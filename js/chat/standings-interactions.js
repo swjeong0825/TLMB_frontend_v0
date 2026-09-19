@@ -16,6 +16,7 @@
     var leagueRoster = ctx.leagueRoster || {};
     var applyLeagueRosterResult = ctx.applyLeagueRosterResult;
     var messagesEl = ctx.messagesEl || null;
+    var formulaState = api.createStandingsFormulaState();
 
     async function ensureLeagueRosterForStandingsDefault() {
       if (leagueRoster.status === "ok") return leagueRoster;
@@ -53,9 +54,48 @@
     }
 
     function renderStandingsPanelInto(panel, dataType, data, isAdmin) {
-      panel.innerHTML = renderReadPanelBody(dataType, data, isAdmin);
+      if (!panel.classList.contains("data-panel")) panel = panel.querySelector(".data-panel");
+      if (!panel) return;
+      var formulaView = formulaState.view(data.standings || []);
+      var formulaDisclosure = panel.querySelector(".standings-formula-disclosure");
+      formulaView.expanded = !!(formulaDisclosure && formulaDisclosure.open);
+      var displayData = Object.assign({}, data, {
+        standings: formulaView.rows,
+        _standings_formula: formulaView,
+      });
+      panel.innerHTML = renderReadPanelBody(dataType, displayData, isAdmin);
       bindStandingsScopeControls(panel, dataType, isAdmin);
       bindStandingsDateControls(panel, dataType, isAdmin);
+      bindStandingsFormulaControls(panel, dataType, data, isAdmin);
+    }
+
+    function bindStandingsFormulaControls(panel, dataType, data, isAdmin) {
+      var form = panel.querySelector("[data-standings-formula]");
+      if (!form) return;
+      var input = form.querySelector('input[name="formula"]');
+      var error = form.querySelector("[data-standings-formula-error]");
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (input.disabled) return;
+        if (!formulaState.apply(input.value, data.standings || [])) {
+          error.textContent = tr("standingsFormulaError") || "There is an issue with this formula.";
+          error.hidden = false;
+          input.setAttribute("aria-invalid", "true");
+          return;
+        }
+        renderStandingsPanelInto(panel, dataType, data, isAdmin);
+        panel.querySelector('input[name="formula"]').focus({ preventScroll: true });
+      });
+      form.querySelector("[data-standings-formula-reset]").addEventListener("click", function () {
+        formulaState.reset();
+        renderStandingsPanelInto(panel, dataType, data, isAdmin);
+        panel.querySelector('input[name="formula"]').focus({ preventScroll: true });
+      });
+    }
+
+    function setFormulaBusy(panel, busy) {
+      panel.querySelectorAll("[data-standings-formula] input, [data-standings-formula] button")
+        .forEach(function (element) { element.disabled = busy; });
     }
 
     async function fetchAndRenderStandingsPanel(
@@ -68,15 +108,21 @@
       subject,
       scope
     ) {
-      var result = await fetchLeagueStandings(
-        route.leagueId,
-        dataType,
-        playerName,
-        startDate,
-        endDate,
-        subject,
-        scope
-      );
+      setFormulaBusy(panel, true);
+      var result;
+      try {
+        result = await fetchLeagueStandings(
+          route.leagueId,
+          dataType,
+          playerName,
+          startDate,
+          endDate,
+          subject,
+          scope
+        );
+      } finally {
+        setFormulaBusy(panel, false);
+      }
       if (!result.ok) return result;
       var nextData = cloneStandingsDataWithDateFilter(
         result.data || {},
@@ -408,6 +454,7 @@
     }
 
     return {
+      renderStandingsPanelInto: renderStandingsPanelInto,
       bindStandingsDateControls: bindStandingsDateControls,
       bindStandingsScopeControls: bindStandingsScopeControls,
       bindStandingsSubjectChooserActions: bindStandingsSubjectChooserActions,

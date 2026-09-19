@@ -57,6 +57,24 @@ The league page is driven by buttons. The header shortcuts, starter tiles, and p
 - Locale: `en` (default) and `ko`. Picker lives in the shared site header. Persisted in `localStorage` under `tlchat-locale`; can be forced with `?lang=en|ko`.
 - Theme: light / dark. Persisted in `localStorage` under `tlchat-theme`; defaults to the system `prefers-color-scheme` on first visit.
 
+### Custom standings formulas
+
+Player and pair standings include a **Stats formula** section, collapsed by default. Click its heading to expand the formula box. Use `{W}`, `{Won}`, `{L}`, `{D}`, `{Played}`, `{GamesWon}`, `{GamesLost}`, `{MatchDiff}`, and `{GamesDiff}` with numeric constants, `+`, `-`, `*`, `/`, and parentheses. Whitespace and letter case are ignored. For example:
+
+```text
+({GamesWon} - {GamesLost}) / {Played} + 3 * {W}
+```
+
+**Apply Formula** calculates a **User Metric** column locally and ranks higher values first. Equal values share ranks (1, 2, 2, 4), retaining backend order within ties. Invalid formulas leave the previous ranking intact. **Reset** restores the current backend ranking without a request. The formula survives action navigation and date/format changes until page reload; it is neither stored nor sent to the API. If new stats make the formula invalid, the table temporarily uses backend ranking and shows the formula error until valid data or a new formula is available.
+
+`Win %` remains visible but cannot be used in formulas. The pure parser/evaluator and page-lifetime state live in `js/chat/standings-formula.js`, which is loaded before the standings renderer on both league and demo pages.
+
+Run formula, ranking, state, and rendering tests with:
+
+```bash
+node --test tests/standings-formula.test.js
+```
+
 ## Configuration
 
 Backend URLs are set in [`js/config.js`](js/config.js):

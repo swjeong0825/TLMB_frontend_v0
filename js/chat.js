@@ -203,8 +203,6 @@
       applyLeagueRosterResult: applyLeagueRosterResult,
       messagesEl: messagesEl,
     });
-    var bindStandingsDateControls = standingsInteractions.bindStandingsDateControls;
-    var bindStandingsScopeControls = standingsInteractions.bindStandingsScopeControls;
     var bindStandingsSubjectChooserActions =
       standingsInteractions.bindStandingsSubjectChooserActions;
     var isStandingsDataType = standingsInteractions.isStandingsDataType;
@@ -318,8 +316,9 @@
         parts.push(renderReadPanel(resp.data_type, readData, !!route.hostToken));
         var readWrap = appendAssistant(parts.join(""));
         if (isStandingsDataType(resp.data_type)) {
-          bindStandingsScopeControls(readWrap, resp.data_type, !!route.hostToken);
-          bindStandingsDateControls(readWrap, resp.data_type, !!route.hostToken);
+          standingsInteractions.renderStandingsPanelInto(
+            readWrap, resp.data_type, readData, !!route.hostToken
+          );
         }
         return;
       }
