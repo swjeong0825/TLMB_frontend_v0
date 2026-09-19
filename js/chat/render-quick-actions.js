@@ -17,6 +17,7 @@
       {
         message: "record a match",
         mode: "local-submit-match",
+        navLabel: tr("leagueActionRecordMatch") || "Record Match",
         title: tr("quickActionRecordMatchTitle") || "Record Match Result",
         desc: tr("quickActionRecordMatchDesc") || "Log a singles or doubles score",
         icon:
@@ -29,6 +30,7 @@
       {
         message: "show me the standings",
         mode: "local-standings-choice",
+        navLabel: tr("leagueActionStandings") || "Standings",
         title: tr("quickActionShowStandingsTitle") || "Show Current Standings",
         desc: tr("quickActionShowStandingsDesc") || "See the league leaderboard",
         icon:
@@ -42,6 +44,7 @@
       {
         message: "show me all the matches",
         mode: "local-match-history",
+        navLabel: tr("leagueActionMatchHistory") || "Match History",
         title: tr("quickActionShowMatchHistoryTitle") || "Show Match History",
         desc: tr("quickActionShowMatchHistoryDesc") || "Browse all recent matches",
         icon:
@@ -142,7 +145,25 @@
     return html;
   }
 
+  /** The three primary actions share their icons and handlers with the header. */
+  function renderLeagueActions() {
+    var html = '<nav class="league-actions" aria-label="' +
+      escapeAttr(tr("leagueActionsLabel") || "League actions") + '">';
+    getQuickActionTiles().filter(function (tile) {
+      return !!tile.navLabel;
+    }).forEach(function (tile) {
+      html +=
+        '<button type="button" class="league-action-btn quick-action-trigger" data-quick-action="' +
+        escapeAttr(tile.message) + '" data-quick-action-mode="' +
+        escapeAttr(tile.mode) + '" aria-controls="messages" aria-pressed="false" title="' +
+        escapeAttr(tile.desc) + '">' +
+        tile.icon + '<span>' + escapeHtml(tile.navLabel) + '</span></button>';
+    });
+    return html + '</nav>';
+  }
+
   api.getQuickActionTiles = getQuickActionTiles;
   api.renderIntentHelper = renderIntentHelper;
   api.renderQuickActions = renderQuickActions;
+  api.renderLeagueActions = renderLeagueActions;
 })(typeof window !== "undefined" ? window : this);

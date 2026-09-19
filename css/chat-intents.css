@@ -49,6 +49,17 @@
   outline-offset: 2px;
 }
 
+.intent-helper-quick-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg);
+}
+
+.quick-action-trigger[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: wait;
+}
+
 .intent-helper-quick-icon {
   display: flex;
   align-items: center;
@@ -173,4 +184,3 @@
   padding: 0.1rem 0.4rem;
   font-style: italic;
 }
-

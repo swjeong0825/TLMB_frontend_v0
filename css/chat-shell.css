@@ -12,11 +12,16 @@
   display: none;
 }
 
-@media (min-width: 521px) {
-  .chat-main.is-empty {
-    justify-content: center;
-    padding-bottom: 4rem;
-  }
+.league-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.chat-main.is-empty .league-workspace {
+  justify-content: safe center;
 }
 
 /* ── Quick-action tiles (empty state) ──────────────────────────────────
@@ -166,13 +171,10 @@
   border: 1px solid var(--border);
 }
 
-.msg.user {
-  align-self: flex-end;
-  background: var(--user-bubble);
-}
-
 .msg.assistant {
   align-self: flex-start;
+  width: 100%;
+  max-width: 100%;
   background: var(--bot-bubble);
 }
 
@@ -194,7 +196,8 @@
   line-height: 1.45;
 }
 
-.msg-loading {
+.msg.assistant.msg-loading {
+  width: auto;
   max-width: max-content;
 }
 
@@ -243,4 +246,3 @@
     opacity: 0.55;
   }
 }
-

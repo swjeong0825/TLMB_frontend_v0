@@ -13,7 +13,7 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 | Project | Role |
 |---|---|
 | **[TLMB_backend_main](https://github.com/swjeong0825/TLMB_backend_main)** | Domain logic, PostgreSQL persistence, and REST API. Called directly from the browser for league creation, league lookup, match history, and confirmed write submissions. |
-| **[TLMB_chat_to_intent](https://github.com/swjeong0825/TLMB_chat_to_intent)** | LLM-powered intermediary. Called from the chat page (`/league`, `/demo`) to classify natural-language messages into intents and to fetch other read data or pre-filled write form payloads. |
+| **[TLMB_chat_to_intent](https://github.com/swjeong0825/TLMB_chat_to_intent)** | LLM-powered intermediary. Used by the existing Show More Commands shortcut on `/league` and `/demo`; the primary league actions use Backend Main directly. |
 | **[ai-agent-guidelines](https://github.com/swjeong0825/ai-agent-guidelines)** | AI agent coding guidelines used during development. |
 
 ## System Architecture
@@ -26,8 +26,9 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 │   /find-league/            ──► TLM Backend Main  (GET  /leagues) │
 │   /find-league-prefix/     ──► TLM Backend Main  (GET  /leagues) │
 │                                                                  │
-│   /league?league_id=...    ──► Chat-to-Intent Server  (POST /chat) │
-│   /demo                    ──► Chat-to-Intent Server  (POST /chat) │
+│   /league?league_id=...    ──► TLM Backend Main                 │
+│   /demo                    ──► TLM Backend Main                 │
+│   Show More Commands       ──► Chat-to-Intent Server (POST /chat) │
 │   Match history controls   ──► TLM Backend Main  (GET /matches)  │
 │                                                                  │
 │   Confirmed write forms    ──► TLM Backend Main                  │
@@ -36,9 +37,9 @@ Static, no-build-step browser client for the **Tennis League Manager (TLM)** sys
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-The chat page never writes through the Chat-to-Intent Server. When the chat returns a write intent, the browser renders the pre-filled form, the user confirms, and `js/chat/write-actions.js` submits the request directly to the TLM Backend Main.
+The league page is driven by buttons. The header shortcuts, starter tiles, and persistent bottom actions share the same handlers. Record Match, Standings, and Match History replace the chat composer. Selecting an action clears the previous panel; only assistant forms, results, and feedback are shown. Match forms retain nickname autocomplete and submit directly to TLM Backend Main through `js/chat/write-actions.js`.
 
-“Show Match History” and the equivalent `show me all the matches` message load directly from Backend Main. The format and player filters call `GET /leagues/{id}/matches` or `GET /leagues/{id}/matches/by-player` with the selected `scope` and optional `player_name`. Other free-form chat messages still use Chat-to-Intent for intent recognition, but match-history rows are fetched from Backend Main before rendering; the chat server's match data is not displayed.
+“Show Match History” loads directly from Backend Main. The format and player filters call `GET /leagues/{id}/matches` or `GET /leagues/{id}/matches/by-player` with the selected `scope` and optional `player_name`. Standings and player controls also use Backend Main directly. The existing Show More Commands shortcut still uses Chat-to-Intent; there is no free-form message input.
 
 ## Pages
 
@@ -46,10 +47,10 @@ The chat page never writes through the Chat-to-Intent Server. When the chat retu
 |---|---|---|
 | `/` | Landing page with links to the other pages. | — |
 | `/create-league/` | Form to create a new league; returns the secret `host_token` and shareable player/admin URLs. | TLM Backend Main |
-| `/find-league/` | Search leagues by title prefix and open the player chat for a result. | TLM Backend Main |
+| `/find-league/` | Search leagues by title prefix and open the league page for a result. | TLM Backend Main |
 | `/find-league-prefix/?prefix=...` | URL-driven variant of `find-league` that auto-runs the search from the `prefix` query param. | TLM Backend Main |
-| `/league?league_id={id}[&host_token={token}]` | Per-league chat UI. Player mode without `host_token`; admin mode with it. | Chat-to-Intent Server + Backend Main for match history and confirmed writes |
-| `/demo` | Same chat UI as `/league`, hard-coded to a sample league so visitors can try it without creating one. | Chat-to-Intent Server + Backend Main for match history and confirmed writes |
+| `/league?league_id={id}[&host_token={token}]` | Button-driven league UI. Player mode without `host_token`; admin mode with it. | Backend Main; Chat-to-Intent for Show More Commands |
+| `/demo` | Same league UI as `/league`, hard-coded to a sample league so visitors can try it without creating one. | Backend Main; Chat-to-Intent for Show More Commands |
 
 ### Theming and locale
 
@@ -112,8 +113,8 @@ Any other static file server (`python -m http.server`, Caddy, nginx, etc.) works
 ├── create-league/index.html   # Create-a-league form
 ├── find-league/index.html     # Search leagues by title prefix
 ├── find-league-prefix/index.html  # URL-driven prefix search
-├── league/index.html          # Per-league chat (player / admin)
-├── demo/index.html            # Pre-wired chat for a sample league
+├── league/index.html          # Per-league actions (player / admin)
+├── demo/index.html            # Pre-wired page for a sample league
 ├── css/styles.css             # Ordered stylesheet manifest
 ├── css/base.css               # Design tokens, resets, shared base layout
 ├── css/chat.css               # Ordered chat stylesheet manifest
@@ -141,4 +142,4 @@ Any other static file server (`python -m http.server`, Caddy, nginx, etc.) works
 
 Per-page HTML still links only `/css/styles.css`; that file is an ordered `@import` manifest. Keep CSS imports in manifest order so the cascade stays stable: `base.css`, `chat.css`, `shell.css`, `chat-intents.css`, `theme-toggle.css`, `create-league.css`, `find-league.css`. `chat.css` is itself an ordered manifest for chat surface modules: `chat-shell.css`, `chat-panels.css`, `chat-roster.css`, `chat-tables.css`, `chat-forms.css`, `chat-composer.css`, and `chat-match-actions.css`. `create-league.css` is also a manifest: `create-league-form.css`, `create-league-roster.css`, `create-league-actions.css`, `create-league-success.css`, and `create-league-help.css`.
 
-Per-page HTML loads its scripts in this order: `js/i18n.js` → `js/i18n/en.js` → `js/i18n/ko.js` → `js/site-header.js` (where present) → `js/config.js` → `js/user-facing-errors.js` → optional no-boot support modules → the page-specific entry script. Add user-visible strings to both locale dictionary files, not the registry. `/create-league/` loads `js/create-league/*.js` before `js/create-league.js`; payload/rule helpers live in `model.js`, chips/help/timezone widgets in `widgets.js`, the backend adapter in `api.js`, and success rendering in `render.js`. `/find-league/` and `/find-league-prefix/` load `js/find-league/*.js` before their boot scripts; shared prefix-search helpers live in `core.js`, the backend adapter in `api.js`, and result rendering in `render.js`. `/league` and `/demo` load `js/chat/*.js` in dependency order, then `js/chat.js` boots the chat controller. Help-command intent catalog rendering lives in `js/chat/render-intents.js`; quick-action tile data/rendering lives in `js/chat/render-quick-actions.js`; header/composer/footer shell rendering plus theme/title helpers live in `js/chat/render-shell.js`. Roster-backed nickname candidate filtering and write-form nickname autocomplete live in `js/chat/composer-autocomplete.js`; the chat textarea, IME-safe Enter, and `@` mention popover live in `js/chat/composer.js`; message thread DOM helpers live in `js/chat/message-thread.js`; standings date filters live in `js/chat/standings-interactions.js`; shared tooltip wiring lives in `js/chat/interactions.js`; roster admin HTTP calls live in `js/chat/roster-actions.js`; Get Players panel filtering/add/refresh behavior lives in `js/chat/players-panel-interactions.js`; delegated roster/alias message actions live in `js/chat/roster-interactions.js`; match-history Update/Delete actions live in `js/chat/match-interactions.js`; match-submit confirmation helpers live in `js/chat/match-submit-interactions.js`; confirmed backend write submission lives in `js/chat/write-actions.js`, with success rendering in `js/chat/write-success.js` and write-error recovery in `js/chat/write-errors.js`. `TLCHAT_I18N.initPage()` is called inline at the end of `<body>` to apply translations to the rendered DOM.
+Per-page HTML loads its scripts in this order: `js/i18n.js` → `js/i18n/en.js` → `js/i18n/ko.js` → `js/site-header.js` (where present) → `js/config.js` → `js/user-facing-errors.js` → optional no-boot support modules → the page-specific entry script. Add user-visible strings to both locale dictionary files, not the registry. `/create-league/` loads `js/create-league/*.js` before `js/create-league.js`; payload/rule helpers live in `model.js`, chips/help/timezone widgets in `widgets.js`, the backend adapter in `api.js`, and success rendering in `render.js`. `/find-league/` and `/find-league-prefix/` load `js/find-league/*.js` before their boot scripts; shared prefix-search helpers live in `core.js`, the backend adapter in `api.js`, and result rendering in `render.js`. `/league` and `/demo` load `js/chat/*.js` in dependency order, then `js/chat.js` boots the chat controller. Help-command intent catalog rendering lives in `js/chat/render-intents.js`; quick-action tile data/rendering lives in `js/chat/render-quick-actions.js`; header/action-bar/footer shell rendering plus theme/title helpers live in `js/chat/render-shell.js`. Roster-backed nickname candidate filtering and write-form nickname autocomplete live in `js/chat/composer-autocomplete.js`; the legacy chat composer in `js/chat/composer.js` is no longer loaded; assistant panel DOM helpers live in `js/chat/message-thread.js`; standings date filters live in `js/chat/standings-interactions.js`; shared tooltip wiring lives in `js/chat/interactions.js`; roster admin HTTP calls live in `js/chat/roster-actions.js`; Get Players panel filtering/add/refresh behavior lives in `js/chat/players-panel-interactions.js`; delegated roster/alias message actions live in `js/chat/roster-interactions.js`; match-history Update/Delete actions live in `js/chat/match-interactions.js`; match-submit confirmation helpers live in `js/chat/match-submit-interactions.js`; confirmed backend write submission lives in `js/chat/write-actions.js`, with success rendering in `js/chat/write-success.js` and write-error recovery in `js/chat/write-errors.js`. `TLCHAT_I18N.initPage()` is called inline at the end of `<body>` to apply translations to the rendered DOM.

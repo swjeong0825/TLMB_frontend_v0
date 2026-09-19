@@ -32,7 +32,7 @@
   var bindDisabledTipPositioning = api.bindDisabledTipPositioning;
   var createMessageThread = api.createMessageThread;
   var createRosterInteractionController = api.createRosterInteractionController;
-  var createComposerController = api.createComposerController;
+  var createNicknameAutocomplete = api.createNicknameAutocomplete;
   var createStandingsInteractionController = api.createStandingsInteractionController;
   var createMatchSubmitInteractionController = api.createMatchSubmitInteractionController;
   var createMatchInteractionController = api.createMatchInteractionController;
@@ -60,17 +60,10 @@
     }
 
     var messagesEl = document.getElementById("messages");
-    var form = document.getElementById("chat-form");
-    var mentionPopover = document.getElementById("chat-mention-popover");
-    var input = document.getElementById("chat-input");
-    var sendBtn = document.getElementById("send-btn");
-    if (input && mentionPopover) {
-      input.setAttribute("aria-controls", "chat-mention-popover");
-    }
+    var actionBusy = false;
 
     var conversationHistory = [];
     var messageThread = createMessageThread({ messagesEl: messagesEl });
-    var appendUser = messageThread.appendUser;
     var appendLoadingBubble = messageThread.appendLoadingBubble;
     var removeLoadingBubble = messageThread.removeLoadingBubble;
     var appendAssistant = messageThread.appendAssistant;
@@ -132,7 +125,6 @@
         result.title,
         route.leagueId
       );
-      updateMentionUI();
     }
 
     function markLeagueRosterError(result) {
@@ -143,7 +135,6 @@
         null,
         route.leagueId
       );
-      updateMentionUI();
     }
 
     function refreshLeagueRoster() {
@@ -195,14 +186,16 @@
     var deliverPlayersPanel = rosterInteractions.deliverPlayersPanel;
     var openPlayersPanelWithNicknames = rosterInteractions.openPlayersPanelWithNicknames;
 
-    var composer = createComposerController({
-      input: input,
-      form: form,
-      mentionPopover: mentionPopover,
-      leagueRoster: leagueRoster,
-    });
-    var updateMentionUI = composer.updateMentionUI;
-    var bindActionCardAutocomplete = composer.bindActionCardAutocomplete;
+    var nicknameAutocomplete = createNicknameAutocomplete({ leagueRoster: leagueRoster });
+    var bindActionCardAutocomplete = nicknameAutocomplete.bindActionCardAutocomplete;
+
+    function setActionBusy(busy) {
+      actionBusy = busy;
+      root.querySelectorAll(".quick-action-trigger").forEach(function (button) {
+        button.setAttribute("aria-disabled", busy ? "true" : "false");
+      });
+      messagesEl.setAttribute("aria-busy", busy ? "true" : "false");
+    }
 
     var standingsInteractions = createStandingsInteractionController({
       route: route,
@@ -228,8 +221,14 @@
       matchSubmitInteractions.ensureLeagueRosterForRematchConfirmation;
 
     var writeActions = null;
-    function submitBackendAction(cardEl, method, url, bodySpec) {
-      return writeActions.submitBackendAction(cardEl, method, url, bodySpec);
+    async function submitBackendAction(cardEl, method, url, bodySpec) {
+      if (actionBusy) return;
+      setActionBusy(true);
+      try {
+        return await writeActions.submitBackendAction(cardEl, method, url, bodySpec);
+      } finally {
+        setActionBusy(false);
+      }
     }
 
     var matchInteractions = createMatchInteractionController({
@@ -309,7 +308,7 @@
             : "";
           var historyScope = resp.data && (resp.data._history_scope || resp.data.scope);
           if (historyScope !== "doubles" && historyScope !== "singles") historyScope = "both";
-          await deliverMatchHistory(null, resp.data_type, playerName, historyScope, parts.join(""));
+          await deliverMatchHistory(resp.data_type, playerName, historyScope, parts.join(""));
           return;
         }
         var readData = await resolveInitialStandingsData(
@@ -395,25 +394,13 @@
       appendAssistant('<div class="data-panel unknown-response">' + unkParts.join("") + "</div>");
     }
 
-    /**
-     * @param {string} rawMessage trimmed user text (e.g. "help")
-     * @param {{ silent?: boolean }} opts when silent, no user bubble (used for auto help on open)
-     */
-    async function deliverChatMessage(rawMessage, opts) {
-      var silent = opts && opts.silent;
+    /** Run the existing header help shortcut without adding a user message. */
+    async function deliverShortcutMessage(rawMessage) {
       var trimmed = String(rawMessage || "").trim();
       if (!trimmed) return;
-      if (trimmed.toLowerCase() === "show me all the matches") {
-        await deliverMatchHistory(silent ? null : trimmed, "GET_MATCH_HISTORY", "", "both");
-        return;
-      }
       var submittedText = normalizePlusForIntentServer(trimmed);
-      sendBtn.disabled = true;
       var loadingNode = null;
       try {
-        if (!silent) {
-          appendUser(trimmed);
-        }
         loadingNode = appendLoadingBubble();
         var resp = await postChat(route, submittedText, conversationHistory);
         removeLoadingBubble(loadingNode);
@@ -430,14 +417,10 @@
         appendErrorTechnical(err.message || String(err), "Chat request failed");
       } finally {
         removeLoadingBubble(loadingNode);
-        sendBtn.disabled = false;
-        input.focus();
       }
     }
 
-    function deliverStandingsSubjectChooser(prompt) {
-      var text = prompt || "show me the standings";
-      appendUser(text);
+    function deliverStandingsSubjectChooser() {
       appendAssistant(
         renderReadPanel(
           "GET_STANDINGS",
@@ -445,15 +428,11 @@
           !!route.hostToken
         )
       );
-      conversationHistory.push({ role: "user", content: text });
-      conversationHistory.push({ role: "assistant", content: "[GET_STANDINGS]" });
     }
 
-    async function deliverMatchHistory(prompt, dataType, playerName, scope, prefixHtml) {
+    async function deliverMatchHistory(dataType, playerName, scope, prefixHtml) {
       var isByPlayer = dataType === "GET_MATCH_HISTORY_BY_PLAYER";
-      if (prompt) appendUser(prompt);
       var loadingNode = appendLoadingBubble();
-      sendBtn.disabled = true;
       try {
         var result = await fetchLeagueMatchHistory(
           route.leagueId,
@@ -479,47 +458,14 @@
         bindMatchDateGroupToggles(wrap);
         bindMatchRowUpdateButtons(wrap);
         bindMatchRowDeleteButtons(wrap);
-        if (prompt) {
-          conversationHistory.push({ role: "user", content: prompt });
-          conversationHistory.push({ role: "assistant", content: "[GET_MATCH_HISTORY]" });
-        }
       } catch (err) {
         appendErrorTechnical(err.message || String(err), "Match history fetch failed");
       } finally {
         removeLoadingBubble(loadingNode);
-        sendBtn.disabled = false;
       }
     }
 
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var text = (input.value || "").trim();
-      if (!text) return;
-      input.value = "";
-      input.style.height = "auto";
-      deliverChatMessage(text, { silent: false });
-    });
-
-    /**
-     * Renders the empty SUBMIT_MATCH_RESULT action card without calling
-     * the chat-to-intent server. This is the local short-circuit used by
-     * the "Record Match Result" quick-action tile.
-     *
-     * Why: the upstream LLM extractor (currently `llama-3.1-8b-instant`)
-     * hallucinates placeholder nicknames such as "john_doe" / "alice_smith"
-     * when the prompt is a bare phrase like "record a match" — there is no
-     * real data to extract, but JSON mode forces the model to produce a
-     * value for every key. Rendering the card locally guarantees an empty
-     * form regardless of what the LLM would have done.
-     *
-     * We mirror the exact bodySpec shape the SubmitMatchResultHandler
-     * would have returned for an all-null extraction, then reuse the
-     * same `renderWriteForm` + `submitBackendAction` pipeline so the
-     * submission flow downstream is identical to a server-mediated turn.
-     * The synthetic [SUBMIT_MATCH_RESULT] assistant turn is pushed into
-     * `conversationHistory` so any subsequent composer messages still
-     * carry the same context the LLM would otherwise have seen.
-     */
+    // Match forms are built locally and submit directly to Backend Main.
     function doublesMatchBodySpec() {
       return {
         pair1_nicknames: { type: "array[string]", required: true, value: null },
@@ -580,8 +526,6 @@
         appendErrorPlain(tr("requestFailed") || "Request failed.");
         return;
       }
-      var prompt = "record a match";
-      appendUser(prompt);
       var wrap = appendAssistant(
         '<div class="match-format-card">' +
           '<div class="match-format-options" role="group" aria-label="' +
@@ -607,8 +551,6 @@
           renderLocalMatchSubmitForm(slot, format);
         });
       });
-      conversationHistory.push({ role: "user", content: prompt });
-      conversationHistory.push({ role: "assistant", content: "[SUBMIT_MATCH_RESULT]" });
     }
 
     rosterInteractions.bindRosterMessageActions();
@@ -616,51 +558,40 @@
     bindStandingsSubjectChooserActions();
     bindDisabledTipPositioning(root);
 
-    /* Quick-action triggers (grid tiles plus sticky intent-helper bar):
-       delegated from `app-root` via `.quick-action-trigger`. Sends the canned
-       prompt through the chat pipeline unless `data-quick-action-mode`
-       short-circuits (see deliverEmptyMatchSubmitForm above). Once any message
-       lands, `chat-main` loses `is-empty` and the grid hides via CSS;
-       shortcuts in the bar remain available. Guard in-flight sends with
-       `sendBtn.disabled`. */
-    root.addEventListener("click", function (e) {
+    // Header, starter tiles, and bottom navigation all use the same handlers.
+    root.addEventListener("click", async function (e) {
       var tile = e.target.closest && e.target.closest(".quick-action-trigger");
-      if (!tile || !root.contains(tile)) return;
-      if (sendBtn.disabled) return;
+      if (!tile || !root.contains(tile) || actionBusy) return;
       var mode = tile.getAttribute("data-quick-action-mode") || "";
-      if (mode === "local-submit-match") {
-        deliverEmptyMatchSubmitForm();
-        return;
-      }
-      if (mode === "local-get-players") {
-        var prompt = tile.getAttribute("data-quick-action") || "show me all the players";
-        appendUser(prompt);
-        deliverPlayersPanel();
-        conversationHistory.push({ role: "user", content: prompt });
-        conversationHistory.push({ role: "assistant", content: "[GET_PLAYERS]" });
-        return;
-      }
-      if (mode === "local-standings-choice") {
-        deliverStandingsSubjectChooser(
-          tile.getAttribute("data-quick-action") || "show me the standings"
-        );
-        return;
-      }
-      if (mode === "local-match-history") {
-        deliverMatchHistory(
-          tile.getAttribute("data-quick-action") || "show me all the matches",
-          "GET_MATCH_HISTORY",
-          "",
-          "both"
-        );
-        return;
-      }
       var message = tile.getAttribute("data-quick-action") || "";
-      if (!message) return;
-      deliverChatMessage(message, { silent: false });
-    });
+      if (!mode && !message) return;
 
-    input.focus();
+      messageThread.reset();
+      root.querySelectorAll(".quick-action-trigger").forEach(function (button) {
+        var selected = mode
+          ? button.getAttribute("data-quick-action-mode") === mode
+          : button.getAttribute("data-quick-action") === message;
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      setActionBusy(true);
+      try {
+        if (mode === "local-submit-match") {
+          deliverEmptyMatchSubmitForm();
+        } else if (mode === "local-get-players") {
+          deliverPlayersPanel();
+        } else if (mode === "local-standings-choice") {
+          deliverStandingsSubjectChooser();
+        } else if (mode === "local-match-history") {
+          await deliverMatchHistory("GET_MATCH_HISTORY", "", "both");
+        } else {
+          await deliverShortcutMessage(message);
+        }
+      } catch (err) {
+        appendErrorTechnical(err.message || String(err), "League action failed");
+      } finally {
+        setActionBusy(false);
+      }
+    });
   }
 
   function boot() {

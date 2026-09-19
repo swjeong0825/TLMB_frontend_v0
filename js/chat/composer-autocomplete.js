@@ -268,6 +268,13 @@
     }
 
     return {
+      bindActionCardAutocomplete: function (card) {
+        if (!card) return;
+        card.querySelectorAll('.nick-input-wrap > input').forEach(function (input) {
+          var popover = document.getElementById(input.getAttribute("aria-controls"));
+          if (popover) bindNickAutocomplete(input, popover);
+        });
+      },
       bindNickAutocomplete: bindNickAutocomplete,
       combinedMentionCandidates: combinedMentionCandidates,
       filterPlayersForMention: filterPlayersForMention,

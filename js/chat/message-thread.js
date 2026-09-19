@@ -21,18 +21,10 @@
       }
     }
 
-    function appendUser(text) {
+    function reset() {
       clearEmpty();
-      var div = document.createElement("div");
-      div.className = "msg user";
-      div.innerHTML =
-        '<div class="label">' +
-        escapeHtml(tr("labelYou") || "You") +
-        "</div><div>" +
-        escapeHtml(text) +
-        "</div>";
-      messagesEl.appendChild(div);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      messagesEl.replaceChildren();
+      messagesEl.scrollTop = 0;
     }
 
     function appendLoadingBubble() {
@@ -103,7 +95,7 @@
       appendErrorPlain: appendErrorPlain,
       appendErrorTechnical: appendErrorTechnical,
       appendLoadingBubble: appendLoadingBubble,
-      appendUser: appendUser,
+      reset: reset,
       clearEmpty: clearEmpty,
       removeLoadingBubble: removeLoadingBubble,
     };

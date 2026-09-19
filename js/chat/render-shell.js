@@ -127,42 +127,16 @@
     );
   }
 
-  function renderComposer() {
-    var isMobile = window.innerWidth <= 520;
-    var rawPlaceholder = isMobile
-      ? tr("placeholderMobile") ||
-        "Report Match Result, or Ask about standings, match history, or the roster."
-      : tr("placeholderDesktop") ||
-        "Report Match Result, or Ask about standings, match history, or the roster.\nUse the shortcuts above or type \"help\".";
-    return (
-      '<div class="composer">' +
-      '<form id="chat-form">' +
-      '<div class="composer-input-wrap">' +
-      '<div id="chat-mention-popover" class="chat-mention-popover" hidden role="listbox" aria-label="' +
-      escapeAttr(tr("mentionPopoverLabel") || "Mention a player") +
-      '"></div>' +
-      '<textarea id="chat-input" rows="2" placeholder="' +
-      escapeAttr(rawPlaceholder) +
-      '" autocomplete="off"></textarea>' +
-      '<button type="submit" id="send-btn" aria-label="' +
-      escapeAttr(tr("send") || "Send") +
-      '">' +
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>' +
-      "</button>" +
-      "</div>" +
-      "</form>" +
-      "</div>"
-    );
-  }
-
   function renderChatShell(route, cachedHeaderTitle) {
     return (
       renderHeader(route, cachedHeaderTitle) +
       api.renderIntentHelper(!!route.hostToken) +
       '<main class="chat-main is-empty">' +
+      '<div class="league-workspace">' +
       '<div id="messages" class="messages"></div>' +
       api.renderQuickActions() +
-      renderComposer() +
+      "</div>" +
+      api.renderLeagueActions() +
       "</main>" +
       '<footer class="chat-footer">' +
       '<span data-i18n="footer.backendSource"></span>' +

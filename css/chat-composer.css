@@ -1,20 +1,57 @@
-
-.composer {
+/* Persistent primary actions replace the chat composer. */
+.league-actions {
   flex-shrink: 0;
-  padding: 0.85rem 1.25rem 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem max(0.75rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
 
-.composer form {
+.league-action-btn {
   display: flex;
-  gap: 0.5rem;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 3.75rem;
+  padding: 0.55rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.composer-input-wrap {
-  position: relative;
-  flex: 1;
+.league-action-btn svg {
+  flex-shrink: 0;
+}
+
+.league-action-btn:hover,
+.league-action-btn[aria-pressed="true"] {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.league-action-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .league-actions {
+    gap: 0.35rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }
 
 .chat-mention-popover {
@@ -61,48 +98,6 @@
 
 .chat-mention-item.chat-mention-status:hover {
   background: transparent;
-}
-
-.composer textarea {
-  width: 100%;
-  min-height: 4.5rem;
-  resize: none;
-  overflow-y: hidden;
-  padding: 0.55rem 3rem 0.55rem 0.65rem;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  line-height: 1.4;
-  box-sizing: border-box;
-}
-
-.composer button[type="submit"] {
-  position: absolute;
-  right: 0.5rem;
-  bottom: 0.65rem;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: background 0.15s;
-}
-
-.composer button[type="submit"]:hover {
-  background: var(--accent-dim);
-}
-
-.composer button[type="submit"]:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .btn-secondary {
