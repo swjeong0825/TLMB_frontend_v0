@@ -63,7 +63,7 @@ test('bad local plans or missing configuration never reach the network', async (
   assert.equal(timers.size, 0);
 });
 
-for (const [status, error] of [[404, 'uploadLeagueMissing'], [422, 'uploadRejected'], [500, 'uploadFailed'], [429, 'uploadFailed']]) {
+for (const [status, error] of [[404, 'uploadLeagueMissing'], [409, 'uploadConflict'], [422, 'uploadRejected'], [500, 'uploadFailed'], [429, 'uploadFailed']]) {
   test(`handles HTTP ${status} without depending on the backend error envelope`, async () => {
     const { plan, timers } = setup(async () => ({ ok: false, status, json() { throw new Error('Must not parse error copy'); } }));
     assert.deepEqual(plain(await plan.uploadMatches(leagueId, payload)), { ok: false, error, status });
@@ -115,15 +115,13 @@ test('successful uploads and retries preserve local IDs/values; later edits use 
     if (attempt++ === 0) throw new Error('Connection lost after commit');
     return success(body);
   });
-  const memory = new Map();
-  const store = plan.createDraftStore(() => ({ getItem: key => memory.get(key) ?? null,
-    setItem: (key, value) => memory.set(key, value) }), 'backend', leagueId, () => matches[0].id);
+  const store = plan.createDraftStore(() => matches[0].id);
   store.save(matches[0].value);
-  const before = memory.get(store.key);
+  const before = JSON.stringify(store.read().records);
   assert.equal((await plan.uploadMatches(leagueId, { matches: store.read().records })).ok, false);
-  assert.equal(memory.get(store.key), before);
+  assert.equal(JSON.stringify(store.read().records), before);
   assert.equal((await plan.uploadMatches(leagueId, { matches: store.read().records })).ok, true);
-  assert.equal(memory.get(store.key), before);
+  assert.equal(JSON.stringify(store.read().records), before);
   assert.deepEqual(requests[0], requests[1]);
   store.save('Alice Guest', matches[0].id);
   assert.equal((await plan.uploadMatches(leagueId, { matches: store.read().records })).ok, true);

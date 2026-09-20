@@ -4,6 +4,13 @@
   var plans = global.TLCHAT_PLAN;
   function tr(key, params) { return api.tr(key, params); }
   function esc(value) { return api.escapeHtml(value); }
+  function errorText(error) {
+    if (!error) return "";
+    var text = tr(error.error);
+    if (error.missing && error.missing.length) text += " " + error.missing.join(", ");
+    else if (error.detail) text += " " + error.detail;
+    return text;
+  }
 
   function renderPlannedScoreList(records, drafts) {
     if (!records.length) return '<p class="hint">' + esc(tr("plannedEmpty")) + '</p>';
@@ -13,85 +20,81 @@
       var scores = draft && draft.value === record.value ? draft.scores : ["", ""];
       var label = parsed.sides.map(function (side) { return side.join(" + "); }).join(" " + tr("vs") + " ");
       return '<li><form class="planned-score-row" data-planned-score-index="' + index + '" aria-label="' +
-        api.escapeAttr(label) + '"><span class="planned-score-format">' +
+        api.escapeAttr(label) + '" data-planned-id="' + api.escapeAttr(record.id) + '" aria-busy="' +
+        !!(draft && draft.pending) + '"><span class="planned-score-format">' +
         esc(tr(parsed.format === "singles" ? "matchFormatSingles" : "matchFormatDoubles")) + '</span>' +
         '<div class="planned-score-sides">' + parsed.sides.map(function (side, sideIndex) {
           return '<label><span class="planned-score-team">' + esc(side.join(" + ")) + '</span>' +
             '<span class="hint">' + esc(tr("plannedSideScore", { side: sideIndex + 1 })) + '</span>' +
-            api.renderScorePicker("side" + (sideIndex + 1) + "_score", scores[sideIndex]) + '</label>';
-        }).join('') + '</div><button type="submit" class="btn-secondary">' + esc(tr("plannedRecordButton")) + '</button>' +
-        '<p class="hint planned-row-status" role="status" hidden></p></form></li>';
+            api.renderScorePicker("side" + (sideIndex + 1) + "_score", scores[sideIndex])
+              .replace('<select ', '<select ' + (draft && draft.pending ? 'disabled ' : '')) + '</label>';
+        }).join('') + '</div><button type="submit" class="btn-secondary"' +
+        (draft && draft.disabled ? ' disabled' : '') + '>' +
+        esc(tr(draft && draft.pending ? "plannedRecording" : draft && draft.error && draft.error.unconfirmed ?
+          "plannedRetry" : "plannedRecordButton")) + '</button>' +
+        '<p class="hint planned-row-status" role="status"' + (draft && draft.error ? '' : ' hidden') + '>' +
+        esc(errorText(draft && draft.error)) + '</p></form></li>';
     }).join('') + '</ul>';
   }
 
-  function mountPlannedMatchResults(container, route) {
+  function mountPlannedMatchResults(container, route, session) {
     container.innerHTML = '<section class="planned-results" aria-label="' + api.escapeAttr(tr("plannedTitle")) + '">' +
       '<div class="planned-results-heading"><h3>' + esc(tr("plannedTitle")) + '</h3>' +
       '<button type="button" class="btn-secondary" data-planned-refresh>' + esc(tr("plannedRefresh")) + '</button></div>' +
-      '<p class="hint">' + esc(tr("plannedStubHint")) + '</p>' +
+      '<p class="hint">' + esc(tr("plannedRecordHint")) + '</p>' +
+      '<p class="hint" data-planned-notice role="status" hidden></p>' +
       '<p class="hint" data-planned-status role="status"></p><div data-planned-list></div></section>';
     var section = container.querySelector(".planned-results");
     var refresh = section.querySelector("[data-planned-refresh]");
     var status = section.querySelector("[data-planned-status]");
     var list = section.querySelector("[data-planned-list]");
-    var records = [];
-    var drafts = Object.create(null);
-    var loading = false;
+    var notice = section.querySelector("[data-planned-notice]");
 
-    function rememberScores() {
-      list.querySelectorAll("[data-planned-score-index]").forEach(function (form) {
-        var record = records[Number(form.getAttribute("data-planned-score-index"))];
-        if (record) drafts[record.id] = { value: record.value, scores: [
-          form.querySelector('[data-field="side1_score"]').value,
-          form.querySelector('[data-field="side2_score"]').value,
-        ] };
-      });
-    }
+    session.subscribe(function (state) {
+      // A pending request belongs to the page session, never to a detached form.
+      if (!section.isConnected) return false;
+      var focused = list.contains(document.activeElement) ? document.activeElement : null;
+      var focusedForm = focused && focused.closest("[data-planned-id]");
+      var focusedId = focusedForm && focusedForm.getAttribute("data-planned-id");
+      var field = focused && focused.getAttribute("data-field");
+      refresh.disabled = state.loading;
+      section.setAttribute("aria-busy", String(state.loading));
+      status.textContent = state.loading ? tr("plannedLoading") : state.loadError ? tr(state.loadError) :
+        state.invalidCount ? tr("plannedInvalidRows", { count: state.invalidCount }) : "";
+      notice.hidden = !state.notice;
+      if (state.notice) {
+        var item = state.notice;
+        var sides = plans.parseValue(item.record.value).sides;
+        notice.textContent = sides[0].join(" + ") + " " + item.scores[0] + " : " + item.scores[1] + " " +
+          sides[1].join(" + ") + " — " + tr(item.key);
+      }
+      list.innerHTML = renderPlannedScoreList(state.records, state.drafts);
+      if (focusedId) {
+        var newForm = Array.from(list.querySelectorAll("[data-planned-id]")).find(function (form) {
+          return form.getAttribute("data-planned-id") === focusedId;
+        });
+        var target = newForm && newForm.querySelector(field ? '[data-field="' + field + '"]' : '[type="submit"]');
+        if (target && !target.disabled) target.focus({ preventScroll: true });
+        else if (!newForm) refresh.focus({ preventScroll: true });
+      }
+    });
 
-    async function load() {
-      if (loading) return;
-      loading = true;
-      refresh.disabled = true;
-      section.setAttribute("aria-busy", "true");
-      status.textContent = tr("plannedLoading");
-      var result;
-      try { result = await plans.loadMatches(route.leagueId); }
-      catch (_err) { result = { ok: false, error: "plannedLoadFailed" }; }
-      loading = false;
-      // Navigating away or switching to manual entry must not resurrect this panel.
-      if (!section.isConnected) return;
-      refresh.disabled = false;
-      section.setAttribute("aria-busy", "false");
-      if (!result.ok) { status.textContent = tr(result.error); return; }
-      rememberScores();
-      records = result.matches;
-      var retained = Object.create(null);
-      records.forEach(function (record) {
-        if (drafts[record.id] && drafts[record.id].value === record.value) retained[record.id] = drafts[record.id];
-      });
-      drafts = retained;
-      list.innerHTML = renderPlannedScoreList(records, drafts);
-      status.textContent = result.invalidCount ? tr("plannedInvalidRows", { count: result.invalidCount }) : "";
-    }
-
-    refresh.addEventListener("click", load);
-    list.addEventListener("submit", async function (event) {
-      var form = event.target.closest("[data-planned-score-index]");
+    refresh.addEventListener("click", function () { session.refresh(); });
+    list.addEventListener("submit", function (event) {
+      var form = event.target.closest("[data-planned-id]");
       if (!form) return;
       event.preventDefault();
-      var record = records[Number(form.getAttribute("data-planned-score-index"))];
-      var result = await plans.recordMatch(route.leagueId, record,
+      session.submit(form.getAttribute("data-planned-id"),
         form.querySelector('[data-field="side1_score"]').value,
         form.querySelector('[data-field="side2_score"]').value);
-      var note = form.querySelector(".planned-row-status");
-      note.textContent = tr(result.error);
-      note.hidden = false;
     });
     list.addEventListener("change", function (event) {
-      var form = event.target.closest("[data-planned-score-index]");
-      if (form) form.querySelector(".planned-row-status").hidden = true;
+      var form = event.target.closest("[data-planned-id]");
+      if (form) session.setScores(form.getAttribute("data-planned-id"),
+        form.querySelector('[data-field="side1_score"]').value,
+        form.querySelector('[data-field="side2_score"]').value);
     });
-    load();
+    session.refresh();
   }
 
   api.renderPlannedScoreList = renderPlannedScoreList;

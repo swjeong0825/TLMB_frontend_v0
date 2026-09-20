@@ -23,6 +23,8 @@
 
     var deleteConfirmModalEl = null;
     var deleteConfirmPending = null;
+    var historyRefreshers = new WeakMap();
+    var historyRequests = new WeakMap();
 
     function toggleEditMatchScoreForm(panel, matchId, match, url, method, bodySchema, colspan) {
       var existing = panel.querySelector(".match-picker-edit-row[data-edit-row-id]");
@@ -402,8 +404,16 @@
       var panel = wrap.querySelector(".data-panel") || wrap;
       var controls = panel.querySelector("[data-history-scope-controls]");
       if (!controls) return;
+      var latestName = controls.getAttribute("data-player-name") || "";
+      var activeScope = controls.querySelector("[data-history-scope].is-active");
+      var latestScope = activeScope ? activeScope.getAttribute("data-history-scope") : "both";
+      historyRefreshers.set(panel, function () { return loadHistory(latestName, latestScope); });
       async function loadHistory(playerName, scope) {
         var name = String(playerName || "").trim();
+        latestName = name;
+        latestScope = scope;
+        var version = (historyRequests.get(panel) || 0) + 1;
+        historyRequests.set(panel, version);
         var dataType = name ? "GET_MATCH_HISTORY_BY_PLAYER" : "GET_MATCH_HISTORY";
         var errorEl = controls.querySelector("[data-history-fetch-error]");
         if (errorEl) {
@@ -420,6 +430,7 @@
             name,
             scope
           );
+          if (!panel.isConnected || historyRequests.get(panel) !== version) return { ok: false, stale: true };
           if (!result || !result.ok) {
             throw new Error(
               "Match history fetch failed: " +
@@ -441,7 +452,9 @@
           api.bindMatchDateGroupToggles(panel);
           bindMatchRowUpdateButtons(panel);
           bindMatchRowDeleteButtons(panel);
+          return result;
         } catch (err) {
+          if (!panel.isConnected || historyRequests.get(panel) !== version) return { ok: false, stale: true };
           console.warn("[TLCHAT] History fetch failed:", err);
           if (errorEl) {
             errorEl.textContent =
@@ -449,8 +462,9 @@
               "Could not load match history. Please try again.";
             errorEl.hidden = false;
           }
+          return { ok: false };
         } finally {
-          if (document.body.contains(controls)) {
+          if (historyRequests.get(panel) === version && document.body.contains(controls)) {
             controls.querySelectorAll("button, input").forEach(function (el) {
               el.disabled = false;
             });
@@ -491,6 +505,11 @@
     }
 
     return {
+      refreshVisibleHistory: async function (root) {
+        var panels = Array.from(root.querySelectorAll(".data-panel")).filter(function (panel) { return historyRefreshers.has(panel); });
+        var results = await Promise.allSettled(panels.map(function (panel) { return historyRefreshers.get(panel)(); }));
+        return { count: panels.length, ok: results.every(function (result) { return result.status === "fulfilled" && result.value.ok; }) };
+      },
       bindHistoryScopeControls: bindHistoryScopeControls,
       bindMatchRowDeleteButtons: bindMatchRowDeleteButtons,
       bindMatchRowUpdateButtons: bindMatchRowUpdateButtons,

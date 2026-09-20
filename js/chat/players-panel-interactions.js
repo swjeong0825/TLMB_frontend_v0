@@ -61,16 +61,20 @@
     }
 
     function refreshRosterSurfaces() {
-      if (!messagesEl) return;
-      fetchLeagueRoster(route.leagueId).then(function (result) {
+      if (!messagesEl) return Promise.resolve({ ok: false });
+      return fetchLeagueRoster(route.leagueId).then(function (result) {
         if (!result.ok) {
           console.warn("[TLCHAT] Roster surface refresh failed:", result);
-          return;
+          return result;
         }
+        if (!messagesEl.isConnected) return result;
         applyLeagueRosterResult(result);
         var state = rosterStateFromResult(result);
         rerenderPlayersPanels(state);
         rerenderRosterReadPanels(state);
+        return result;
+      }).catch(function () {
+        return { ok: false };
       });
     }
 

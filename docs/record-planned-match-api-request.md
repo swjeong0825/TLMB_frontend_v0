@@ -1,157 +1,128 @@
-# Backend request: record a planned match and consume its plan atomically
+# Planned-match recording: implemented frontend integration
 
-## Current frontend and required behavior
+This document replaces the earlier proposal for a dedicated recording endpoint and
+consumption receipts. The implemented contract is described by Backend Main's
+`docs/planned-match-recording-frontend-guide.md`. Recording uses the existing result
+endpoints with an optional `planned_match_id`, not a separate plan-record route.
 
-Record Match now first asks **Scheduled Match?**, with **Yes** for a planned match
-and **No** for manual entry.
-The planned path reads `GET /leagues/{league_id}/planned-matches`, parses each `{id,
-value}`, and shows fixed sides plus two score selectors. It does not edit teams.
-The recording adapter in `js/plan/record.js` is intentionally a no-write stub.
-Implement the endpoint below in Backend Main so that a future frontend change can
-enable recording with one request. Keep existing manual recording APIs working.
+## Requests
 
-**One committed transaction must create the actual result and physically DELETE the
-pending planned-match row.** Any validation, persistence, deletion, or commit failure
-must leave the plan intact and roll back all result-related changes. Do not use two
-HTTP requests, a background deletion, or an independent commit in each use case.
+Send directly to the configured Backend Main URL. Use JSON `Content-Type`, JSON
+`Accept`, and `credentials: "omit"`; no host token is required. Parse the saved
+`{id, value}` with `TLCHAT_PLAN.parseValue`. Keep the saved UUID, exact nickname/alias
+spelling, side order, and score association. Never generate a replacement ID.
 
-## Endpoint and input
+Singles, for saved value `Alice Bob`:
 
-`POST /leagues/{league_id}/planned-matches/{planned_match_id}/record`
-
-Public league-link access, consistent with the existing match-result endpoints;
-no host token required. Apply the existing result submission rate-limit policy.
-Both path identifiers must be UUIDs, and the plan must belong to the specified league.
+```http
+POST /leagues/2166134f-934b-4f59-af2b-bdb1cb1b49db/singles-matches
+Content-Type: application/json
+Accept: application/json
+```
 
 ```json
 {
-  "expected_value": "Alice,Bob Charlie,Diana",
-  "side1_score": "6",
-  "side2_score": "3"
+  "player1_nickname": "Alice",
+  "player2_nickname": "Bob",
+  "player1_score": "6",
+  "player2_score": "0",
+  "planned_match_id": "d315f636-10e5-4265-9b19-fc260e1ed224"
 }
 ```
 
-Singles use the identical request shape, for example `expected_value: "Alice Bob"`.
-All three body fields are required strings.
-Scores are strings to match existing result contracts. Use existing score-domain
-validation; the current frontend offers whole-number score selectors from 0 to 21,
-including zero. Do not introduce new win/draw rules in this endpoint.
+Doubles, for saved value `Alice,민수 Bob,Guest`:
 
-`expected_value` is the exact value the user saw when entering scores. Under lock,
-compare it byte-for-byte with the stored plan; return **409 PlanChanged** if it has
-changed. This prevents scores being assigned to different teams after someone else
-edits/uploads a plan. It is a precondition, not authority to override the stored plan.
-
-Never accept replacement participant names or a format from this request. Derive
-them from the stored value using the existing grammar:
-
-- `Alice Bob`: singles; side 1 = Alice, side 2 = Bob.
-- `Alice,Bob Charlie,Diana`: doubles; side 1 = Alice + Bob, side 2 = Charlie + Diana.
-
-Require exactly one ASCII space between sides and one comma between doubles
-teammates. Both sides must contain the same number of names, either one or two.
-Each nickname must be nonempty and contain no whitespace (including Unicode
-whitespace) or commas. Preserve spelling/case; do not trim or repair stored values.
-Malformed stored plans fail validation and remain pending.
-
-Preserve side order. Map `side1_score`/`side2_score` to `player1_score`/`player2_score`
-or `pair1_score`/`pair2_score` accordingly. Reject unexpected request fields.
-
-## Transaction and concurrency
-
-1. Begin one application Unit of Work with all repositories sharing its session.
-2. Lock the league first, then resolve/lock the pending plan or its prior consumption
-   receipt. Use this lock order consistently with planned-match uploads.
-3. Verify league membership, plan existence, the expected value, and valid grammar.
-4. Reuse the normal singles/doubles recording domain operations: nickname/alias
-   resolution, roster restrictions, permitted automatic registration, pair membership,
-   duplicate/rematch restrictions, score validation, and league activity updates.
-   Unknown names allowed during planning can fail here in a closed-roster league.
-5. Persist the match result, any allowed player/pair changes, and league activity
-   changes in this same transaction. Capture the database-authoritative result time.
-6. Store a durable consumption receipt, then physically delete exactly the pending
-   `(league_id, planned_match_id)` row. Commit once, after all steps succeed.
-
-The current `SubmitMatchResultUseCase` and `SubmitSinglesMatchResultUseCase` each open
-and commit their own Unit of Work. Extract/reuse their domain workflow inside the new
-transaction; do not call those independently committing entry points and then delete
-the plan. If any recording rule fails, including duplicate-match checks, keep the plan.
-
-### Safe retries and preventing plan recreation
-
-Local planning copies currently survive uploads. Without a consumed-ID check, the next
-batch upload of those copies would recreate a plan whose result was already recorded.
-Keep a small durable receipt outside `planned_matches`, unique on
-`(league_id, planned_match_id)`, containing the created result's ID/format/time and a
-fingerprint of the recording request. This is provenance for the recorded result;
-the pending planned-match row must still be hard-deleted.
-
-- An identical retry returns the same recorded result with **200**, without creating
-  another match. A different recording request for a consumed ID returns **409**.
-- Concurrent requests for one plan must produce at most one result; the other request
-  gets the existing result for identical input, or a conflict for different input.
-- Update planned-match batch upsert to reject consumed IDs with **409**, rolling back
-  the entire batch. Acquire the same league lock before this check/upsert so a request
-  queued behind recording cannot recreate the just-consumed plan.
-- Keep receipts even if the actual result is later deleted; a consumed plan ID must
-  not silently become reusable. A new planned rematch gets a new plan ID.
-
-Keep league scoping on both receipts and plans. Do not make IDs from another league
-accessible through this endpoint. Retain the minimal three-column pending-plan table;
-no soft-delete/status column is requested there.
-
-## Success and errors
-
-Return **201** for the first successful recording, **200** for an identical retry:
+```http
+POST /leagues/2166134f-934b-4f59-af2b-bdb1cb1b49db/matches
+Content-Type: application/json
+Accept: application/json
+```
 
 ```json
 {
-  "planned_match_id": "719e28b2-bce7-4e48-92a7-204711504dc8",
+  "pair1_nicknames": ["Alice", "민수"],
+  "pair2_nicknames": ["Bob", "Guest"],
+  "pair1_score": "6",
+  "pair2_score": "3",
+  "planned_match_id": "719e28b2-bce7-4e48-92a7-204711504dc8"
+}
+```
+
+Scores are strings, including zero. The UI retains its 0–21 selectors and allows
+draws. There are no `expected_value`, `side1_score`, `side2_score`, or `match_format`
+fields on the wire. The backend compares the submitted participants against the
+saved sides, then applies normal recording rules. A different alias cannot replace
+a saved name even when it identifies the same player.
+
+A committed transaction creates the result, applies permitted roster/pair/activity
+changes, and hard-deletes the pending plan. It returns **201**:
+
+```json
+{
   "match_id": "3e846a0f-6ef1-42f6-971b-45e2fa920697",
-  "match_format": "doubles",
-  "created_at": "2026-09-19T21:00:00Z"
+  "created_at": "2026-09-20T12:34:56.123456Z"
 }
 ```
 
-`match_format` is `singles` or `doubles`. The ID and timestamp come from the committed
-result; retries return the same values. Do not return success before commit.
+The frontend validates that acknowledgement before reporting success, removes the
+submitted row/draft, and refreshes plans, history, roster state, and visible standings.
+Existing standings filters and custom formulas are retained. A failed follow-up GET
+is a refresh failure; it never changes confirmed recording into a failed recording.
+There is no second DELETE request. Manual result entry remains unchanged.
 
-Use the backend's normal error envelope, with distinguishable machine-readable codes:
+## Compatibility and deployment
 
-- **404**: unknown league or plan, where no prior consumption receipt exists.
-- **409 PlanChanged**: expected value no longer matches the pending plan.
-- **409 PlannedMatchAlreadyRecorded**: consumed ID with a different recording request;
-  also use this conflict for attempted re-upload of a consumed ID.
-- **422**: malformed identifiers/body/value/scores.
-- Existing result-domain errors: preserve existing statuses/codes for roster,
-  pairing, participant, and duplicate-match restrictions.
-- **5xx**: unexpected storage/commit failure with all uncommitted changes rolled back.
+Older deployments can silently ignore `planned_match_id` and record a manual result
+without consuming the plan. Before each planned result POST, `js/plan/record.js`
+reads the configured backend's `/openapi.json` with `cache: "no-store"` and verifies
+that the selected result endpoint's JSON request schema exposes `planned_match_id`.
+An unavailable, unreadable, or outdated schema prevents the POST and shows a localized
+backend-unavailable message. Deployments must serve that schema with the same CORS
+access as their result APIs. Local API-prefix fixtures must expose it under that prefix.
+The check and POST share a 30-second abort timer. No automatic POST retry occurs.
 
-No request may delete a pending plan when the corresponding result failed to commit.
+On 2026-09-20, a read-only check of the configured production backend's OpenAPI schema
+found neither result request schema advertising `planned_match_id`. The implementation
+is verified with local fixtures; deploying the updated backend is a prerequisite for
+production recording. This frontend task does not deploy either repository.
 
-## Backend acceptance tests
+## Errors and recovery
 
-1. Singles/doubles create correctly ordered results, delete the pending row, remove it
-   from GET planned matches, and expose the normal match history/standings effects.
-2. Verify zero scores, invalid scores, aliases, repeated-player errors, closed/open
-   roster behavior, pair membership, and each rematch policy through existing rules.
-3. Changed values and foreign/missing league/plan IDs cannot record or delete anything.
-4. Force errors after registration, match insertion, receipt insertion, plan deletion,
-   and during commit: verify complete rollback, including all players/pairs/activity.
-5. Race identical and different requests for the same plan: exactly one result and
-   deletion; stable retry responses or conflicts as specified.
-6. Retry after a simulated lost success response: return the original ID/time without
-   duplicate matches or standings effects.
-7. Re-upload a consumed ID, including concurrently with recording and in a mixed batch:
-   return 409 and preserve all prior data without resurrecting the plan.
-8. The same UUID in a different league remains isolated. Result deletion does not make
-   its consumed plan ID reusable. Manual recording remains unaffected.
+Backend domain errors usually return `{ "error": "ErrorName", "detail": "…" }`.
+Request validation can return an array in `detail`, and proxies may return non-JSON.
+The adapter handles these variations; rendered details and missing names are escaped.
 
-## Frontend integration after this backend work
+| Response | UI behavior |
+| --- | --- |
+| 404 `LeagueNotFoundError` | Stop submission until the league can be refreshed successfully. |
+| 404 `PlannedMatchNotFoundError` | Refresh plans/history. Explain that the plan is no longer pending; do not claim recording succeeded. |
+| 409 `PlannedMatchMismatchError` | Refresh the matchup and clear scores before another explicit submission. |
+| 422 `InvalidPlannedMatchError` | Refresh/rebuild from the saved format; never fall back to manual recording. |
+| 422 nickname, score, repeated-player errors | Show the relevant message and retain applicable scores. |
+| 422 `RosterMembershipRequiredError` | Display missing nicknames when provided; registration is required first. |
+| 409 pair/player rule conflicts | Explain the rule conflict; retain scores. |
+| 409 duplicate matchup/rematch errors | Refresh history and explain the rematch restriction. |
+| 429 | Ask the user to wait before retrying. |
+| 5xx, timeout, network failure, malformed/unreadable 201 | Treat the result as unconfirmed, retain its context, and reconcile plans/history before enabling an explicit retry. |
 
-This request does not enable the frontend stub. A later change will call the new
-endpoint with the selected ID, loaded value, and two scores. Only after acknowledged
-success should it remove that plan from the displayed list and the matching local
-planning copy, then refresh result data. On errors keep scores and the plan visible;
-on a changed-plan conflict reload it before allowing another attempt. Never implement
-client-side POST-result followed by DELETE-plan as a substitute for this transaction.
+There are **no consumption receipts or success replays**. A retry after consumption
+returns 404, and a later upload can recreate a consumed UUID. Never automatically
+retry, re-upload a stale plan, drop `planned_match_id`, or infer successful recording
+solely from an absent plan. Review history before deciding whether to retry a plan
+that remains pending. Confirmed/absent-after-review rows are not resurrected by stale
+reads in the current page session.
+
+`js/plan/record-session.js` owns pending requests and score drafts across action
+navigation on the league page. It guards duplicate submission per ID, pins the submitted
+teams during refresh, ignores stale GETs, and retains scores only for an unchanged
+saved value. Detached panels unsubscribe; full page navigation discards the session.
+The independent saved-plan Delete action remains its existing no-request stub.
+
+## Verification
+
+Run `node --test tests/*.test.js`. Adapter tests cover endpoint/payload mapping,
+string zero scores, compatibility checks, error envelopes, timeouts, and no automatic
+retries. Session tests cover duplicate clicks/action navigation, concurrent rows,
+changed plans, uncertainty, failed follow-up reads, stale responses, disposal, and
+preservation/removal of applicable drafts. Browser checks use local fixtures only;
+production match results must not be created as an integration test.

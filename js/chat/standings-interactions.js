@@ -17,6 +17,8 @@
     var applyLeagueRosterResult = ctx.applyLeagueRosterResult;
     var messagesEl = ctx.messagesEl || null;
     var formulaState = api.createStandingsFormulaState();
+    var standingsRefreshers = new WeakMap();
+    var standingsRequests = new WeakMap();
 
     async function ensureLeagueRosterForStandingsDefault() {
       if (leagueRoster.status === "ok") return leagueRoster;
@@ -108,6 +110,11 @@
       subject,
       scope
     ) {
+      var version = (standingsRequests.get(panel) || 0) + 1;
+      standingsRequests.set(panel, version);
+      standingsRefreshers.set(panel, function () {
+        return fetchAndRenderStandingsPanel(panel, dataType, playerName, startDate, endDate, isAdmin, subject, scope);
+      });
       setFormulaBusy(panel, true);
       var result;
       try {
@@ -121,8 +128,9 @@
           scope
         );
       } finally {
-        setFormulaBusy(panel, false);
+        if (standingsRequests.get(panel) === version && panel.isConnected) setFormulaBusy(panel, false);
       }
+      if (!panel.isConnected || standingsRequests.get(panel) !== version) return { ok: false, stale: true };
       if (!result.ok) return result;
       var nextData = cloneStandingsDataWithDateFilter(
         result.data || {},
@@ -310,6 +318,9 @@
       var playerName = form.getAttribute("data-player-name") || "";
       var subject = form.getAttribute("data-standings-subject") || "";
       var scopeValue = form.getAttribute("data-standings-scope") || "doubles";
+      var appliedStart = startInput ? startInput.value : "";
+      var appliedEnd = endInput ? endInput.value : "";
+      standingsRefreshers.set(panel, function () { return applyFilter(appliedStart, appliedEnd); });
 
       async function applyFilter(startDate, endDate) {
         showStandingsDateError(form, "");
@@ -319,7 +330,7 @@
             tr("standingsDateRangeInvalid") ||
               "Start date must be on or before end date."
           );
-          return;
+          return { ok: false };
         }
         setStandingsFilterBusy(form, true);
         try {
@@ -340,6 +351,7 @@
                 "Could not update standings for those dates."
             );
           }
+          return result || { ok: false };
         } catch (err) {
           console.warn("[TLCHAT] Standings filter fetch failed:", err);
           showStandingsDateError(
@@ -347,6 +359,7 @@
             tr("standingsFilterFailed") ||
               "Could not update standings for those dates."
           );
+          return { ok: false };
         } finally {
           if (document.body.contains(form)) setStandingsFilterBusy(form, false);
         }
@@ -454,6 +467,13 @@
     }
 
     return {
+      refreshVisibleStandings: async function () {
+        var panels = messagesEl ? Array.from(messagesEl.querySelectorAll(".data-panel")).filter(function (panel) {
+          return standingsRefreshers.has(panel);
+        }) : [];
+        var results = await Promise.allSettled(panels.map(function (panel) { return standingsRefreshers.get(panel)(); }));
+        return { count: panels.length, ok: results.every(function (result) { return result.status === "fulfilled" && result.value.ok; }) };
+      },
       renderStandingsPanelInto: renderStandingsPanelInto,
       bindStandingsDateControls: bindStandingsDateControls,
       bindStandingsScopeControls: bindStandingsScopeControls,

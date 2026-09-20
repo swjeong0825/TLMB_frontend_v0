@@ -7,63 +7,53 @@
       ":" + encodeURIComponent(leagueId);
   }
 
-  function createDraftStore(getStorage, backend, leagueId, newId) {
-    var key = storageKey(backend, leagueId);
+  function clearLegacyDrafts(getStorage, backend, leagueId) {
+    try { getStorage().removeItem(storageKey(backend, leagueId)); } catch (_err) {}
+  }
+
+  // Drafts belong to one page instance. Never persist or restore them from storage.
+  function createDraftStore(newId) {
+    var records = [];
 
     function read() {
-      try {
-        var raw = getStorage().getItem(key);
-        if (raw === null) return { ok: true, records: [] };
-        var data = JSON.parse(raw);
-        if (!data || data.version !== 1 || !Array.isArray(data.matches)) {
-          return { ok: false, error: "storageUnreadable", records: [] };
-        }
-        return { ok: true, records: data.matches };
-      } catch (err) {
-        return { ok: false, error: err instanceof SyntaxError ? "storageUnreadable" : "storageUnavailable", records: [] };
-      }
-    }
-
-    function write(records) {
-      try {
-        getStorage().setItem(key, JSON.stringify({ version: 1, matches: records }));
-        return { ok: true, records: records };
-      } catch (_err) {
-        return { ok: false, error: "storageWriteFailed" };
-      }
+      return { ok: true, records: records.map(function (record) { return { id: record.id, value: record.value }; }) };
     }
 
     function save(value, editingId) {
-      var state = read();
-      if (!state.ok) return state;
       if (!api.parseValue(value)) return { ok: false, error: "invalidPlan" };
-      var index = editingId ? state.records.findIndex(function (record) { return record && record.id === editingId; }) : -1;
+      var index = editingId ? records.findIndex(function (record) { return record.id === editingId; }) : -1;
       if (editingId && index === -1) return { ok: false, error: "planMissing" };
       var id;
       try { id = editingId || newId(); } catch (_err) { return { ok: false, error: "saveFailed" }; }
       var record = { id: id, value: value };
-      if (!api.isValidRecord(record) || (!editingId && state.records.some(function (item) { return item && item.id === id; }))) {
+      if (!api.isValidRecord(record) || (!editingId && records.some(function (item) { return item.id.toLowerCase() === id.toLowerCase(); }))) {
         return { ok: false, error: "saveFailed" };
       }
-      if (index === -1) state.records.push(record);
-      else state.records[index] = record;
-      return write(state.records);
+      if (index === -1) records.push(record);
+      else records[index] = record;
+      return read();
     }
 
-    // Index + expected value also permits removing malformed entries without guessing an ID.
     function remove(index, expected) {
-      var state = read();
-      if (!state.ok) return state;
-      if (index < 0 || index >= state.records.length || JSON.stringify(state.records[index]) !== JSON.stringify(expected)) {
+      if (index < 0 || index >= records.length || JSON.stringify(records[index]) !== JSON.stringify(expected)) {
         return { ok: false, error: "planMissing" };
       }
-      state.records.splice(index, 1);
-      return write(state.records);
+      records.splice(index, 1);
+      return read();
     }
 
-    return { key: key, read: read, save: save, remove: remove };
+    function acknowledge(matches) {
+      records = records.filter(function (record) {
+        return !matches.some(function (match) {
+          return match.id.toLowerCase() === record.id.toLowerCase() && match.value === record.value;
+        });
+      });
+    }
+
+    return { read: read, save: save, remove: remove, acknowledge: acknowledge, clear: function () { records = []; } };
   }
 
   api.storageKey = storageKey;
+  api.clearLegacyDrafts = clearLegacyDrafts;
   api.createDraftStore = createDraftStore;
 })(typeof window !== "undefined" ? window : this);

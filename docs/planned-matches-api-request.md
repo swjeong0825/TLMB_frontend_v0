@@ -1,10 +1,13 @@
 # Backend Main request: planned matches
 
 This contract is implemented in Backend Main. The frontend upload adapter now calls
-the batch POST endpoint below, verifies the acknowledgement, and keeps local drafts
-for editing and retry. Chat-to-Intent is not involved. Record Match now uses the GET
-endpoint to show shared plans with score inputs. Planned result submission remains
-a no-write stub; its separate contract is in
+the batch POST endpoint below and verifies the acknowledgement. Drafts live only in
+page memory; confirmed uploads move into the server-backed saved list, while failed
+uploads remain drafts until leaving/reloading the page. Plan Match reads saved plans
+and edits them through single-item upsert. Saved deletion remains a stub pending the
+[CRUD extension](planned-match-crud-api-request.md). Chat-to-Intent is not involved. Record Match uses the GET
+endpoint to show shared plans with score inputs. Planned result submission uses the existing result endpoints with `planned_match_id`;
+the implemented contract and deployment prerequisites are in
 [Record a planned match atomically](record-planned-match-api-request.md).
 
 ## Purpose and permissions
@@ -157,6 +160,7 @@ prevent correcting that player's name.
 10. Cover the nickname-rule examples on every affected player-write path, including
     aliases, initial registration, and preserving access to legacy records.
 
-No independent delete endpoint or scheduling fields are requested in this contract.
-The separate atomic recording request linked above extends it to consume a plan
-only when its actual result is committed successfully.
+The separate CRUD extension linked above requests independent deletion without
+recording a result. Atomic recording consumes
+a plan only when its actual result commits successfully. There are no consumption
+receipts: later uploads can recreate consumed UUIDs. No scheduling fields are requested.

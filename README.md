@@ -80,26 +80,36 @@ node --test tests/standings-formula.test.js
 
 **Plan Match** in the header and starter tiles opens `/league/plan/` in the same tab,
 preserving the league, language, host token, and API overrides. Select singles or
-doubles, enter names, and **Save**. Saved plans can be edited or removed. There are
+doubles, enter names, and **Save** to add a temporary draft. Drafts can be edited or removed. There are
 no score, date, time, or court fields on the planning page.
 
-Drafts persist in versioned browser storage, isolated by backend URL and league.
+Drafts exist only in the current page's memory. Reloading, navigating away, or changing
+language discards drafts and unfinished edits. Returning through browser history starts
+fresh. Legacy storage for the current league/backend is cleared on a best-effort basis;
+unavailable browser storage does not block planning. Theme/language settings are retained.
 Each record contains only `{id, value}`: singles use `Alice Bob`, doubles use
 `Alice,Bob Charlie,Diana`. IDs stay stable through editing. Tokens are not stored.
-`js/plan/model.js` handles strict parsing/serialization, `storage.js` handles local
-persistence, `render.js` renders the page, and `js/plan.js` controls interactions.
+`js/plan/model.js` handles strict parsing/serialization, `storage.js` holds temporary
+drafts, `controller.js` coordinates server state, and `js/plan.js` controls the page.
 
 Unknown players are allowed. Closed-roster leagues show a warning that recording
 will fail unless those players are registered first. Alias matching follows the
 existing roster rules. **Upload matches** sends one batch to Backend Main's
 `POST /leagues/{league_id}/planned-matches`, without a host token or cookies.
 The adapter in `js/plan/api.js` confirms the returned IDs and values before reporting
-success. Requests time out after 30 seconds, and failed or uncertain uploads can be
-retried with the same IDs. The button remains disabled while a request is running.
-Local copies remain after both success and failure. Edit and upload again to update
-server plans; removing a local plan does not delete the server copy. New local edits
-made during an upload need another upload.
-The standalone [backend API request](docs/planned-matches-api-request.md) specifies
+success. Requests time out after 30 seconds. Review saved plans and match history
+before retrying uncertain uploads: an upload can recreate a consumed UUID. The button remains disabled while a request is running.
+Confirmed uploads move from **Drafts** to **Saved plans**. Only unchanged submitted
+ID/value pairs leave Drafts; new or edited drafts remain for another upload. Failed or
+uncertain uploads keep drafts until the page is left. Saved plans load automatically
+and offer Refresh and Edit. Saved **Save changes** uses a single-item batch upsert,
+retaining the ID and keeping editor values if saving fails. Cancel performs no request.
+Refresh failures preserve the displayed list; malformed entries produce a warning.
+
+Saved **Delete** is a no-request stub: it explains deletion is unavailable and keeps
+the plan visible. The [saved-plan CRUD backend request](docs/planned-match-crud-api-request.md)
+specifies the public, league-scoped DELETE endpoint and its acceptance tests.
+The original [backend API request](docs/planned-matches-api-request.md) specifies
 minimal batch upsert/read support and the backend acceptance tests.
 
 **Record Match** first asks **Scheduled Match?**, with **Yes** for a planned match
@@ -108,14 +118,22 @@ The planned path loads the shared list directly from Backend Main's
 `GET /leagues/{league_id}/planned-matches`. It shows fixed singles/doubles participants
 and two score selectors per plan, without editing controls. Refresh retains entered
 scores for unchanged plans; unreadable entries are skipped with a warning. Scores
-remain only in the open panel and are not persisted.
+remain only in the league page session and are not persisted.
 
-Planned **Record result** is deliberately a no-write stub: it validates score selection
-and explains that recording is unavailable. It sends no result and removes no plan.
-`js/plan/record.js` is the future integration point. The standalone
-[atomic recording API request](docs/record-planned-match-api-request.md) specifies
-submitting a result and hard-deleting its plan in one backend transaction, with
-concurrency and retry protection. The manual path retains existing recording behavior.
+Planned **Record result** sends the saved `planned_match_id`, fixed participants, and
+string scores to the existing singles/doubles result endpoint. The backend records
+and removes the plan in one transaction. Confirmed results remove their row and refresh
+plans, history, roster state, and visible standings. Rejections retain applicable scores;
+uncertain results require refreshed plans/history before an explicit retry. No result
+POST is retried automatically, and there is no follow-up DELETE or re-upload.
+
+`js/plan/record.js` validates the response and first checks the configured backend's
+`/openapi.json` for support, preventing older deployments from recording a manual
+result while ignoring the plan ID. An unavailable/outdated schema prevents submission.
+`record-session.js` keeps requests/drafts consistent across action navigation and ignores
+stale responses. See the [implemented recording contract](docs/record-planned-match-api-request.md)
+for deployment prerequisites and recovery behavior. The manual path retains existing
+recording behavior. The saved-plan Delete action remains a stub.
 
 `js/nicknames.js` validates all newly submitted nicknames and aliases. Surrounding
 whitespace is trimmed, then empty names, internal whitespace, and commas are rejected.

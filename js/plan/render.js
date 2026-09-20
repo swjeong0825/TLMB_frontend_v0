@@ -30,7 +30,6 @@
       '<main class="plan-main"><a class="plan-back" href="' + chat.escapeAttr(backUrl) + '">' +
       escape(t("back")) + '</a><h2>' + escape(t("title")) + '</h2>' +
       '<p class="hint">' + escape(t("intro")) + '</p>' +
-      '<p class="plan-error" id="plan-storage-error" role="alert" hidden></p>' +
       '<section class="plan-editor" aria-label="' + chat.escapeAttr(t("editor")) + '">' +
       '<div class="match-format-options" role="group" aria-label="' + chat.escapeAttr(chat.tr("matchFormatChooserLabel")) + '">' +
       ["doubles", "singles"].map(function (format) {
@@ -39,13 +38,18 @@
       }).join("") + '</div><div id="plan-form-slot"><p class="hint">' + escape(t("chooseFormat")) + '</p></div></section>' +
       '<p id="plan-status" role="status" class="hint"></p>' +
       '<section class="plan-saved" aria-labelledby="plan-list-title"><div class="plan-list-heading">' +
-      '<h2 id="plan-list-title">' + escape(t("savedPlans")) + '</h2>' +
+      '<h2 id="plan-list-title">' + escape(t("drafts")) + '</h2>' +
       '<button class="btn-secondary" type="button" id="plan-upload" disabled>' + escape(t("upload", { count: 0 })) +
-      '</button></div><div id="plan-list"></div></section></main>';
+      '</button></div><div id="plan-list"></div></section>' +
+      '<section class="plan-saved" aria-labelledby="plan-server-title"><div class="plan-list-heading">' +
+      '<h2 id="plan-server-title">' + escape(t("savedPlans")) + '</h2>' +
+      '<button class="btn-secondary" type="button" id="plan-refresh">' + escape(t("refresh")) + '</button></div>' +
+      '<p id="plan-server-status" class="hint" role="status"></p><div id="plan-server-list"></div></section></main>';
   }
 
   function renderForm(format, sides, editing) {
-    return '<form id="plan-form">' + chat.renderWriteForm(bodySpec(format, sides)) +
+    return '<form id="plan-form"><h3 id="plan-editor-context">' + escape(t(editing === "saved" ? "editingSaved" :
+      editing ? "editingDraft" : "editor")) + '</h3>' + chat.renderWriteForm(bodySpec(format, sides)) +
       '<p class="hint">' + escape(global.TLCHAT_NICKNAMES.message()) + '</p>' +
       '<p class="plan-warning" id="plan-roster-warning" role="status" hidden></p>' +
       '<p class="plan-error" id="plan-form-error" role="alert" hidden></p>' +
@@ -54,8 +58,11 @@
       '</div></form>';
   }
 
-  function renderList(records, roster) {
-    if (!records.length) return '<p class="hint">' + escape(t("empty")) + '</p>';
+  function renderList(records, roster, saved, disabled) {
+    if (!records.length) return '<p class="hint">' + escape(t(saved ? "emptySaved" : "empty")) + '</p>';
+    var editAttr = saved ? "data-saved-edit" : "data-plan-edit";
+    var removeAttr = saved ? "data-saved-delete" : "data-plan-remove";
+    var busy = disabled ? " disabled" : "";
     return '<ol class="plan-list">' + records.map(function (record, index) {
       var valid = api.isValidRecord(record);
       var parsed = valid && api.parseValue(record.value);
@@ -66,8 +73,9 @@
           ' <span class="hint">' + escape(chat.tr("vs")) + '</span> ' + escape(parsed.sides[1].join(" + ")) + '</p>' :
           '<p class="plan-error">' + escape(t("invalidPlan")) + '</p>') +
         (warning ? '<p class="plan-warning">' + escape(warning) + '</p>' : "") + '</div>' +
-        '<div class="plan-item-actions">' + (valid ? '<button type="button" class="btn-secondary" data-plan-edit="' + index + '">' + escape(t("edit")) + '</button>' : "") +
-        '<button type="button" class="btn-secondary" data-plan-remove="' + index + '">' + escape(t("remove")) + '</button></div></li>';
+        '<div class="plan-item-actions">' + (valid ? '<button type="button" class="btn-secondary" ' + editAttr + '="' + index + '"' + busy + '>' + escape(t("edit")) + '</button>' : "") +
+        '<button type="button" class="btn-secondary" ' + removeAttr + '="' + index + '"' + busy + '>' + escape(t(saved ? "delete" : "remove")) + '</button></div>' +
+        (saved ? '<p class="plan-item-status hint" role="status" hidden></p>' : '') + '</li>';
     }).join("") + '</ol>';
   }
 

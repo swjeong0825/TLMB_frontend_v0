@@ -61,6 +61,7 @@
 
     var messagesEl = document.getElementById("messages");
     var actionBusy = false;
+    var resultVersion = 0;
 
     var conversationHistory = [];
     var messageThread = createMessageThread({ messagesEl: messagesEl });
@@ -259,6 +260,28 @@
       bindMatchRowDeleteButtons: bindMatchRowDeleteButtons,
     });
 
+    var plannedRecording = window.TLCHAT_PLAN.createRecordingSession({
+      leagueId: route.leagueId,
+      refreshResults: async function () {
+        resultVersion++;
+        var results = await Promise.allSettled([
+          rosterInteractions.refreshRosterSurfaces(),
+          (async function () {
+            var visible = await matchInteractions.refreshVisibleHistory(messagesEl);
+            // Reconcile history even when the score list is the active action.
+            return visible.count ? visible : fetchLeagueMatchHistory(route.leagueId, "GET_MATCH_HISTORY", "", "both");
+          })(),
+          standingsInteractions.refreshVisibleStandings(),
+        ]);
+        return { ok: results.every(function (result) { return result.status === "fulfilled" && result.value && result.value.ok; }) };
+      },
+    });
+    window.addEventListener("pagehide", function () { plannedRecording.dispose(); }, { once: true });
+    window.addEventListener("pageshow", function (event) {
+      // Restoring a frozen page must not revive old score drafts or disposed requests.
+      if (event.persisted) window.location.reload();
+    });
+
     async function renderResponse(resp) {
 
       if (resp.data_type === "ERROR") {
@@ -433,12 +456,19 @@
       var isByPlayer = dataType === "GET_MATCH_HISTORY_BY_PLAYER";
       var loadingNode = appendLoadingBubble();
       try {
+        var version = resultVersion;
         var result = await fetchLeagueMatchHistory(
           route.leagueId,
           dataType,
           playerName,
           scope
         );
+        // A result may finish while the initial history panel is still loading.
+        while (version !== resultVersion && messagesEl.isConnected) {
+          version = resultVersion;
+          result = await fetchLeagueMatchHistory(route.leagueId, dataType, playerName, scope);
+        }
+        if (!messagesEl.isConnected) return;
         if (!result.ok) {
           var detail = result.body ? humanDetailFromHttpBody(result.body) : "";
           throw new Error(
@@ -538,7 +568,7 @@
             other.setAttribute("aria-pressed", String(other === button));
             other.classList.toggle("is-active", other === button);
           });
-          if (source === "planned") api.mountPlannedMatchResults(sourceSlot, route);
+          if (source === "planned") api.mountPlannedMatchResults(sourceSlot, route, plannedRecording);
           else renderUnplannedMatchChooser(sourceSlot);
         });
       });

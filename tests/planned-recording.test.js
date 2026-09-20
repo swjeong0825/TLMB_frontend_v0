@@ -14,7 +14,14 @@ const success = data => ({ ok: true, status: 200, json: async () => data });
 
 function setup(fetch, options = {}) {
   const timers = new Set();
-  const context = vm.createContext({ fetch, AbortController,
+  const context = vm.createContext({ fetch: (url, init) => {
+    if (url.endsWith('/openapi.json') && !options.rawFetch) return Promise.resolve(success({ paths: Object.fromEntries(
+      ['matches', 'singles-matches'].map(endpoint => ['/leagues/{league_id}/' + endpoint, { post: {
+        requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Result' } } } },
+      } }])
+    ), components: { schemas: { Result: { properties: { planned_match_id: {} } } } } }));
+    return fetch(url, init);
+  }, AbortController,
     localStorage: { setItem() { assert.fail('Must not write storage'); }, removeItem() { assert.fail('Must not remove drafts'); } },
     setTimeout(fn, ms) { const timer = { fn, ms }; timers.add(timer); return timer; },
     clearTimeout(timer) { timers.delete(timer); },
@@ -119,22 +126,89 @@ test('slow reads time out and can be retried', async () => {
   assert.equal((await plan.loadMatches(leagueId)).ok, true);
 });
 
-test('recording stub keeps plans intact and never sends HTTP or storage writes, including on retries', async () => {
-  const { plan } = setup(() => assert.fail('The recording stub must not fetch'));
+test('singles and doubles POST the saved ID, exact sides and string scores to the existing endpoints', async () => {
+  const calls = [];
+  const resultBody = { match_id: '3e846a0f-6ef1-42f6-971b-45e2fa920697', created_at: '2026-09-20T12:34:56.123456Z' };
+  const { plan, timers } = setup(async (url, options) => {
+    calls.push({ url, options });
+    return { ok: true, status: 201, json: async () => resultBody };
+  });
   const before = JSON.stringify(matches);
-  for (const match of matches) {
-    assert.deepEqual(plain(plan.recordPayload(match, 0, '21')), {
-      expected_value: match.value, side1_score: '0', side2_score: '21',
-    });
-    for (let i = 0; i < 2; i++) {
-      assert.deepEqual(plain(await plan.recordMatch(leagueId, match, '6', '3')),
-        { ok: false, error: 'plannedRecordUnavailable' });
-    }
+  for (const record of matches) assert.deepEqual(plain(await plan.recordMatch('league/test', record, 0, '21')), { ok: true, ...resultBody });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(call => call.url), ['https://backend.test/leagues/league%2Ftest/singles-matches', 'https://backend.test/leagues/league%2Ftest/matches']);
+  assert.deepEqual(JSON.parse(calls[0].options.body), { player1_nickname: 'Alice', player2_nickname: 'Bob', player1_score: '0', player2_score: '21', planned_match_id: matches[0].id });
+  assert.deepEqual(JSON.parse(calls[1].options.body), { pair1_nicknames: ['Alice', '민수'], pair2_nicknames: ['Guest1', 'Guest2'], pair1_score: '0', pair2_score: '21', planned_match_id: matches[1].id });
+  for (const { options } of calls) {
+    assert.equal(options.method, 'POST');
+    assert.equal(options.credentials, 'omit');
+    assert.deepEqual(plain(options.headers), { 'Content-Type': 'application/json', Accept: 'application/json' });
+    assert.ok(options.signal instanceof AbortSignal);
   }
+  assert.equal(timers.size, 0);
   assert.equal(JSON.stringify(matches), before);
 });
 
-test('recording stub requires two valid scores and a valid selected plan', async () => {
+test('recording distinguishes backend errors and safely handles alternate envelopes', async () => {
+  const cases = [
+    [404, 'LeagueNotFoundError', 'plannedLeagueMissing'], [404, 'PlannedMatchNotFoundError', 'plannedMissing'],
+    [409, 'PlannedMatchMismatchError', 'plannedMismatch'], [422, 'InvalidPlannedMatchError', 'plannedInvalidMatch'],
+    [422, 'InvalidPlayerNicknameError', 'plannedInvalidNickname'], [422, 'InvalidSetScoreError', 'plannedScoreRequired'],
+    [422, 'RosterMembershipRequiredError', 'plannedRosterRequired'],
+    ...['SamePlayerWithinSinglePairError', 'SamePlayerOnBothPairsError', 'SamePlayerOnBothSidesError'].map(code => [422, code, 'plannedRepeatedPlayer']),
+    ...['PairConflictError', 'SamePairOnBothSidesError'].map(code => [409, code, 'plannedRuleConflict']),
+    ...['DuplicatePairMatchupMatchError', 'DuplicateSinglesMatchupMatchError'].map(code => [409, code, 'plannedRematchConflict']),
+    [429, '', 'plannedRateLimited'], [422, '', 'plannedRejected'], [422, 'constructor', 'plannedRejected'],
+  ];
+  for (const [status, code, error] of cases) {
+    const { plan, timers } = setup(async () => ({ status, json: async () => ({ error: code, detail: [{ msg: 'bad' }], missing_nicknames: ['Guest', null, 6] }) }));
+    const result = await plan.recordMatch(leagueId, matches[0], '6', '3');
+    assert.equal(result.error, error);
+    assert.equal(result.unconfirmed, false);
+    assert.equal(result.detail, '');
+    assert.deepEqual(plain(result.missing), ['Guest']);
+    assert.equal(timers.size, 0);
+  }
+});
+
+test('unreadable or incomplete success, 5xx, and network errors are unconfirmed without automatic retry', async () => {
+  const bodies = [null, {}, { match_id: 'bad', created_at: '2026-09-20T12:00:00Z' },
+    { match_id: matches[0].id, created_at: 'bad' }, { match_id: matches[0].id }];
+  const variants = bodies.map(body => async () => ({ status: 201, json: async () => body }));
+  variants.push(async () => { throw new Error('Offline'); },
+    async () => ({ status: 201, json: async () => { throw new Error('JSON'); } }),
+    async () => ({ status: 503, json: async () => ({ detail: '<b>error</b>' }) }),
+    async () => ({ status: 200, json: async () => ({ match_id: matches[0].id, created_at: '2026-09-20T12:00:00Z' }) }));
+  for (const variant of variants) {
+    let count = 0;
+    const { plan, timers } = setup((...args) => { count++; return variant(...args); });
+    const result = await plan.recordMatch(leagueId, matches[0], '6', '3');
+    assert.equal(result.error, 'plannedUnconfirmed');
+    assert.equal(result.unconfirmed, true);
+    assert.equal(result.reconcile, true);
+    assert.equal(result.review, true);
+    assert.equal(count, 1);
+    assert.equal(timers.size, 0);
+  }
+});
+
+test('recording times out after 30 seconds without claiming cancellation or retrying', async () => {
+  let count = 0;
+  const { plan, timers } = setup((_url, options) => {
+    count++;
+    return new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => reject(new Error('Abort'))));
+  });
+  const pending = plan.recordMatch(leagueId, matches[1], '6', '6');
+  await new Promise(resolve => setImmediate(resolve));
+  const [timer] = timers;
+  assert.equal(timer.ms, 30000);
+  timer.fn();
+  assert.equal((await pending).unconfirmed, true);
+  assert.equal(count, 1);
+  assert.equal(timers.size, 0);
+});
+
+test('recording requires two valid scores and a valid selected plan', async () => {
   const { plan } = setup(() => assert.fail('Must not fetch'));
   for (const invalid of ['', null, undefined, -1, 22, 1.5, '6-3', 'NaN', ' 6', '06']) {
     assert.equal((await plan.recordMatch(leagueId, matches[0], invalid, '3')).error, 'plannedScoreRequired');
@@ -154,7 +228,7 @@ test('concise score list fixes both teams, escapes nicknames, and has no partici
   assert.match(html, /&lt;img&gt; \+ "Guest"/);
   assert.match(html, /&lt;img> \+ &quot;Guest&quot;/); // Attribute escaping follows core.js.
   assert.doesNotMatch(html, /<img>|<input|contenteditable|data-plan-edit|data-plan-remove/);
-  assert.doesNotMatch(html, /d315f636|719e28b2/);
+  assert.match(html, /data-planned-id=/);
 });
 
 test('score rendering restores only drafts for the same id and exact matchup value', () => {
@@ -167,4 +241,41 @@ test('score rendering restores only drafts for the same id and exact matchup val
   assert.equal((changed.match(/value="" disabled selected/g) || []).length, 2);
   assert.doesNotMatch(changed, /value="6" selected/);
   assert.match(chat.renderPlannedScoreList([], drafts), /plannedEmpty/);
+});
+
+test('pending rows lock both scores and submit, and backend error details are escaped', () => {
+  const { chat } = setup(() => assert.fail('Must not fetch'));
+  const html = chat.renderPlannedScoreList([matches[0]], { [matches[0].id]: {
+    value: matches[0].value, scores: ['6','0'], pending: true, disabled: true,
+    error: { error: 'plannedRejected', detail: '<script>bad</script>' },
+  } });
+  assert.equal((html.match(/<select disabled/g) || []).length, 2);
+  assert.match(html, /type="submit" class="btn-secondary" disabled/);
+  assert.match(html, /plannedRecording/);
+  assert.match(html, /&lt;script&gt;bad/);
+  assert.doesNotMatch(html, /<script>/);
+});
+
+test('an outdated, unavailable, or malformed API schema prevents any result POST', async () => {
+  for (const response of [success({ paths: {} }), { ok: false, status: 404 }, success(null),
+    success({ paths: { '/leagues/{league_id}/singles-matches': { post: { requestBody: { content: { 'application/json': { schema: { properties: { player1_score: {} } } } } } } } } })]) {
+    const calls = [];
+    const { plan } = setup(async (url, options) => { calls.push({ url, options }); return response; }, { rawFetch: true });
+    const result = await plan.recordMatch(leagueId, matches[0], '6', '3');
+    assert.equal(result.error, 'plannedBackendUnavailable');
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://backend.test/openapi.json');
+    assert.equal(calls[0].options.method, 'GET');
+    assert.equal(calls[0].options.credentials, 'omit');
+    assert.equal(calls[0].options.cache, 'no-store');
+  }
+});
+
+test('history reconciliation rejects malformed envelopes instead of treating them as an empty history', async () => {
+  for (const body of [null, {}, { matches: {} }, { matches: null }]) {
+    const context = vm.createContext({ URLSearchParams, fetch: async () => ({ ok: true, text: async () => JSON.stringify(body) }),
+      TLCHAT_CHAT: { backendMainBase: () => 'https://backend.test' } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/chat/api.js'), 'utf8'), context);
+    assert.equal((await context.TLCHAT_CHAT.fetchLeagueMatchHistory(leagueId, 'both')).ok, false);
+  }
 });

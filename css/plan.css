@@ -10,6 +10,7 @@
 .plan-back { display: inline-block; margin-bottom: 0.5rem; }
 .plan-editor { padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 #plan-form { margin-top: 1rem; }
+#plan-editor-context { margin: 0 0 0.75rem; font-size: 1rem; }
 .plan-form-actions, .plan-item-actions, .plan-list-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .plan-list-heading { justify-content: space-between; }
 .plan-list-heading h2 { margin: 0; }
@@ -18,6 +19,7 @@
 .plan-item { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
 .plan-item-info { flex: 1 1 15rem; min-width: 0; }
 .plan-matchup { overflow-wrap: anywhere; margin: 0.25rem 0; font-weight: 600; }
+.plan-item-status { flex-basis: 100%; margin: 0; }
 .plan-format { color: var(--muted); font-size: 0.8rem; }
 .plan-warning, .plan-error { font-size: 0.85rem; overflow-wrap: anywhere; }
 .plan-warning { color: var(--warn); }

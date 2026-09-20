@@ -198,9 +198,10 @@
     }
     try {
       var data = JSON.parse(text);
+      if (!data || !Array.isArray(data.matches)) return { ok: false, error: "parse" };
       return {
         ok: true,
-        matches: Array.isArray(data.matches) ? data.matches : [],
+        matches: data.matches,
       };
     } catch (e) {
       return { ok: false, error: "parse", message: e && e.message ? e.message : String(e) };

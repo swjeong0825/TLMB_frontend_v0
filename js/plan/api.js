@@ -50,7 +50,7 @@
       });
       if (!response.ok) {
         var error = response.status === 404 ? "uploadLeagueMissing" :
-          response.status === 422 ? "uploadRejected" : "uploadFailed";
+          response.status === 409 ? "uploadConflict" : response.status === 422 ? "uploadRejected" : "uploadFailed";
         return { ok: false, error: error, status: response.status };
       }
       var data;
@@ -74,6 +74,12 @@
     } finally { clearTimeout(timeout); }
   }
 
+  // Saved-plan deletion stays a no-write stub until its backend endpoint is connected.
+  async function deleteMatch(_leagueId, _record) {
+    return { ok: false, error: "deleteUnavailable" };
+  }
+
+  api.deleteMatch = deleteMatch;
   api.uploadMatches = uploadMatches;
   api.loadMatches = loadMatches;
 })(typeof window !== "undefined" ? window : this);

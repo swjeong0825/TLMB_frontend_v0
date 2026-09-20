@@ -78,77 +78,71 @@ test('strict parser rejects invalid stored values instead of guessing participan
   }
 });
 
-function memoryStorage() {
-  const data = new Map();
-  return { getItem: key => data.has(key) ? data.get(key) : null, setItem: (key, value) => data.set(key, value) };
-}
-
-test('drafts survive new controllers, edit with a stable ID, keep insertion order, and remove individually', () => {
-  const storage = memoryStorage();
-  const store = plan.createDraftStore(() => storage, 'https://api.test', 'league1', () => id1);
-  assert.equal(store.save('Alice Bob').ok, true);
-  const reloaded = plan.createDraftStore(() => storage, 'https://api.test', 'league1', () => id2);
-  assert.equal(reloaded.save('Charlie Diana').ok, true);
-  assert.equal(reloaded.save('Alice 민수', id1).ok, true);
+test('drafts stay in one store, retain IDs through edits, and are absent from new page stores', () => {
+  let next = 0;
+  const store = plan.createDraftStore(() => [id1, id2][next++]);
+  store.save('Alice Bob');
+  store.save('Charlie Diana');
+  assert.equal(store.save('Alice 민수', id1).ok, true);
   assert.deepEqual(plain(store.read().records), [{ id: id1, value: 'Alice 민수' }, { id: id2, value: 'Charlie Diana' }]);
+  const snapshot = store.read().records;
+  snapshot[0].value = 'Changed Outside';
+  assert.equal(store.read().records[0].value, 'Alice 민수');
+  assert.equal(plan.createDraftStore(randomUUID).read().records.length, 0);
   assert.equal(store.remove(0, store.read().records[0]).ok, true);
-  assert.deepEqual(plain(store.read().records), [{ id: id2, value: 'Charlie Diana' }]);
   assert.equal(store.save('Alice Bob', id1).error, 'planMissing');
+  store.clear();
+  assert.deepEqual(plain(store.read().records), []);
 });
 
-test('scopes drafts by backend and league and does not persist route credentials', () => {
-  const storage = memoryStorage();
-  const store = plan.createDraftStore(() => storage, 'https://api.test/', 'league1', randomUUID);
-  store.save('Alice Bob');
-  assert.equal(plan.createDraftStore(() => storage, 'https://api.test', 'league1', randomUUID).read().records.length, 1);
-  assert.equal(plan.createDraftStore(() => storage, 'https://other.test', 'league1', randomUUID).read().records.length, 0);
-  assert.equal(plan.createDraftStore(() => storage, 'https://api.test', 'league2', randomUUID).read().records.length, 0);
-  const raw = JSON.parse(storage.getItem(store.key));
-  assert.deepEqual(Object.keys(raw), ['version', 'matches']);
-  assert.deepEqual(Object.keys(raw.matches[0]), ['id', 'value']);
+test('legacy cleanup touches only the current league/backend draft key and never restores old data', () => {
+  const key = plan.storageKey('https://api.test/', 'league1');
+  const other = plan.storageKey('https://other.test', 'league1');
+  const otherLeague = plan.storageKey('https://api.test', 'league2');
+  const data = new Map([[key, '{broken'], [other, 'old plans'], [otherLeague, 'other plans'],
+    ['tlchat-theme', 'dark'], ['tlchat-locale', 'ko']]);
+  plan.clearLegacyDrafts(() => ({ removeItem: key => data.delete(key),
+    getItem() { assert.fail('Legacy plans must not be read'); } }), 'https://api.test', 'league1');
+  assert.equal(data.has(key), false);
+  assert.equal(data.size, 4);
+  assert.equal(data.get('tlchat-theme'), 'dark');
+  assert.equal(data.get('tlchat-locale'), 'ko');
+  assert.deepEqual(plain(plan.createDraftStore(randomUUID).read().records), []);
 });
 
-test('read-modify-write preserves drafts added by another controller and detects stale removals', () => {
-  const storage = memoryStorage();
-  const one = plan.createDraftStore(() => storage, 'api', 'league', () => id1);
-  const two = plan.createDraftStore(() => storage, 'api', 'league', () => id2);
-  one.save('Alice Bob');
-  const previous = one.read().records[0];
-  two.save('Charlie Diana');
-  one.save('Alice Eve', id1);
-  assert.equal(two.remove(0, previous).error, 'planMissing');
-  assert.equal(two.read().records.length, 2);
-});
-
-test('malformed values remain removable; unreadable envelopes are never overwritten', () => {
-  const storage = memoryStorage();
-  const store = plan.createDraftStore(() => storage, 'api', 'league', randomUUID);
-  storage.setItem(store.key, JSON.stringify({ version: 1, matches: [null, { id: id1, value: 'bad' }] }));
-  assert.equal(store.read().records.length, 2);
-  assert.equal(store.remove(0, null).ok, true);
+test('blocked browser storage never prevents temporary planning', () => {
+  plan.clearLegacyDrafts(() => { throw new Error('blocked'); }, 'api', 'league');
+  plan.clearLegacyDrafts(() => ({ removeItem() { throw new Error('denied'); } }), 'api', 'league');
+  const store = plan.createDraftStore(randomUUID);
+  assert.equal(store.save('Guest Other').ok, true);
   assert.equal(store.remove(0, store.read().records[0]).ok, true);
-  for (const raw of ['{broken', '{}', '{"version":2,"matches":[]}']) {
-    storage.setItem(store.key, raw);
-    assert.equal(store.read().ok, false);
-    assert.equal(store.save('Alice Bob').ok, false);
-    assert.equal(storage.getItem(store.key), raw);
-  }
 });
 
-test('storage and ID failures never claim success or discard previously saved data', () => {
-  const blocked = plan.createDraftStore(() => { throw new Error('blocked'); }, 'api', 'league', randomUUID);
-  assert.equal(blocked.read().error, 'storageUnavailable');
-  assert.equal(blocked.save('Alice Bob').ok, false);
-  const storage = memoryStorage();
-  const store = plan.createDraftStore(() => storage, 'api', 'league', randomUUID);
+test('only acknowledged ID/value pairs leave drafts; concurrent edits and new drafts survive', () => {
+  let next = 0;
+  const store = plan.createDraftStore(() => [id1, id2][next++]);
   store.save('Alice Bob');
-  const raw = storage.getItem(store.key);
-  storage.setItem = () => { throw new Error('quota'); };
-  assert.equal(store.save('Charlie Diana').error, 'storageWriteFailed');
-  assert.equal(store.remove(0, store.read().records[0]).error, 'storageWriteFailed');
-  assert.equal(storage.getItem(store.key), raw);
-  const noUUID = plan.createDraftStore(() => memoryStorage(), 'api', 'league', () => { throw new Error('crypto'); });
-  assert.equal(noUUID.save('Alice Bob').error, 'saveFailed');
+  const submitted = store.read().records;
+  store.save('Alice Guest', id1);
+  store.save('Charlie Diana');
+  store.acknowledge(submitted);
+  assert.equal(store.read().records.length, 2);
+  store.acknowledge([{ id: id1.toUpperCase(), value: 'Alice Guest' }]);
+  assert.deepEqual(plain(store.read().records), [{ id: id2, value: 'Charlie Diana' }]);
+});
+
+test('invalid values, missing/stale removals, and ID failures leave drafts unchanged', () => {
+  const store = plan.createDraftStore(() => id1);
+  store.save('Alice Bob');
+  const before = store.read().records[0];
+  assert.equal(store.save('bad').error, 'invalidPlan');
+  assert.equal(store.save('Other Guest').error, 'saveFailed');
+  store.save('Alice Guest', id1);
+  assert.equal(store.remove(0, before).error, 'planMissing');
+  assert.equal(store.remove(-1, before).error, 'planMissing');
+  assert.equal(store.read().records.length, 1);
+  assert.equal(plan.createDraftStore(() => { throw new Error('crypto'); }).save('Alice Bob').error, 'saveFailed');
+  assert.equal(plan.createDraftStore(() => 'bad').save('Alice Bob').error, 'saveFailed');
 });
 
 test('registration warnings recognize aliases/case and never prevent saving unknown players', () => {
@@ -159,7 +153,7 @@ test('registration warnings recognize aliases/case and never prevent saving unkn
   for (const data of [null, { status: 'error' }, { status: 'ok' }, { ...roster, rules: {} }]) {
     assert.equal(plan.registrationWarning('Guest Other', data).kind, 'unavailable');
   }
-  assert.equal(plan.createDraftStore(() => memoryStorage(), 'api', 'league', randomUUID).save('Guest Other').ok, true);
+  assert.equal(plan.createDraftStore(randomUUID).save('Guest Other').ok, true);
 });
 
 test('upload payload uses only id/value without mutating local records', () => {

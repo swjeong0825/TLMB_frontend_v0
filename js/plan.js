@@ -4,8 +4,10 @@
   var chat = window.TLCHAT_CHAT;
   var names = window.TLCHAT_NICKNAMES;
   var t = api.t;
+  var disposePage = function () {};
 
   function boot() {
+    disposePage();
     var params = new URLSearchParams(window.location.search);
     var route = { leagueId: params.get("league_id"), hostToken: params.get("host_token") };
     var root = document.getElementById("app-root");
@@ -16,24 +18,25 @@
     }
     root.innerHTML = api.renderShell(route, window.TLCHAT_NAVIGATION.leagueUrl("/league/", window.location.search, route.leagueId));
     window.TLCHAT_I18N.syncLocaleDropdown(root);
-    var theme = document.documentElement.getAttribute("data-theme") || "light";
-    chat.applyTheme(theme);
+    chat.applyTheme(document.documentElement.getAttribute("data-theme") || "light");
     document.getElementById("theme-toggle-btn").addEventListener("click", function () {
       chat.applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
     });
+    api.clearLegacyDrafts(function () { return window.localStorage; }, chat.backendMainBase(), route.leagueId);
 
-    var store = api.createDraftStore(function () { return window.localStorage; }, chat.backendMainBase(), route.leagueId,
-      function () { return window.crypto.randomUUID(); });
+    var disposed = false;
     var roster = { status: "loading", players: [], rules: null };
     var autocomplete = chat.createNicknameAutocomplete({ leagueRoster: roster });
     var format = "";
-    var editingId = null;
-    var uploading = false;
-    var snapshot = { ok: true, records: [] };
+    var editing = null; // {kind: "draft" | "saved", id}
     var slot = document.getElementById("plan-form-slot");
     var list = document.getElementById("plan-list");
+    var savedList = document.getElementById("plan-server-list");
+    var serverStatus = document.getElementById("plan-server-status");
     var upload = document.getElementById("plan-upload");
-    var storageError = document.getElementById("plan-storage-error");
+    var refresh = document.getElementById("plan-refresh");
+    var manager = api.createPlanManager({ leagueId: route.leagueId,
+      newId: function () { return window.crypto.randomUUID(); }, onChange: renderLists });
 
     function status(key, params) { document.getElementById("plan-status").textContent = key ? t(key, params) : ""; }
     function formError(message) {
@@ -56,14 +59,30 @@
       node.textContent = message;
       node.hidden = !message;
     }
-    function renderSaved() {
-      snapshot = store.read();
-      storageError.textContent = snapshot.ok ? "" : t(snapshot.error);
-      storageError.hidden = snapshot.ok;
-      list.innerHTML = api.renderList(snapshot.records, roster);
-      upload.textContent = uploading ? t("uploading") : t("upload", { count: snapshot.records.length });
-      upload.disabled = uploading || !snapshot.ok || !snapshot.records.length;
-      upload.setAttribute("aria-busy", String(uploading));
+    function syncEditor(state) {
+      var busy = state.writing === "edit" || (editing && editing.kind === "saved" && !!state.writing);
+      root.querySelectorAll("[data-plan-format]").forEach(function (button) { button.disabled = !!busy; });
+      slot.querySelectorAll("input, select, button").forEach(function (control) { control.disabled = !!busy; });
+      var context = document.getElementById("plan-editor-context");
+      if (context) context.textContent = t(editing ? editing.kind === "saved" ? "editingSaved" : "editingDraft" : "editor");
+      var submit = slot.querySelector('[type="submit"]');
+      if (submit) {
+        submit.textContent = t(state.writing === "edit" ? "saving" : editing ? "saveChanges" : "save");
+        submit.setAttribute("aria-busy", String(state.writing === "edit"));
+      }
+    }
+    function renderLists(state) {
+      if (disposed) return;
+      list.innerHTML = api.renderList(state.drafts, roster, false, state.writing === "edit");
+      savedList.innerHTML = state.loaded || state.saved.length ? api.renderList(state.saved, roster, true, !!state.writing) : "";
+      upload.textContent = state.writing === "upload" ? t("uploading") : t("upload", { count: state.drafts.length });
+      upload.disabled = !!state.writing || !state.drafts.length;
+      upload.setAttribute("aria-busy", String(state.writing === "upload"));
+      refresh.disabled = state.loading || !!state.writing;
+      refresh.setAttribute("aria-busy", String(state.loading));
+      serverStatus.textContent = state.loading ? chat.tr("plannedLoading") : state.loadError ? chat.tr(state.loadError) :
+        state.invalidCount ? chat.tr("plannedInvalidRows", { count: state.invalidCount }) : state.loaded ? "" : t("loadPrompt");
+      syncEditor(state);
     }
     function focusNickname() {
       var input = slot.querySelector("input");
@@ -75,34 +94,44 @@
         button.classList.toggle("is-active", active);
         button.setAttribute("aria-pressed", String(active));
       });
-      slot.innerHTML = api.renderForm(format, sides, !!editingId);
+      slot.innerHTML = api.renderForm(format, sides, editing && editing.kind);
       autocomplete.bindActionCardAutocomplete(slot);
       var form = document.getElementById("plan-form");
       form.addEventListener("input", function () { formError(""); updateWarning(); });
-      form.addEventListener("submit", function (event) {
+      form.addEventListener("submit", async function (event) {
         event.preventDefault();
+        if (disposed || manager.view().writing === "edit" || (editing && editing.kind === "saved" && manager.view().writing)) return;
         var sides = sidesFromForm();
-        if (!sides[0].concat(sides[1]).every(names.isValid)) {
-          formError(names.message());
-          return;
-        }
-        var result = store.save(api.serialize(format, sides), editingId);
+        if (!sides[0].concat(sides[1]).every(names.isValid)) { formError(names.message()); return; }
+        var value = api.serialize(format, sides);
+        var target = editing;
+        var result = target && target.kind === "saved" ? await manager.updateSaved({ id: target.id, value: value }) :
+          manager.saveDraft(value, target && target.id);
+        if (disposed) return;
         if (!result.ok) { formError(t(result.error)); return; }
-        var wasEditing = !!editingId;
-        editingId = null;
-        renderSaved();
+        editing = null;
         renderEditor();
-        status(wasEditing ? "updated" : "saved");
+        status(target ? target.kind === "saved" ? "savedUpdated" : "updated" : "saved");
         focusNickname();
       });
       var cancel = slot.querySelector("[data-plan-cancel]");
       if (cancel) cancel.addEventListener("click", function () {
-        editingId = null;
+        editing = null;
         renderEditor();
         status("");
         focusNickname();
       });
+      syncEditor(manager.view());
       updateWarning();
+    }
+    function startEditing(record, kind) {
+      if (!api.isValidRecord(record)) return;
+      var parsed = api.parseValue(record.value);
+      editing = { kind: kind, id: record.id };
+      format = parsed.format;
+      renderEditor(parsed.sides);
+      status("");
+      focusNickname();
     }
 
     root.querySelectorAll("[data-plan-format]").forEach(function (button) {
@@ -120,54 +149,66 @@
       var remove = event.target.closest("[data-plan-remove]");
       if (!edit && !remove) return;
       var index = Number((edit || remove).getAttribute(edit ? "data-plan-edit" : "data-plan-remove"));
-      var record = snapshot.records[index];
-      if (edit && api.isValidRecord(record)) {
-        var parsed = api.parseValue(record.value);
-        editingId = record.id;
-        format = parsed.format;
-        renderEditor(parsed.sides);
-        status("");
-        focusNickname();
-      } else if (remove) {
-        var result = store.remove(index, record);
-        if (result.ok && record && record.id === editingId) { editingId = null; renderEditor(); }
-        renderSaved();
+      var record = manager.view().drafts[index];
+      if (edit) startEditing(record, "draft");
+      else {
+        var result = manager.removeDraft(index, record);
+        if (result.ok && editing && editing.kind === "draft" && record.id === editing.id) { editing = null; renderEditor(); }
         status(result.ok ? "removed" : result.error);
       }
     });
-    upload.addEventListener("click", async function () {
-      if (uploading) return;
-      var state = store.read();
-      if (!state.ok) { renderSaved(); return; }
-      uploading = true;
-      renderSaved();
-      status("uploading");
-      try {
-        var result = await api.uploadMatches(route.leagueId, { matches: state.records });
-        if (result.ok) status("uploaded", { count: result.matches.length });
-        else status(result.error);
-      } catch (_err) {
-        status("uploadUnconfirmed");
-      } finally {
-        uploading = false;
-        renderSaved();
+    savedList.addEventListener("click", async function (event) {
+      var edit = event.target.closest("[data-saved-edit]");
+      var remove = event.target.closest("[data-saved-delete]");
+      if ((!edit && !remove) || manager.view().writing) return;
+      var index = Number((edit || remove).getAttribute(edit ? "data-saved-edit" : "data-saved-delete"));
+      var record = manager.view().saved[index];
+      if (edit) startEditing(record, "saved");
+      else {
+        var note = remove.closest(".plan-item").querySelector(".plan-item-status");
+        var result = await api.deleteMatch(route.leagueId, record);
+        if (!disposed && note.isConnected) { note.textContent = t(result.error); note.hidden = false; }
       }
     });
-    window.addEventListener("storage", function (event) {
-      if (event.key === store.key || event.key === null) renderSaved();
+    upload.addEventListener("click", async function () {
+      if (manager.view().writing) return;
+      status("uploading");
+      var result = await manager.uploadDrafts();
+      if (disposed) return;
+      // An unfinished edit of a just-uploaded draft becomes an edit of that saved plan.
+      if (result.ok && editing && editing.kind === "draft" &&
+          !manager.view().drafts.some(function (record) { return record.id === editing.id; })) {
+        editing.kind = "saved";
+        syncEditor(manager.view());
+      }
+      status(result.ok ? "uploaded" : result.error, result.ok ? { count: result.matches.length } : undefined);
     });
-    renderSaved();
+    refresh.addEventListener("click", function () { manager.loadSaved(); });
+
+    disposePage = function () {
+      disposed = true;
+      manager.dispose();
+      editing = null;
+      slot.innerHTML = "";
+      list.innerHTML = "";
+    };
+    renderLists(manager.view());
+    manager.loadSaved();
     chat.fetchLeagueRoster(route.leagueId).then(function (result) {
+      if (disposed) return;
       roster.status = result.ok ? "ok" : "error";
       roster.players = result.players || [];
       roster.rules = result.rules || null;
       if (result.ok && result.title) document.getElementById("chat-header-title").textContent = result.title;
-    }).catch(function () { roster.status = "error"; }).finally(function () {
+    }).catch(function () { if (!disposed) roster.status = "error"; }).finally(function () {
+      if (disposed) return;
       updateWarning();
-      renderSaved();
+      renderLists(manager.view());
     });
   }
 
+  window.addEventListener("pagehide", function () { disposePage(); });
+  window.addEventListener("pageshow", function (event) { if (event.persisted) boot(); });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
