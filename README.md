@@ -102,8 +102,12 @@ before retrying uncertain uploads: an upload can recreate a consumed UUID. The b
 Confirmed uploads move from **Drafts** to **Saved plans**. Only unchanged submitted
 ID/value pairs leave Drafts; new or edited drafts remain for another upload. Failed or
 uncertain uploads keep drafts until the page is left. Saved plans load automatically
-and offer Refresh and Edit. Saved **Save changes** uses a single-item batch upsert,
-retaining the ID and keeping editor values if saving fails. Cancel performs no request.
+and offer Refresh and Edit. **Edit** opens an inline form beneath the selected draft
+or saved matchup; the separate creation form and its entered names stay unchanged.
+Clicking outside the editor, pressing Escape, or choosing Cancel dismisses unsaved
+edits without sending a request. Saved **Save changes** uses a single-item batch upsert,
+retaining the ID. Confirmed saves close the editor; failed saves keep its values while
+it is open. Dismissing an editor during a submitted save does not cancel that request.
 Refresh failures preserve the displayed list; malformed entries produce a warning.
 
 Saved **Delete** is a no-request stub: it explains deletion is unavailable and keeps

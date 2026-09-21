@@ -25,17 +25,22 @@
     return "";
   }
 
+  function renderFormatChooser(selected, editing) {
+    return '<div class="match-format-options" role="group" aria-label="' + chat.escapeAttr(chat.tr("matchFormatChooserLabel")) + '">' +
+      ["doubles", "singles"].map(function (format) {
+        return '<button type="button" class="btn-secondary match-format-option' + (selected === format ? ' is-active' : '') +
+          '" ' + (editing ? 'data-plan-edit-format' : 'data-plan-format') + '="' + format +
+          '" aria-pressed="' + String(selected === format) + '">' + escape(t(format)) + '</button>';
+      }).join("") + '</div>';
+  }
+
   function renderShell(route, backUrl) {
     return chat.renderHeader(route, t("title")) +
       '<main class="plan-main"><a class="plan-back" href="' + chat.escapeAttr(backUrl) + '">' +
       escape(t("back")) + '</a><h2>' + escape(t("title")) + '</h2>' +
       '<p class="hint">' + escape(t("intro")) + '</p>' +
       '<section class="plan-editor" aria-label="' + chat.escapeAttr(t("editor")) + '">' +
-      '<div class="match-format-options" role="group" aria-label="' + chat.escapeAttr(chat.tr("matchFormatChooserLabel")) + '">' +
-      ["doubles", "singles"].map(function (format) {
-        return '<button type="button" class="btn-secondary match-format-option" data-plan-format="' + format +
-          '" aria-pressed="false">' + escape(t(format)) + '</button>';
-      }).join("") + '</div><div id="plan-form-slot"><p class="hint">' + escape(t("chooseFormat")) + '</p></div></section>' +
+      renderFormatChooser("", false) + '<div id="plan-form-slot"><p class="hint">' + escape(t("chooseFormat")) + '</p></div></section>' +
       '<p id="plan-status" role="status" class="hint"></p>' +
       '<section class="plan-saved" aria-labelledby="plan-list-title"><div class="plan-list-heading">' +
       '<h2 id="plan-list-title">' + escape(t("drafts")) + '</h2>' +
@@ -48,11 +53,12 @@
   }
 
   function renderForm(format, sides, editing) {
-    return '<form id="plan-form"><h3 id="plan-editor-context">' + escape(t(editing === "saved" ? "editingSaved" :
+    var prefix = editing ? "plan-edit" : "plan";
+    return '<form id="' + prefix + '-form" class="plan-match-form"><h3 id="' + prefix + '-editor-context" class="plan-editor-context" data-plan-editor-context>' + escape(t(editing === "saved" ? "editingSaved" :
       editing ? "editingDraft" : "editor")) + '</h3>' + chat.renderWriteForm(bodySpec(format, sides)) +
       '<p class="hint">' + escape(global.TLCHAT_NICKNAMES.message()) + '</p>' +
-      '<p class="plan-warning" id="plan-roster-warning" role="status" hidden></p>' +
-      '<p class="plan-error" id="plan-form-error" role="alert" hidden></p>' +
+      '<p class="plan-warning" id="' + prefix + '-roster-warning" data-plan-roster-warning role="status" hidden></p>' +
+      '<p class="plan-error" id="' + prefix + '-form-error" data-plan-form-error role="alert" hidden></p>' +
       '<div class="plan-form-actions"><button class="btn-secondary" type="submit">' + escape(t(editing ? "saveChanges" : "save")) + '</button>' +
       (editing ? '<button class="btn-secondary" type="button" data-plan-cancel>' + escape(t("cancel")) + '</button>' : "") +
       '</div></form>';
@@ -67,13 +73,13 @@
       var valid = api.isValidRecord(record);
       var parsed = valid && api.parseValue(record.value);
       var warning = valid ? warningText(record.value, roster) : "";
-      return '<li class="plan-item"><div class="plan-item-info">' +
+      return '<li class="plan-item"' + (valid ? ' data-plan-id="' + chat.escapeAttr(record.id) + '"' : '') + '><div class="plan-item-info">' +
         (valid ? '<span class="plan-format">' + escape(t(parsed.format)) + '</span>' +
           '<p class="plan-matchup">' + escape(parsed.sides[0].join(" + ")) +
           ' <span class="hint">' + escape(chat.tr("vs")) + '</span> ' + escape(parsed.sides[1].join(" + ")) + '</p>' :
           '<p class="plan-error">' + escape(t("invalidPlan")) + '</p>') +
         (warning ? '<p class="plan-warning">' + escape(warning) + '</p>' : "") + '</div>' +
-        '<div class="plan-item-actions">' + (valid ? '<button type="button" class="btn-secondary" ' + editAttr + '="' + index + '"' + busy + '>' + escape(t("edit")) + '</button>' : "") +
+        '<div class="plan-item-actions">' + (valid ? '<button type="button" class="btn-secondary" aria-expanded="false" ' + editAttr + '="' + index + '"' + busy + '>' + escape(t("edit")) + '</button>' : "") +
         '<button type="button" class="btn-secondary" ' + removeAttr + '="' + index + '"' + busy + '>' + escape(t(saved ? "delete" : "remove")) + '</button></div>' +
         (saved ? '<p class="plan-item-status hint" role="status" hidden></p>' : '') + '</li>';
     }).join("") + '</ol>';
@@ -82,6 +88,7 @@
   api.t = t;
   api.bodySpec = bodySpec;
   api.warningText = warningText;
+  api.renderFormatChooser = renderFormatChooser;
   api.renderShell = renderShell;
   api.renderForm = renderForm;
   api.renderList = renderList;

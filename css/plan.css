@@ -9,8 +9,9 @@
 .plan-main h2 { font-size: 1.2rem; margin: 1rem 0 0.5rem; }
 .plan-back { display: inline-block; margin-bottom: 0.5rem; }
 .plan-editor { padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-#plan-form { margin-top: 1rem; }
-#plan-editor-context { margin: 0 0 0.75rem; font-size: 1rem; }
+.plan-match-form { margin-top: 1rem; }
+.plan-editor-context { margin: 0 0 0.75rem; font-size: 1rem; }
+.plan-inline-editor { flex-basis: 100%; min-width: 0; border-top: 1px solid var(--border); padding-top: 1rem; }
 .plan-form-actions, .plan-item-actions, .plan-list-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .plan-list-heading { justify-content: space-between; }
 .plan-list-heading h2 { margin: 0; }

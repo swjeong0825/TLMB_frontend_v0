@@ -27,8 +27,8 @@
     var disposed = false;
     var roster = { status: "loading", players: [], rules: null };
     var autocomplete = chat.createNicknameAutocomplete({ leagueRoster: roster });
-    var format = "";
-    var editing = null; // {kind: "draft" | "saved", id}
+    var format = ""; // Creation is independent of the card being edited.
+    var editing = null; // {kind, id, format, element, saving}
     var slot = document.getElementById("plan-form-slot");
     var list = document.getElementById("plan-list");
     var savedList = document.getElementById("plan-server-list");
@@ -39,19 +39,19 @@
       newId: function () { return window.crypto.randomUUID(); }, onChange: renderLists });
 
     function status(key, params) { document.getElementById("plan-status").textContent = key ? t(key, params) : ""; }
-    function formError(message) {
-      var node = document.getElementById("plan-form-error");
+    function formError(host, message) {
+      var node = host.querySelector("[data-plan-form-error]");
       if (node) { node.textContent = message || ""; node.hidden = !message; }
     }
-    function sidesFromForm() {
-      var payload = chat.collectWriteForm(slot, api.bodySpec(format));
-      return format === "singles" ? [[payload.player1_nickname], [payload.player2_nickname]] : [payload.pair1_nicknames, payload.pair2_nicknames];
+    function sidesFromForm(host, selectedFormat) {
+      var payload = chat.collectWriteForm(host, api.bodySpec(selectedFormat));
+      return selectedFormat === "singles" ? [[payload.player1_nickname], [payload.player2_nickname]] : [payload.pair1_nicknames, payload.pair2_nicknames];
     }
-    function updateWarning() {
-      var node = document.getElementById("plan-roster-warning");
+    function updateWarning(host, selectedFormat) {
+      var node = host.querySelector("[data-plan-roster-warning]");
       if (!node) return;
       var message = "";
-      try { message = api.warningText(api.serialize(format, sidesFromForm()), roster); } catch (_e) {
+      try { message = api.warningText(api.serialize(selectedFormat, sidesFromForm(host, selectedFormat)), roster); } catch (_e) {
         if (roster.status !== "ok" || !roster.rules || typeof roster.rules.auto_register_players_on_match !== "boolean") {
           message = t("registrationUnavailable");
         }
@@ -59,22 +59,65 @@
       node.textContent = message;
       node.hidden = !message;
     }
-    function syncEditor(state) {
-      var busy = state.writing === "edit" || (editing && editing.kind === "saved" && !!state.writing);
-      root.querySelectorAll("[data-plan-format]").forEach(function (button) { button.disabled = !!busy; });
-      slot.querySelectorAll("input, select, button").forEach(function (control) { control.disabled = !!busy; });
-      var context = document.getElementById("plan-editor-context");
-      if (context) context.textContent = t(editing ? editing.kind === "saved" ? "editingSaved" : "editingDraft" : "editor");
-      var submit = slot.querySelector('[type="submit"]');
-      if (submit) {
-        submit.textContent = t(state.writing === "edit" ? "saving" : editing ? "saveChanges" : "save");
-        submit.setAttribute("aria-busy", String(state.writing === "edit"));
+    function sameId(first, second) { return first.toLowerCase() === second.toLowerCase(); }
+    function editorCard(target) {
+      var parent = target.kind === "saved" ? savedList : list;
+      return Array.from(parent.querySelectorAll("[data-plan-id]")).find(function (card) {
+        return sameId(card.getAttribute("data-plan-id"), target.id);
+      });
+    }
+    function closeEditing(restoreFocus) {
+      if (!editing) return;
+      var previous = editing;
+      editing = null;
+      previous.element.remove();
+      var card = editorCard(previous);
+      var trigger = card && card.querySelector("[data-plan-edit], [data-saved-edit]");
+      if (trigger) {
+        trigger.setAttribute("aria-expanded", "false");
+        trigger.removeAttribute("aria-controls");
+        if (restoreFocus && !trigger.disabled) trigger.focus({ preventScroll: true });
       }
+    }
+    function syncEditor(state) {
+      if (!editing) return;
+      var busy = editing.saving || state.writing === "edit" || (editing.kind === "saved" && !!state.writing);
+      editing.element.querySelectorAll("input, select, button").forEach(function (control) { control.disabled = !!busy; });
+      var label = t(editing.kind === "saved" ? "editingSaved" : "editingDraft");
+      editing.element.setAttribute("aria-label", label);
+      editing.element.querySelector("[data-plan-editor-context]").textContent = label;
+      var submit = editing.element.querySelector('[type="submit"]');
+      submit.textContent = t(editing.saving ? "saving" : "saveChanges");
+      submit.setAttribute("aria-busy", String(!!editing.saving));
     }
     function renderLists(state) {
       if (disposed) return;
+      var action = document.activeElement;
+      var actionCard = action && action.closest("[data-plan-id]");
+      var actionAttr = actionCard && ["data-plan-edit", "data-plan-remove", "data-saved-edit", "data-saved-delete"].find(function (attr) {
+        return action.hasAttribute(attr);
+      });
+      var actionTarget = actionAttr && { id: actionCard.getAttribute("data-plan-id"), kind: savedList.contains(actionCard) ? "saved" : "draft" };
+      var focused = editing && editing.element.contains(document.activeElement) ? document.activeElement : null;
+      var selection = focused && typeof focused.selectionStart === "number" ? [focused.selectionStart, focused.selectionEnd] : null;
+      // Preserve the editor DOM, its input values, validation, and autocomplete bindings.
+      if (editing) editing.element.remove();
       list.innerHTML = api.renderList(state.drafts, roster, false, state.writing === "edit");
       savedList.innerHTML = state.loaded || state.saved.length ? api.renderList(state.saved, roster, true, !!state.writing) : "";
+      if (editing) {
+        if (editing.kind === "draft" && !state.drafts.some(function (record) { return sameId(record.id, editing.id); }) &&
+            state.saved.some(function (record) { return sameId(record.id, editing.id); })) editing.kind = "saved";
+        var card = editorCard(editing);
+        if (card) {
+          card.appendChild(editing.element);
+          var trigger = card.querySelector("[data-plan-edit], [data-saved-edit]");
+          trigger.setAttribute("aria-expanded", "true");
+          trigger.setAttribute("aria-controls", editing.element.id);
+        } else {
+          closeEditing(false);
+          status("planMissing");
+        }
+      }
       upload.textContent = state.writing === "upload" ? t("uploading") : t("upload", { count: state.drafts.length });
       upload.disabled = !!state.writing || !state.drafts.length;
       upload.setAttribute("aria-busy", String(state.writing === "upload"));
@@ -83,55 +126,99 @@
       serverStatus.textContent = state.loading ? chat.tr("plannedLoading") : state.loadError ? chat.tr(state.loadError) :
         state.invalidCount ? chat.tr("plannedInvalidRows", { count: state.invalidCount }) : state.loaded ? "" : t("loadPrompt");
       syncEditor(state);
+      if (focused && focused.isConnected && !focused.disabled) {
+        focused.focus({ preventScroll: true });
+        if (selection) focused.setSelectionRange(selection[0], selection[1]);
+      } else if (actionTarget) {
+        var replacementCard = editorCard(actionTarget);
+        var replacement = replacementCard && replacementCard.querySelector("[" + actionAttr + "]");
+        if (replacement && !replacement.disabled) replacement.focus({ preventScroll: true });
+      }
     }
-    function focusNickname() {
-      var input = slot.querySelector("input");
-      if (input) input.focus();
+    function focusNickname(host) {
+      var input = host.querySelector("input");
+      if (input) input.focus({ preventScroll: true });
     }
-    function renderEditor(sides) {
+    function bindForm(host, target) {
+      var selectedFormat = target ? target.format : format;
+      autocomplete.bindActionCardAutocomplete(host);
+      var form = host.querySelector("form");
+      form.addEventListener("input", function () { formError(host, ""); updateWarning(host, selectedFormat); });
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        if (disposed || (target && (editing !== target || target.saving || manager.view().writing === "edit" ||
+            (target.kind === "saved" && manager.view().writing)))) return;
+        var sides = sidesFromForm(host, selectedFormat);
+        if (!sides[0].concat(sides[1]).every(names.isValid)) { formError(host, names.message()); return; }
+        var value = api.serialize(selectedFormat, sides);
+        var savedEdit = target && target.kind === "saved";
+        if (target) target.saving = true;
+        var result = savedEdit ? await manager.updateSaved({ id: target.id, value: value }) :
+          manager.saveDraft(value, target && target.id);
+        if (target) target.saving = false;
+        if (disposed) return;
+        if (!result.ok) {
+          if (!target || editing === target) {
+            formError(host, t(result.error));
+            syncEditor(manager.view());
+            if (target && document.activeElement === document.body) form.querySelector('[type="submit"]').focus({ preventScroll: true });
+          }
+          else status(result.error === "uploadUnconfirmed" ? "editUnconfirmed" : "saveFailed");
+          return;
+        }
+        if (target) {
+          // A dismissed request must never close a different editor opened later.
+          if (editing === target) closeEditing(true);
+        } else {
+          renderCreation();
+          focusNickname(slot);
+        }
+        status(target ? savedEdit ? "savedUpdated" : "updated" : "saved");
+      });
+      var cancel = host.querySelector("[data-plan-cancel]");
+      if (cancel) cancel.addEventListener("click", function () { closeEditing(true); });
+      updateWarning(host, selectedFormat);
+    }
+    function renderCreation() {
       root.querySelectorAll("[data-plan-format]").forEach(function (button) {
         var active = button.getAttribute("data-plan-format") === format;
         button.classList.toggle("is-active", active);
         button.setAttribute("aria-pressed", String(active));
       });
-      slot.innerHTML = api.renderForm(format, sides, editing && editing.kind);
-      autocomplete.bindActionCardAutocomplete(slot);
-      var form = document.getElementById("plan-form");
-      form.addEventListener("input", function () { formError(""); updateWarning(); });
-      form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        if (disposed || manager.view().writing === "edit" || (editing && editing.kind === "saved" && manager.view().writing)) return;
-        var sides = sidesFromForm();
-        if (!sides[0].concat(sides[1]).every(names.isValid)) { formError(names.message()); return; }
-        var value = api.serialize(format, sides);
-        var target = editing;
-        var result = target && target.kind === "saved" ? await manager.updateSaved({ id: target.id, value: value }) :
-          manager.saveDraft(value, target && target.id);
-        if (disposed) return;
-        if (!result.ok) { formError(t(result.error)); return; }
-        editing = null;
-        renderEditor();
-        status(target ? target.kind === "saved" ? "savedUpdated" : "updated" : "saved");
-        focusNickname();
+      slot.innerHTML = api.renderForm(format);
+      bindForm(slot, null);
+    }
+    function renderInlineForm(target, sides) {
+      target.element.innerHTML = api.renderFormatChooser(target.format, true) + api.renderForm(target.format, sides, target.kind);
+      target.element.querySelectorAll("[data-plan-edit-format]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var next = button.getAttribute("data-plan-edit-format");
+          if (editing !== target || next === target.format || target.saving) return;
+          target.format = next;
+          renderInlineForm(target);
+          focusNickname(target.element);
+        });
       });
-      var cancel = slot.querySelector("[data-plan-cancel]");
-      if (cancel) cancel.addEventListener("click", function () {
-        editing = null;
-        renderEditor();
-        status("");
-        focusNickname();
-      });
+      bindForm(target.element, target);
       syncEditor(manager.view());
-      updateWarning();
     }
     function startEditing(record, kind) {
       if (!api.isValidRecord(record)) return;
+      closeEditing(false);
       var parsed = api.parseValue(record.value);
-      editing = { kind: kind, id: record.id };
-      format = parsed.format;
-      renderEditor(parsed.sides);
+      var element = document.createElement("section");
+      element.id = "plan-inline-editor";
+      element.className = "plan-inline-editor";
+      editing = { kind: kind, id: record.id, format: parsed.format, element: element, saving: false };
+      var card = editorCard(editing);
+      if (!card) { closeEditing(false); return; }
+      card.appendChild(element);
+      var trigger = card.querySelector("[data-plan-edit], [data-saved-edit]");
+      trigger.setAttribute("aria-expanded", "true");
+      trigger.setAttribute("aria-controls", element.id);
+      renderInlineForm(editing, parsed.sides);
       status("");
-      focusNickname();
+      focusNickname(element);
     }
 
     root.querySelectorAll("[data-plan-format]").forEach(function (button) {
@@ -139,21 +226,20 @@
         var next = button.getAttribute("data-plan-format");
         if (next === format) return;
         format = next;
-        renderEditor();
+        renderCreation();
         status("");
-        focusNickname();
+        focusNickname(slot);
       });
     });
     list.addEventListener("click", function (event) {
       var edit = event.target.closest("[data-plan-edit]");
       var remove = event.target.closest("[data-plan-remove]");
-      if (!edit && !remove) return;
+      if ((!edit && !remove) || manager.view().writing === "edit") return;
       var index = Number((edit || remove).getAttribute(edit ? "data-plan-edit" : "data-plan-remove"));
       var record = manager.view().drafts[index];
       if (edit) startEditing(record, "draft");
       else {
         var result = manager.removeDraft(index, record);
-        if (result.ok && editing && editing.kind === "draft" && record.id === editing.id) { editing = null; renderEditor(); }
         status(result.ok ? "removed" : result.error);
       }
     });
@@ -175,20 +261,24 @@
       status("uploading");
       var result = await manager.uploadDrafts();
       if (disposed) return;
-      // An unfinished edit of a just-uploaded draft becomes an edit of that saved plan.
-      if (result.ok && editing && editing.kind === "draft" &&
-          !manager.view().drafts.some(function (record) { return record.id === editing.id; })) {
-        editing.kind = "saved";
-        syncEditor(manager.view());
-      }
       status(result.ok ? "uploaded" : result.error, result.ok ? { count: result.matches.length } : undefined);
     });
     refresh.addEventListener("click", function () { manager.loadSaved(); });
+    function dismissOutside(event) {
+      if (editing && !editing.element.contains(event.target)) closeEditing(false);
+    }
+    function dismissWithEscape(event) {
+      if (editing && event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); closeEditing(true); }
+    }
+    document.addEventListener("click", dismissOutside, true);
+    document.addEventListener("keydown", dismissWithEscape);
 
     disposePage = function () {
       disposed = true;
+      document.removeEventListener("click", dismissOutside, true);
+      document.removeEventListener("keydown", dismissWithEscape);
+      closeEditing(false);
       manager.dispose();
-      editing = null;
       slot.innerHTML = "";
       list.innerHTML = "";
     };
@@ -202,7 +292,8 @@
       if (result.ok && result.title) document.getElementById("chat-header-title").textContent = result.title;
     }).catch(function () { if (!disposed) roster.status = "error"; }).finally(function () {
       if (disposed) return;
-      updateWarning();
+      updateWarning(slot, format);
+      if (editing) updateWarning(editing.element, editing.format);
       renderLists(manager.view());
     });
   }

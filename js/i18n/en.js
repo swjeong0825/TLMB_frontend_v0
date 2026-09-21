@@ -73,6 +73,7 @@
         "uploadConflict": "The update conflicted with saved plans. Refresh before trying again. Your changes remain on this page.",
         "uploadFailed": "The server could not save these plans. Try again. Your changes remain on this page.",
         "uploadUnconfirmed": "Saving could not be confirmed. Check your connection and retry. Your changes remain on this page.",
+        "editUnconfirmed": "Saving could not be confirmed. Refresh saved plans before trying again.",
         "unregistered": "These players are not registered: {names}. Recording this match will fail unless they are registered first.",
         "registrationUnavailable": "Registration could not be checked. You can still save this plan.",
         "missingLeague": "No league specified. Open Plan Match from a league page.",
