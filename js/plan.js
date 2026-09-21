@@ -90,8 +90,14 @@
       submit.textContent = t(editing.saving ? "saving" : "saveChanges");
       submit.setAttribute("aria-busy", String(!!editing.saving));
     }
+    function warnBeforeUnload(event) {
+      event.preventDefault();
+      event.returnValue = true; // Browsers show their own unsaved-changes message.
+    }
     function renderLists(state) {
       if (disposed) return;
+      if (state.drafts.length) window.addEventListener("beforeunload", warnBeforeUnload);
+      else window.removeEventListener("beforeunload", warnBeforeUnload);
       var action = document.activeElement;
       var actionCard = action && action.closest("[data-plan-id]");
       var actionAttr = actionCard && ["data-plan-edit", "data-plan-remove", "data-saved-edit", "data-saved-delete"].find(function (attr) {
@@ -276,6 +282,7 @@
 
     disposePage = function () {
       disposed = true;
+      window.removeEventListener("beforeunload", warnBeforeUnload);
       document.removeEventListener("click", dismissOutside, true);
       document.removeEventListener("keydown", dismissWithEscape);
       closeEditing(false);
