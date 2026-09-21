@@ -10,13 +10,14 @@
     var loadError = "";
     var invalidCount = 0;
     var loaded = false;
+    var deleteNeedsRefresh = false;
     var active = true;
     var readVersion = 0;
 
     function copy(records) { return records.map(function (record) { return { id: record.id, value: record.value }; }); }
     function view() {
       return { drafts: drafts.read().records, saved: copy(saved), loading: loading, writing: writing,
-        loadError: loadError, invalidCount: invalidCount, loaded: loaded };
+        loadError: loadError, invalidCount: invalidCount, loaded: loaded, deleteNeedsRefresh: deleteNeedsRefresh };
     }
     function notify() { if (active && options.onChange) options.onChange(view()); }
     function unavailable() { return { ok: false, error: active ? "requestBusy" : "pageClosed" }; }
@@ -36,6 +37,7 @@
         saved = copy(result.matches);
         invalidCount = result.invalidCount;
         loaded = true;
+        deleteNeedsRefresh = false;
       } else loadError = result.error;
       notify();
       return result;
@@ -43,6 +45,7 @@
 
     async function write(matches, kind) {
       if (!active || writing) return unavailable();
+      if (deleteNeedsRefresh) return { ok: false, error: "deleteRefreshRequired" };
       // A GET started before this write must never overwrite its acknowledgement.
       readVersion++;
       loading = false;
@@ -64,6 +67,33 @@
       return result;
     }
 
+    async function deleteSaved(record) {
+      if (!active || writing) return unavailable();
+      if (deleteNeedsRefresh) return { ok: false, error: "deleteRefreshRequired" };
+      var id = record && record.id;
+      if (!api.isValidId(id)) return { ok: false, error: "deleteRejected" };
+      var key = id.toLowerCase();
+      if (!saved.some(function (item) { return item.id.toLowerCase() === key; })) return { ok: false, error: "planMissing" };
+      // Invalidate older reads before deleting so they cannot restore a removed row.
+      readVersion++;
+      loading = false;
+      writing = "delete";
+      notify();
+      var result;
+      try { result = await api.deleteMatch(options.leagueId, { id: id }); }
+      catch (_err) { result = { ok: false, error: "deleteUnconfirmed", unconfirmed: true }; }
+      if (!active) return unavailable();
+      writing = "";
+      if (result.ok) saved = saved.filter(function (item) { return item.id.toLowerCase() !== key; });
+      deleteNeedsRefresh = !!(result.unconfirmed || result.error === "deletePlanMissing");
+      notify();
+      // A failed refresh never undoes a confirmed deletion or repeats a DELETE.
+      if (result.ok) loadSaved();
+      else if (deleteNeedsRefresh) await loadSaved();
+      if (!active) return unavailable();
+      return result;
+    }
+
     return {
       view: view,
       saveDraft: function (value, id) {
@@ -79,6 +109,7 @@
         return result;
       },
       loadSaved: loadSaved,
+      deleteSaved: deleteSaved,
       uploadDrafts: function () {
         var records = drafts.read().records;
         if (!records.length) return Promise.resolve({ ok: false, error: "invalidUpload" });
@@ -98,6 +129,7 @@
         saved = [];
         loading = false;
         writing = "";
+        deleteNeedsRefresh = false;
       },
     };
   }

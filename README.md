@@ -110,9 +110,15 @@ retaining the ID. Confirmed saves close the editor; failed saves keep its values
 it is open. Dismissing an editor during a submitted save does not cancel that request.
 Refresh failures preserve the displayed list; malformed entries produce a warning.
 
-Saved **Delete** is a no-request stub: it explains deletion is unavailable and keeps
-the plan visible. The [saved-plan CRUD backend request](docs/planned-match-crud-api-request.md)
-specifies the public, league-scoped DELETE endpoint and its acceptance tests.
+Saved **Delete** calls Backend Main's public
+`DELETE /leagues/{league_id}/planned-matches/{planned_match_id}` with no body or host
+token. An empty **204** removes that saved card and refreshes the list, preserving
+local drafts. A missing-plan response refreshes the list without claiming deletion
+succeeded. Failed requests keep the row; uncertain responses refresh before another
+write is allowed. If that refresh fails, use **Refresh** to reconcile before retrying.
+Deletion never records or removes a match result. The
+[saved-plan CRUD contract](docs/planned-match-crud-api-request.md) documents the
+implemented endpoint and its acceptance tests.
 The original [backend API request](docs/planned-matches-api-request.md) specifies
 minimal batch upsert/read support and the backend acceptance tests.
 
@@ -141,7 +147,7 @@ result while ignoring the plan ID. An unavailable/outdated schema prevents submi
 `record-session.js` keeps requests/drafts consistent across action navigation and ignores
 stale responses. See the [implemented recording contract](docs/record-planned-match-api-request.md)
 for deployment prerequisites and recovery behavior. The manual path retains existing
-recording behavior. The saved-plan Delete action remains a stub.
+recording behavior. Saved-plan deletion uses its independent DELETE endpoint.
 
 `js/nicknames.js` validates all newly submitted nicknames and aliases. Surrounding
 whitespace is trimmed, then empty names, internal whitespace, and commas are rejected.

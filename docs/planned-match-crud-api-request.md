@@ -1,4 +1,4 @@
-# Backend request: delete a saved planned match
+# Saved planned-match CRUD: implemented contract
 
 ## Current behavior and scope
 
@@ -8,11 +8,11 @@ change. Successful uploads move confirmed drafts into the saved list. Failed or
 uncertain uploads retain drafts until the page is left. Saved plans come from
 Backend Main and can be edited without copying them back into drafts.
 
-Creation, reading, and editing already use the existing APIs below. **Only the
-DELETE endpoint is requested as new backend work.** The frontend delete adapter
-in `js/plan/api.js` remains a no-request stub, displays an unavailable notice, and
-leaves the saved plan visible. Backend implementation, deployment, and connecting
-that adapter are separate tasks. Planned-result recording uses the existing result
+Creation, reading, editing, and deletion use the APIs below. The frontend delete
+adapter in `js/plan/api.js` is connected through the saved-plan controller. The
+backend must be deployed with this endpoint. This document reflects the implemented
+backend contract, including 404 for repeated deletion, replacing the original
+proposal for idempotent 204 responses. Planned-result recording uses the existing result
 endpoints with `planned_match_id`; this DELETE endpoint must never record a result.
 
 ## Existing create/read/update contract
@@ -50,7 +50,7 @@ containing the complete shared list in ascending UUID order. An empty league ret
 - Reject malformed or unequal sides. Do not resolve players, create pairs, or apply
   recording/registration rules to planned-match create/update operations.
 
-## New delete endpoint
+## Delete endpoint
 
 ```http
 DELETE /leagues/2166134f-934b-4f59-af2b-bdb1cb1b49db/planned-matches/d315f636-10e5-4265-9b19-fc260e1ed224
@@ -66,37 +66,41 @@ Within one transaction:
 1. Resolve and lock the league using the same league lock/order as batch upsert and
    atomic planned-match recording. A missing league returns 404.
 2. Physically delete the pending row scoped to **both** `league_id` and
-   `planned_match_id`, if present. Never delete by ID alone.
-3. Commit, then return **204 No Content**, with no JSON body. If the plan is already
-   absent in an existing league, return the same 204 so retries are safe.
+   `planned_match_id`, if present. Never delete by ID alone. An absent plan returns
+   404 with `PlannedMatchNotFoundError`.
+3. Commit, then return **204 No Content**, with no JSON body. The frontend must not
+   parse this response as JSON.
 
 Do not soft-delete, create a cancellation receipt, or add status/timestamp columns.
 Do not change league activity, players, aliases, pairs, recorded matches, or standings.
-Deleting an absent, already-consumed plan ID is a no-op and must not delete its
+Deleting an absent, already-consumed plan ID returns 404 and must not delete its
 recorded result. No recording receipts exist or are requested. Roll back on any storage/commit failure.
 
 Use the backend's normal error envelope:
 
 | Status | Meaning |
 | --- | --- |
-| 204 | Deleted, or already absent in an existing league |
-| 404 | League does not exist |
+| 204 | Deleted; empty response body |
+| 404 `LeagueNotFoundError` | League does not exist |
+| 404 `PlannedMatchNotFoundError` | Plan does not exist in this league, including after deletion or recording |
+| Generic 404 or 405 | Route unavailable or wrong backend URL; not proof that the plan is absent |
 | 422 | Malformed league or planned-match UUID |
+| 429 | Rate limited (60 requests/minute when enabled); wait before explicitly retrying |
 | 5xx | Unexpected storage/commit failure; no partial changes |
 
 Existing upsert semantics stay unchanged: a later upload of a manually deleted or consumed
 ID can create a plan again. The league lock orders concurrent operations;
 this request adds no revision checks, receipts, or tombstones. If recording commits
-first and no intervening upload recreates the plan, deletion is
-a no-op; if deletion commits first, recording must find the plan missing and must
+first and no intervening upload recreates the plan, deletion returns
+404; if deletion commits first, recording must find the plan missing and must
 not create a result from its request payload alone.
 
 ## Acceptance tests
 
 1. Anonymous deletion works for singles/doubles plans and they disappear from GET.
-2. Repeated deletion and a lost-response retry return 204 with no duplicate side effects.
-3. Unknown plan in an existing league returns 204; missing league returns 404; invalid
-   UUIDs return 422 using standard errors.
+2. Repeated deletion returns 404 `PlannedMatchNotFoundError` with no duplicate side effects.
+3. Unknown plan in an existing league returns 404 `PlannedMatchNotFoundError`; missing
+   league returns 404 `LeagueNotFoundError`; invalid UUIDs return 422.
 4. The same plan UUID in another league is untouched. A foreign plan ID is treated as
    absent in the requested league; do not disclose or delete the other league's row.
 5. Force delete and commit failures: the plan remains and all changes roll back.
@@ -107,6 +111,12 @@ not create a result from its request payload alone.
 8. Confirm existing batch insertion, single-item update, idempotent upload retries,
    atomic mixed-batch rejection, and uploads recreating absent IDs remain unchanged.
 
-When the frontend adapter is connected later, remove a displayed plan only after
-acknowledged 204 and then refresh. Failed/uncertain deletion must keep the row and
-offer a retry. The current stub must not simulate that success.
+The frontend removes a displayed plan after acknowledged 204 and then refreshes.
+Failed refreshes do not undo confirmed deletion. Ordinary errors retain the card.
+A missing-plan domain error or uncertain response triggers a fresh GET; only that
+successful read may reconcile the row or unlock another write. If the read fails,
+keep the displayed rows and disable saved-plan writes/upload until Refresh succeeds.
+Never retry DELETE automatically or recreate plans to undo an uncertain deletion.
+Local drafts remain editable. Older GET responses cannot restore deleted rows, and
+navigation discards late completion callbacks. No standings refresh or extra DELETE
+is part of planned-result recording.

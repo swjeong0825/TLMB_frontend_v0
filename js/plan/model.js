@@ -25,8 +25,10 @@
     return sides.map(function (side) { return names.assertNames(side).join(","); }).join(" ");
   }
 
+  function isValidId(id) { return typeof id === "string" && uuidPattern.test(id); }
+
   function isValidRecord(record) {
-    return !!(record && typeof record.id === "string" && uuidPattern.test(record.id) && parseValue(record.value));
+    return !!(record && isValidId(record.id) && parseValue(record.value));
   }
 
   function uploadPayload(records) {
@@ -60,6 +62,7 @@
 
   api.parseValue = parseValue;
   api.serialize = serialize;
+  api.isValidId = isValidId;
   api.isValidRecord = isValidRecord;
   api.uploadPayload = uploadPayload;
   api.registrationWarning = registrationWarning;

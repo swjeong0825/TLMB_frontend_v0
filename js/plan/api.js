@@ -74,9 +74,34 @@
     } finally { clearTimeout(timeout); }
   }
 
-  // Saved-plan deletion stays a no-write stub until its backend endpoint is connected.
-  async function deleteMatch(_leagueId, _record) {
-    return { ok: false, error: "deleteUnavailable" };
+  async function deleteMatch(leagueId, record) {
+    var id = record && record.id;
+    // Deletion targets the ID, even if the saved value cannot be parsed.
+    if (!api.isValidId(id)) return { ok: false, error: "deleteRejected" };
+    var base = global.TLCHAT_CHAT.backendMainBase();
+    if (!base || !leagueId) return { ok: false, error: "deleteConfigError" };
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 30000);
+    try {
+      var response = await fetch(base.replace(/\/+$/, "") + "/leagues/" + encodeURIComponent(leagueId) +
+        "/planned-matches/" + encodeURIComponent(id), {
+        method: "DELETE", credentials: "omit", headers: { Accept: "application/json" }, signal: controller.signal,
+      });
+      // The successful response has no body.
+      if (response.status === 204) return { ok: true };
+      var data;
+      try { data = await response.json(); } catch (_err) { data = null; }
+      var code = data && typeof data.error === "string" ? data.error : "";
+      var unconfirmed = response.status >= 500 || response.ok;
+      var error = unconfirmed ? "deleteUnconfirmed" :
+        response.status === 404 && code === "LeagueNotFoundError" ? "deleteLeagueMissing" :
+        response.status === 404 && code === "PlannedMatchNotFoundError" ? "deletePlanMissing" :
+        response.status === 404 || response.status === 405 ? "deleteUnavailable" :
+        response.status === 422 ? "deleteRejected" : response.status === 429 ? "deleteRateLimited" : "deleteFailed";
+      return { ok: false, error: error, status: response.status, unconfirmed: !!unconfirmed };
+    } catch (_err) {
+      return { ok: false, error: "deleteUnconfirmed", unconfirmed: true };
+    } finally { clearTimeout(timeout); }
   }
 
   api.deleteMatch = deleteMatch;

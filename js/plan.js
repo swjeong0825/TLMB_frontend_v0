@@ -81,7 +81,7 @@
     }
     function syncEditor(state) {
       if (!editing) return;
-      var busy = editing.saving || state.writing === "edit" || (editing.kind === "saved" && !!state.writing);
+      var busy = editing.saving || state.writing === "edit" || (editing.kind === "saved" && (!!state.writing || state.deleteNeedsRefresh));
       editing.element.querySelectorAll("input, select, button").forEach(function (control) { control.disabled = !!busy; });
       var label = t(editing.kind === "saved" ? "editingSaved" : "editingDraft");
       editing.element.setAttribute("aria-label", label);
@@ -103,7 +103,8 @@
       // Preserve the editor DOM, its input values, validation, and autocomplete bindings.
       if (editing) editing.element.remove();
       list.innerHTML = api.renderList(state.drafts, roster, false, state.writing === "edit");
-      savedList.innerHTML = state.loaded || state.saved.length ? api.renderList(state.saved, roster, true, !!state.writing) : "";
+      savedList.innerHTML = state.loaded || state.saved.length ? api.renderList(state.saved, roster, true, !!state.writing || state.deleteNeedsRefresh) : "";
+      savedList.setAttribute("aria-busy", String(state.writing === "delete"));
       if (editing) {
         if (editing.kind === "draft" && !state.drafts.some(function (record) { return sameId(record.id, editing.id); }) &&
             state.saved.some(function (record) { return sameId(record.id, editing.id); })) editing.kind = "saved";
@@ -119,7 +120,7 @@
         }
       }
       upload.textContent = state.writing === "upload" ? t("uploading") : t("upload", { count: state.drafts.length });
-      upload.disabled = !!state.writing || !state.drafts.length;
+      upload.disabled = !!state.writing || state.deleteNeedsRefresh || !state.drafts.length;
       upload.setAttribute("aria-busy", String(state.writing === "upload"));
       refresh.disabled = state.loading || !!state.writing;
       refresh.setAttribute("aria-busy", String(state.loading));
@@ -246,14 +247,14 @@
     savedList.addEventListener("click", async function (event) {
       var edit = event.target.closest("[data-saved-edit]");
       var remove = event.target.closest("[data-saved-delete]");
-      if ((!edit && !remove) || manager.view().writing) return;
+      if ((!edit && !remove) || manager.view().writing || manager.view().deleteNeedsRefresh) return;
       var index = Number((edit || remove).getAttribute(edit ? "data-saved-edit" : "data-saved-delete"));
       var record = manager.view().saved[index];
       if (edit) startEditing(record, "saved");
       else {
-        var note = remove.closest(".plan-item").querySelector(".plan-item-status");
-        var result = await api.deleteMatch(route.leagueId, record);
-        if (!disposed && note.isConnected) { note.textContent = t(result.error); note.hidden = false; }
+        status("deleting");
+        var result = await manager.deleteSaved(record);
+        if (!disposed) status(result.ok ? "deleted" : result.error);
       }
     });
     upload.addEventListener("click", async function () {

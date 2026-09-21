@@ -120,7 +120,9 @@ reads or re-uploaded IDs in the current page session. Absent-after-review rows a
 navigation on the league page. It guards duplicate submission per ID, pins the submitted
 teams during refresh, ignores stale GETs, and retains scores only for an unchanged
 saved value. Detached panels unsubscribe; full page navigation discards the session.
-The independent saved-plan Delete action remains its existing no-request stub.
+The independent saved-plan Delete action uses the public, league-scoped DELETE
+endpoint. Recording must never call that endpoint: the result transaction already
+removes its pending plan atomically.
 
 ## Verification
 

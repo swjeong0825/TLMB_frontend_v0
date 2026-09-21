@@ -4,7 +4,7 @@ This contract is implemented in Backend Main. The frontend upload adapter now ca
 the batch POST endpoint below and verifies the acknowledgement. Drafts live only in
 page memory; confirmed uploads move into the server-backed saved list, while failed
 uploads remain drafts until leaving/reloading the page. Plan Match reads saved plans
-and edits them through single-item upsert. Saved deletion remains a stub pending the
+and edits them through single-item upsert. Saved deletion now uses the
 [CRUD extension](planned-match-crud-api-request.md). Chat-to-Intent is not involved. Record Match uses the GET
 endpoint to show shared plans with score inputs. Planned result submission uses the existing result endpoints with `planned_match_id`;
 the implemented contract and deployment prerequisites are in

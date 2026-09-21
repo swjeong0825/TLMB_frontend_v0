@@ -28,6 +28,11 @@ function setup() {
     }
     return { ok: true, matches: plain(body.matches) };
   };
+  api.deleteMatch = async (league, record) => {
+    calls.push({ method: 'DELETE', league, id: record.id });
+    server = server.filter(item => item.id.toLowerCase() !== record.id.toLowerCase());
+    return { ok: true };
+  };
   const manager = api.createPlanManager({ leagueId: 'league-a', newId: () => ids[nextId++] });
   return { api, manager, calls, setServer(records) { server = plain(records); } };
 }
@@ -204,14 +209,150 @@ test('navigation disposal clears drafts and ignores late reads/writes; a new pag
   assert.deepEqual(plain(fresh.view().saved), []);
 });
 
-test('saved-plan deletion is a no-request stub and leaves all records intact', async () => {
+test('confirmed deletion removes only the captured ID and refreshes, preserving drafts', async () => {
+  const { manager, calls, setServer } = setup();
+  const other = { id: ids[1], value: 'Guest Other' };
+  setServer([original, other]);
+  await manager.loadSaved();
+  manager.saveDraft('Local Guest');
+  assert.equal((await manager.deleteSaved({ id: ids[0].toUpperCase(), value: 'Changed Elsewhere' })).ok, true);
+  await tick();
+  assert.deepEqual(plain(manager.view().saved), [other]);
+  assert.equal(manager.view().drafts[0].value, 'Local Guest');
+  assert.deepEqual(calls.map(c => c.method), ['GET', 'DELETE', 'GET']);
+  assert.deepEqual(calls[1], { method: 'DELETE', league: 'league-a', id: ids[0].toUpperCase() });
+});
+
+test('pending deletion preserves rows, blocks duplicate writes, and permits local draft changes', async () => {
+  const { api, manager, setServer } = setup();
+  setServer([original]);
+  await manager.loadSaved();
+  const pending = deferred();
+  let deletes = 0;
+  api.deleteMatch = () => { deletes++; return pending.promise; };
+  const removing = manager.deleteSaved(original);
+  assert.equal(manager.view().writing, 'delete');
+  assert.equal(manager.view().saved.length, 1);
+  manager.saveDraft('Local Guest');
+  assert.equal((await manager.deleteSaved(original)).error, 'requestBusy');
+  assert.equal((await manager.updateSaved(original)).error, 'requestBusy');
+  assert.equal((await manager.uploadDrafts()).error, 'requestBusy');
+  assert.equal((await manager.loadSaved()).error, 'requestBusy');
+  pending.resolve({ ok: false, error: 'deleteRejected' });
+  await removing;
+  assert.equal(deletes, 1);
+  assert.deepEqual(plain(manager.view().saved), [original]);
+  assert.equal(manager.view().drafts.length, 1);
+  assert.equal(manager.view().writing, '');
+});
+
+test('ordinary deletion failures keep the row without interpreting generic 404 as success', async () => {
+  for (const error of ['deleteLeagueMissing', 'deleteUnavailable', 'deleteRejected', 'deleteRateLimited', 'deleteFailed']) {
+    const { api, manager, calls, setServer } = setup();
+    setServer([original]);
+    await manager.loadSaved();
+    api.deleteMatch = async () => ({ ok: false, error });
+    assert.equal((await manager.deleteSaved(original)).error, error);
+    assert.deepEqual(plain(manager.view().saved), [original]);
+    assert.equal(manager.view().deleteNeedsRefresh, false);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test('a failed refresh after 204 leaves the confirmed deletion in place and never repeats it', async () => {
   const { api, manager, calls, setServer } = setup();
   setServer([original]);
   await manager.loadSaved();
-  const before = plain(manager.view());
-  for (let i = 0; i < 2; i++) {
-    assert.deepEqual(plain(await api.deleteMatch('league-a', original)), { ok: false, error: 'deleteUnavailable' });
+  api.loadMatches = async () => ({ ok: false, error: 'plannedLoadFailed' });
+  assert.equal((await manager.deleteSaved(original)).ok, true);
+  await tick();
+  assert.deepEqual(plain(manager.view().saved), []);
+  assert.equal(manager.view().loadError, 'plannedLoadFailed');
+  assert.equal(calls.filter(c => c.method === 'DELETE').length, 1);
+});
+
+test('missing-plan and uncertain deletions refresh before another write; no automatic recreation', async () => {
+  for (const result of [{ ok: false, error: 'deletePlanMissing' }, { ok: false, error: 'deleteUnconfirmed', unconfirmed: true }]) {
+    const { api, manager, setServer } = setup();
+    setServer([original]);
+    await manager.loadSaved();
+    const refresh = deferred();
+    let deletes = 0;
+    api.deleteMatch = async () => { deletes++; return result; };
+    api.loadMatches = () => refresh.promise;
+    const removing = manager.deleteSaved(original);
+    await tick();
+    assert.equal(manager.view().deleteNeedsRefresh, true);
+    assert.equal(manager.view().saved.length, 1);
+    assert.equal((await manager.deleteSaved(original)).error, 'deleteRefreshRequired');
+    refresh.resolve({ ok: true, matches: [], invalidCount: 0 });
+    assert.equal((await removing).error, result.error);
+    assert.deepEqual(plain(manager.view().saved), []);
+    assert.equal(manager.view().deleteNeedsRefresh, false);
+    assert.equal(deletes, 1);
   }
-  assert.deepEqual(plain(manager.view()), before);
-  assert.deepEqual(calls.map(call => call.method), ['GET']);
+});
+
+test('uncertain deletion plus failed refresh retains the row and blocks writes until a successful refresh', async () => {
+  const { api, manager, setServer } = setup();
+  setServer([original]);
+  await manager.loadSaved();
+  api.deleteMatch = async () => { throw new Error('Timeout'); };
+  api.loadMatches = async () => ({ ok: false, error: 'plannedLoadFailed' });
+  assert.equal((await manager.deleteSaved(original)).unconfirmed, true);
+  assert.deepEqual(plain(manager.view().saved), [original]);
+  assert.equal(manager.view().deleteNeedsRefresh, true);
+  manager.saveDraft('Local Guest');
+  assert.equal((await manager.uploadDrafts()).error, 'deleteRefreshRequired');
+  assert.equal((await manager.updateSaved(original)).error, 'deleteRefreshRequired');
+  assert.equal((await manager.deleteSaved(original)).error, 'deleteRefreshRequired');
+  api.loadMatches = async () => ({ ok: true, matches: [original], invalidCount: 0 });
+  await manager.loadSaved();
+  assert.equal(manager.view().deleteNeedsRefresh, false);
+  api.deleteMatch = async () => ({ ok: false, error: 'deleteRateLimited' });
+  assert.equal((await manager.deleteSaved(original)).error, 'deleteRateLimited');
+});
+
+test('GET started before DELETE cannot resurrect a deleted row or unlock a newer read', async () => {
+  const { api, manager, setServer } = setup();
+  setServer([original]);
+  await manager.loadSaved();
+  const oldRead = deferred();
+  const newRead = deferred();
+  let reads = 0;
+  api.loadMatches = () => reads++ ? newRead.promise : oldRead.promise;
+  const first = manager.loadSaved();
+  await manager.deleteSaved(original);
+  oldRead.resolve({ ok: true, matches: [original], invalidCount: 0 });
+  await first;
+  assert.deepEqual(plain(manager.view().saved), []);
+  assert.equal(manager.view().loading, true);
+  newRead.resolve({ ok: true, matches: [], invalidCount: 0 });
+  await tick();
+  assert.equal(manager.view().loading, false);
+});
+
+test('navigation ignores a late delete result and a fresh manager starts normally', async () => {
+  const { api, manager, calls, setServer } = setup();
+  setServer([original]);
+  await manager.loadSaved();
+  const pending = deferred();
+  api.deleteMatch = () => pending.promise;
+  const removing = manager.deleteSaved(original);
+  manager.dispose();
+  pending.resolve({ ok: true });
+  assert.equal((await removing).error, 'pageClosed');
+  assert.deepEqual(plain(manager.view().saved), []);
+  assert.equal(calls.length, 1);
+  assert.equal(manager.view().deleteNeedsRefresh, false);
+});
+
+test('invalid or stale delete IDs make no request; stored value is not a deletion precondition', async () => {
+  const { manager, calls, setServer } = setup();
+  setServer([{ id: ids[0], value: 'malformed' }]);
+  await manager.loadSaved();
+  assert.equal((await manager.deleteSaved(null)).error, 'deleteRejected');
+  assert.equal((await manager.deleteSaved({ id: ids[1] })).error, 'planMissing');
+  assert.equal(calls.length, 1);
+  assert.equal((await manager.deleteSaved({ id: ids[0] })).ok, true);
 });
