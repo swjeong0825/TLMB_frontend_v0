@@ -44,7 +44,7 @@
       '<p id="plan-status" role="status" class="hint"></p>' +
       '<section class="plan-saved" aria-labelledby="plan-list-title"><div class="plan-list-heading">' +
       '<h2 id="plan-list-title">' + escape(t("drafts")) + '</h2>' +
-      '<button class="btn-secondary" type="button" id="plan-upload" disabled>' + escape(t("upload", { count: 0 })) +
+      '<button class="btn-secondary" type="button" id="plan-upload" disabled>' + escape(t("save")) + ' (0)' +
       '</button></div><div id="plan-list"></div></section>' +
       '<section class="plan-saved" aria-labelledby="plan-server-title"><div class="plan-list-heading">' +
       '<h2 id="plan-server-title">' + escape(t("savedPlans")) + '</h2>' +
@@ -59,7 +59,7 @@
       '<p class="hint">' + escape(global.TLCHAT_NICKNAMES.message()) + '</p>' +
       '<p class="plan-warning" id="' + prefix + '-roster-warning" data-plan-roster-warning role="status" hidden></p>' +
       '<p class="plan-error" id="' + prefix + '-form-error" data-plan-form-error role="alert" hidden></p>' +
-      '<div class="plan-form-actions"><button class="btn-secondary" type="submit">' + escape(t(editing ? "saveChanges" : "save")) + '</button>' +
+      '<div class="plan-form-actions"><button class="btn-secondary" type="submit">' + escape(t(editing ? "saveChanges" : "done")) + '</button>' +
       (editing ? '<button class="btn-secondary" type="button" data-plan-cancel>' + escape(t("cancel")) + '</button>' : "") +
       '</div></form>';
   }

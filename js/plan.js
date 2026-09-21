@@ -125,7 +125,7 @@
           status("planMissing");
         }
       }
-      upload.textContent = state.writing === "upload" ? t("uploading") : t("upload", { count: state.drafts.length });
+      upload.textContent = state.writing === "upload" ? t("saving") : t("save") + " (" + state.drafts.length + ")";
       upload.disabled = !!state.writing || state.deleteNeedsRefresh || !state.drafts.length;
       upload.setAttribute("aria-busy", String(state.writing === "upload"));
       refresh.disabled = state.loading || !!state.writing;
@@ -265,7 +265,7 @@
     });
     upload.addEventListener("click", async function () {
       if (manager.view().writing) return;
-      status("uploading");
+      status("saving");
       var result = await manager.uploadDrafts();
       if (disposed) return;
       status(result.ok ? "uploaded" : result.error, result.ok ? { count: result.matches.length } : undefined);

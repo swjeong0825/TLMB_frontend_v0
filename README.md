@@ -80,7 +80,7 @@ node --test tests/standings-formula.test.js
 
 **Plan Match** in the header and starter tiles opens `/league/plan/` in the same tab,
 preserving the league, language, host token, and API overrides. Select singles or
-doubles, enter names, and **Save** to add a temporary draft. Drafts can be edited or removed. There are
+doubles, enter names, and **Done** to add a temporary draft. Drafts can be edited or removed. There are
 no score, date, time, or court fields on the planning page.
 
 Drafts exist only in the current page's memory. Reloading, navigating away, or changing
@@ -94,7 +94,7 @@ drafts, `controller.js` coordinates server state, and `js/plan.js` controls the 
 
 Unknown players are allowed. Closed-roster leagues show a warning that recording
 will fail unless those players are registered first. Alias matching follows the
-existing roster rules. **Upload matches** sends one batch to Backend Main's
+existing roster rules. **Save** sends one batch to Backend Main's
 `POST /leagues/{league_id}/planned-matches`, without a host token or cookies.
 The adapter in `js/plan/api.js` confirms the returned IDs and values before reporting
 success. Requests time out after 30 seconds. Review saved plans and match history
