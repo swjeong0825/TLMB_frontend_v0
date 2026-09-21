@@ -63,7 +63,7 @@
         "deleteUnconfirmed": "삭제 완료를 확인할 수 없습니다. 저장된 계획을 확인하고, 필요하면 새로고침한 후 다시 시도하세요.",
         "deleteRefreshRequired": "이전 삭제 완료를 확인할 수 없습니다. 저장된 계획을 새로고침한 후 변경하세요.",
         "saving": "저장 중…",
-        "save": "저장",
+        "save": "완료",
         "saveChanges": "변경 사항 저장",
         "cancel": "취소",
         "edit": "수정",

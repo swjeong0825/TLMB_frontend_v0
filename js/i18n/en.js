@@ -63,7 +63,7 @@
         "deleteUnconfirmed": "Deletion could not be confirmed. Check Saved plans; refresh if needed before retrying.",
         "deleteRefreshRequired": "Refresh saved plans before making more changes. The previous deletion could not be confirmed.",
         "saving": "Saving…",
-        "save": "Save",
+        "save": "Done",
         "saveChanges": "Save changes",
         "cancel": "Cancel",
         "edit": "Edit",
