@@ -279,3 +279,24 @@ test('history reconciliation rejects malformed envelopes instead of treating the
     assert.equal((await context.TLCHAT_CHAT.fetchLeagueMatchHistory(leagueId, 'both')).ok, false);
   }
 });
+
+test('completed cards show escaped plain scores and a disabled Recorded button with no score inputs', () => {
+  const { chat } = setup(() => assert.fail('Rendering must not fetch'));
+  for (const record of matches) {
+    const html = chat.renderPlannedScoreList([record], { [record.id]: {
+      value: record.value, scores: ['6', '0'], recorded: true,
+    } });
+    assert.match(html, /class="planned-score-row is-recorded"/);
+    assert.match(html, /data-planned-recorded="true"/);
+    assert.match(html, /class="planned-score-value">6<\/span>/);
+    assert.match(html, /class="planned-score-value">0<\/span>/);
+    assert.match(html, /type="button" class="btn-secondary" disabled>plannedRecordedButton/);
+    assert.doesNotMatch(html, /<select|<input|type="submit"/);
+  }
+  const html = chat.renderPlannedScoreList(matches, { [matches[0].id]: {
+    value: matches[0].value, scores: ['0', '6'], recorded: true, disabled: true,
+  } });
+  assert.equal((html.match(/<select /g) || []).length, 2);
+  assert.equal((html.match(/type="submit"/g) || []).length, 1);
+  assert.equal((html.match(/plannedRecordedButton/g) || []).length, 1);
+});

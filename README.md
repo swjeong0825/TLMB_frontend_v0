@@ -122,8 +122,12 @@ remain only in the league page session and are not persisted.
 
 Planned **Record result** sends the saved `planned_match_id`, fixed participants, and
 string scores to the existing singles/doubles result endpoint. The backend records
-and removes the plan in one transaction. Confirmed results remove their row and refresh
-plans, history, roster state, and visible standings. Rejections retain applicable scores;
+and removes the plan in one transaction. Confirmed results keep their card in place
+with plain-text scores and a disabled **Recorded** button, then refresh plans, history,
+roster state, and visible standings.
+Completed cards remain through list refreshes and action navigation for the current
+page session; leaving or reloading the page clears them. The server still consumes
+the plan atomically. Rejections retain applicable scores;
 uncertain results require refreshed plans/history before an explicit retry. No result
 POST is retried automatically, and there is no follow-up DELETE or re-upload.
 

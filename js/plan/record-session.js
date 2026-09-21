@@ -6,6 +6,7 @@
   function createRecordingSession(options) {
     var records = [], drafts = Object.create(null), pending = Object.create(null);
     var errors = Object.create(null), blocked = Object.create(null), retired = Object.create(null);
+    var recorded = Object.create(null);
     var listeners = [], loading = false, loadError = "", invalidCount = 0, notice = null;
     var needsResults = false, leagueBlocked = false, readVersion = 0, active = true;
     function key(id) { return id.toLowerCase(); }
@@ -13,10 +14,11 @@
     function view() {
       var values = Object.create(null);
       records.forEach(function (record) {
-        var id = key(record.id), draft = drafts[id];
+        var id = key(record.id), draft = recorded[id] || drafts[id];
         values[record.id] = { value: record.value,
-          scores: draft && draft.value === record.value ? draft.scores.slice() : ["", ""],
-          pending: !!pending[id], disabled: !!pending[id] || !!blocked[id] || leagueBlocked,
+          scores: draft && (recorded[id] || draft.value === record.value) ? draft.scores.slice() : ["", ""],
+          recorded: !!recorded[id],
+          pending: !!pending[id], disabled: !!recorded[id] || !!pending[id] || !!blocked[id] || leagueBlocked,
           error: errors[id] || null };
       });
       return { records: records.map(copy), drafts: values, loading: loading, loadError: loadError,
@@ -49,12 +51,18 @@
           // An absent plan is no longer actionable, but absence does not prove our POST succeeded.
           if (errors[id].review && !incoming[id] && !pending[id]) retired[id] = true;
         });
-        records = plans.matches.filter(function (record) { return !retired[key(record.id)]; }).map(function (record) {
+        var nextRecords = plans.matches.filter(function (record) { return !retired[key(record.id)]; }).map(function (record) {
           return copy(pending[key(record.id)] ? pending[key(record.id)].record : record);
         });
         Object.keys(pending).forEach(function (id) {
-          if (!incoming[id]) records.push(copy(pending[id].record));
+          if (!incoming[id]) nextRecords.push(copy(pending[id].record));
         });
+        // Consumed plans disappear from GET, but keep their confirmed cards in place.
+        records.forEach(function (record, index) {
+          var completed = recorded[key(record.id)];
+          if (completed) nextRecords.splice(Math.min(index, nextRecords.length), 0, copy(completed.record));
+        });
+        records = nextRecords;
         records.forEach(function (record) {
           var id = key(record.id);
           if (drafts[id] && drafts[id].value !== record.value) delete drafts[id];
@@ -93,7 +101,7 @@
       loading = false;
       if (result.ok) {
         retired[id] = true;
-        records = records.filter(function (item) { return key(item.id) !== id; });
+        recorded[id] = { record: copy(submitted.record), scores: submitted.scores.slice() };
         delete drafts[id];
         delete errors[id];
         notice = { key: "plannedRecorded", record: submitted.record, scores: submitted.scores };
@@ -113,10 +121,10 @@
       view: view, refresh: refresh, submit: submit,
       setScores: function (recordId, first, second) {
         var id = key(recordId), record = records.find(function (item) { return key(item.id) === id; });
-        if (active && record && !pending[id]) drafts[id] = { value: record.value, scores: [first, second] };
+        if (active && record && !pending[id] && !recorded[id]) drafts[id] = { value: record.value, scores: [first, second] };
       },
       subscribe: function (listener) { listeners.push(listener); listener(view()); },
-      dispose: function () { active = false; readVersion++; records = []; drafts = {}; pending = {}; listeners = []; },
+      dispose: function () { active = false; readVersion++; records = []; drafts = {}; pending = {}; recorded = {}; notice = null; listeners = []; },
     };
   }
 

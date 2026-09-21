@@ -18,19 +18,23 @@
       var parsed = plans.parseValue(record.value);
       var draft = drafts[record.id];
       var scores = draft && draft.value === record.value ? draft.scores : ["", ""];
+      var recorded = !!(draft && draft.value === record.value && draft.recorded);
       var label = parsed.sides.map(function (side) { return side.join(" + "); }).join(" " + tr("vs") + " ");
-      return '<li><form class="planned-score-row" data-planned-score-index="' + index + '" aria-label="' +
+      return '<li><form class="planned-score-row' + (recorded ? ' is-recorded' : '') + '" data-planned-recorded="' +
+        recorded + '" data-planned-score-index="' + index + '" aria-label="' +
         api.escapeAttr(label) + '" data-planned-id="' + api.escapeAttr(record.id) + '" aria-busy="' +
         !!(draft && draft.pending) + '"><span class="planned-score-format">' +
         esc(tr(parsed.format === "singles" ? "matchFormatSingles" : "matchFormatDoubles")) + '</span>' +
         '<div class="planned-score-sides">' + parsed.sides.map(function (side, sideIndex) {
-          return '<label><span class="planned-score-team">' + esc(side.join(" + ")) + '</span>' +
+          var tag = recorded ? 'div' : 'label';
+          return '<' + tag + ' class="planned-score-side"><span class="planned-score-team">' + esc(side.join(" + ")) + '</span>' +
             '<span class="hint">' + esc(tr("plannedSideScore", { side: sideIndex + 1 })) + '</span>' +
-            api.renderScorePicker("side" + (sideIndex + 1) + "_score", scores[sideIndex])
-              .replace('<select ', '<select ' + (draft && draft.pending ? 'disabled ' : '')) + '</label>';
-        }).join('') + '</div><button type="submit" class="btn-secondary"' +
-        (draft && draft.disabled ? ' disabled' : '') + '>' +
-        esc(tr(draft && draft.pending ? "plannedRecording" : draft && draft.error && draft.error.unconfirmed ?
+            (recorded ? '<span class="planned-score-value">' + esc(scores[sideIndex]) + '</span>' :
+              api.renderScorePicker("side" + (sideIndex + 1) + "_score", scores[sideIndex])
+                .replace('<select ', '<select ' + (draft && draft.pending ? 'disabled ' : ''))) + '</' + tag + '>';
+        }).join('') + '</div><button type="' + (recorded ? 'button' : 'submit') + '" class="btn-secondary"' +
+        (recorded || draft && draft.disabled ? ' disabled' : '') + '>' +
+        esc(tr(recorded ? "plannedRecordedButton" : draft && draft.pending ? "plannedRecording" : draft && draft.error && draft.error.unconfirmed ?
           "plannedRetry" : "plannedRecordButton")) + '</button>' +
         '<p class="hint planned-row-status" role="status"' + (draft && draft.error ? '' : ' hidden') + '>' +
         esc(errorText(draft && draft.error)) + '</p></form></li>';
@@ -84,13 +88,14 @@
       var form = event.target.closest("[data-planned-id]");
       if (!form) return;
       event.preventDefault();
+      if (form.getAttribute("data-planned-recorded") === "true") return;
       session.submit(form.getAttribute("data-planned-id"),
         form.querySelector('[data-field="side1_score"]').value,
         form.querySelector('[data-field="side2_score"]').value);
     });
     list.addEventListener("change", function (event) {
       var form = event.target.closest("[data-planned-id]");
-      if (form) session.setScores(form.getAttribute("data-planned-id"),
+      if (form && form.getAttribute("data-planned-recorded") !== "true") session.setScores(form.getAttribute("data-planned-id"),
         form.querySelector('[data-field="side1_score"]').value,
         form.querySelector('[data-field="side2_score"]').value);
     });

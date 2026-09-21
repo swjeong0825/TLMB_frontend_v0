@@ -64,8 +64,12 @@ changes, and hard-deletes the pending plan. It returns **201**:
 }
 ```
 
-The frontend validates that acknowledgement before reporting success, removes the
-submitted row/draft, and refreshes plans, history, roster state, and visible standings.
+The frontend validates that acknowledgement before reporting success, replaces the
+editable score draft with a completed card, and refreshes plans, history, roster state,
+and visible standings. The card stays in place with plain-text scores and a disabled
+Recorded button (Korean: 기록 완료). Refresh and action navigation retain these cards
+for the current page session; leaving or reloading clears them. The server still
+hard-deletes the consumed plan; no additional persistence or backend change is needed.
 Existing standings filters and custom formulas are retained. A failed follow-up GET
 is a refresh failure; it never changes confirmed recording into a failed recording.
 There is no second DELETE request. Manual result entry remains unchanged.
@@ -109,8 +113,8 @@ There are **no consumption receipts or success replays**. A retry after consumpt
 returns 404, and a later upload can recreate a consumed UUID. Never automatically
 retry, re-upload a stale plan, drop `planned_match_id`, or infer successful recording
 solely from an absent plan. Review history before deciding whether to retry a plan
-that remains pending. Confirmed/absent-after-review rows are not resurrected by stale
-reads in the current page session.
+that remains pending. Confirmed cards cannot become editable again through stale
+reads or re-uploaded IDs in the current page session. Absent-after-review rows are not marked as recorded.
 
 `js/plan/record-session.js` owns pending requests and score drafts across action
 navigation on the league page. It guards duplicate submission per ID, pins the submitted
@@ -124,5 +128,5 @@ Run `node --test tests/*.test.js`. Adapter tests cover endpoint/payload mapping,
 string zero scores, compatibility checks, error envelopes, timeouts, and no automatic
 retries. Session tests cover duplicate clicks/action navigation, concurrent rows,
 changed plans, uncertainty, failed follow-up reads, stale responses, disposal, and
-preservation/removal of applicable drafts. Browser checks use local fixtures only;
+preservation of applicable drafts and completed cards. Browser checks use local fixtures only;
 production match results must not be created as an integration test.

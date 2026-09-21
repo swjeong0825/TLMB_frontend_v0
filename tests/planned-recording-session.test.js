@@ -27,14 +27,16 @@ function setup() {
   return { session, state, api };
 }
 
-test('confirmed results remove their plan/draft and reconcile once without a second POST or resurrection', async () => {
+test('confirmed results stay visible and locked while reconciling without a second POST', async () => {
   const { session, state } = setup();
   await session.refresh();
   session.setScores(a.id, '6', '0');
   state.write = () => ({ ok: true, match_id: b.id, created_at: '2026-09-20T00:00:00Z' });
   assert.equal((await session.submit(a.id, '6', '0')).ok, true);
-  assert.deepEqual(plain(session.view().records), [b]); // Stale GET still includes a; it cannot resurrect it.
-  assert.equal(session.view().drafts[a.id], undefined);
+  assert.deepEqual(plain(session.view().records), [a, b]);
+  assert.equal(session.view().drafts[a.id].recorded, true);
+  assert.equal(session.view().drafts[a.id].disabled, true);
+  assert.deepEqual(plain(session.view().drafts[a.id].scores), ['6', '0']);
   assert.equal(session.view().notice.key, 'plannedRecorded');
   assert.equal(state.posts.length, 1);
   assert.equal(state.loads, 2);
@@ -51,7 +53,8 @@ test('failed post-success refresh is only a refresh error; no duplicate result',
   assert.equal(result.ok, true);
   assert.equal(session.view().notice.key, 'plannedRecorded');
   assert.equal(session.view().loadError, 'plannedLoadFailed');
-  assert.equal(session.view().records.length, 1);
+  assert.equal(session.view().records.length, 2);
+  assert.equal(session.view().drafts[a.id].recorded, true);
   await session.refresh();
   assert.equal(state.posts.length, 1);
 });
@@ -76,7 +79,9 @@ test('double submit and navigating to a new subscriber keep one pending request 
   assert.equal(state.posts.length, 1);
   gate.resolve({ ok: true });
   await pending;
-  assert.equal(newPanel.records.length, 1);
+  assert.equal(newPanel.records.length, 2);
+  assert.equal(newPanel.drafts[a.id].recorded, true);
+  assert.deepEqual(plain(newPanel.drafts[a.id].scores), ['6', '0']);
   assert.ok(detachedUpdates <= 2);
 });
 
@@ -105,6 +110,7 @@ test('ordinary rejections retain scores and permit correction without automatic 
     assert.deepEqual(plain(session.view().drafts[a.id].scores), ['6', '0']);
     assert.equal(session.view().drafts[a.id].disabled, false);
     assert.equal(session.view().drafts[a.id].error.error, error);
+    assert.equal(session.view().drafts[a.id].recorded, false);
     assert.equal(state.loads, 1);
     assert.equal(state.posts.length, 1);
   }
@@ -167,7 +173,7 @@ test('league-not-found stops all rows until a successful league refresh', async 
   assert.equal(state.posts.length, 1);
 });
 
-test('stale GET completion cannot replace a later result refresh or bring back a consumed plan', async () => {
+test('stale GET completion cannot replace a confirmed card or unlock it', async () => {
   const { session, state, api } = setup();
   await session.refresh();
   const stale = deferred();
@@ -179,11 +185,12 @@ test('stale GET completion cannot replace a later result refresh or bring back a
   await session.submit(a.id, '6', '0');
   stale.resolve({ ok: true, matches: [a], invalidCount: 0 });
   await loading;
-  assert.deepEqual(plain(session.view().records), [b]);
+  assert.deepEqual(plain(session.view().records), [a, b]);
+  assert.equal(session.view().drafts[a.id].recorded, true);
   assert.equal(session.view().invalidCount, 2);
 });
 
-test('parallel rows do not unlock each other and both confirmations remove their drafts', async () => {
+test('parallel rows do not unlock each other and both confirmations keep separate fixed scores', async () => {
   const { session, state } = setup();
   await session.refresh();
   const first = deferred(), second = deferred();
@@ -194,7 +201,11 @@ test('parallel rows do not unlock each other and both confirmations remove their
   assert.equal(session.view().drafts[b.id].pending, true);
   second.resolve({ ok: true });
   await two;
-  assert.equal(session.view().records.length, 0);
+  assert.deepEqual(plain(session.view().records), [a, b]);
+  assert.deepEqual(plain(session.view().drafts[a.id].scores), ['6', '0']);
+  assert.deepEqual(plain(session.view().drafts[b.id].scores), ['7', '5']);
+  assert.equal(session.view().drafts[a.id].recorded, true);
+  assert.equal(session.view().drafts[b.id].recorded, true);
   assert.equal(state.posts.length, 2);
 });
 
@@ -213,4 +224,59 @@ test('disposing the page ignores pending completions and never updates a detache
   assert.equal(updates, count);
   assert.equal(session.view().records.length, 0);
   assert.equal(state.resultReads, 0);
+});
+
+test('server consumption keeps completed cards in place and other score drafts editable across refresh/navigation', async () => {
+  const { session, state } = setup();
+  const c = { id: '3e846a0f-6ef1-42f6-971b-45e2fa920697', value: 'Bob 민수' };
+  state.rows = [a, b, c];
+  await session.refresh();
+  session.setScores(c.id, '3', '4');
+  state.write = record => { state.rows = state.rows.filter(row => row.id !== record.id); return { ok: true }; };
+  await session.submit(b.id, '7', '0');
+  assert.deepEqual(plain(session.view().records), [a, b, c]);
+  assert.deepEqual(plain(session.view().drafts[c.id].scores), ['3', '4']);
+  assert.equal(session.view().drafts[c.id].disabled, false);
+  session.setScores(c.id, '5', '4');
+  session.setScores(b.id, '1', '1');
+  session.view().drafts[b.id].scores[0] = '21';
+  await session.refresh();
+  let reopened;
+  session.subscribe(view => { reopened = view; });
+  assert.deepEqual(plain(reopened.records), [a, b, c]);
+  assert.deepEqual(plain(reopened.drafts[b.id].scores), ['7', '0']);
+  assert.deepEqual(plain(reopened.drafts[c.id].scores), ['5', '4']);
+  assert.equal(reopened.drafts[b.id].recorded, true);
+  assert.equal(reopened.drafts[b.id].disabled, true);
+  await session.submit(b.id.toUpperCase(), '1', '1');
+  assert.equal(state.posts.length, 1);
+});
+
+test('a re-uploaded or changed consumed ID cannot replace the completed matchup or its scores', async () => {
+  const { session, state } = setup();
+  await session.refresh();
+  state.write = () => { state.rows = [b]; return { ok: true }; };
+  await session.submit(a.id, '0', '6');
+  state.rows = [{ id: a.id.toUpperCase(), value: 'Other Players' }, b];
+  await session.refresh();
+  assert.deepEqual(plain(session.view().records), [a, b]);
+  assert.deepEqual(plain(session.view().drafts[a.id].scores), ['0', '6']);
+  assert.equal(session.view().drafts[a.id].recorded, true);
+});
+
+test('completed cards clear with the page session and are not recreated from an empty server list', async () => {
+  const { session, state } = setup();
+  await session.refresh();
+  state.write = () => { state.rows = []; return { ok: true }; };
+  await session.submit(a.id, '6', '0');
+  assert.deepEqual(plain(session.view().records), [a]);
+  await session.refresh();
+  assert.equal(session.view().drafts[a.id].recorded, true);
+  session.dispose();
+  assert.equal(session.view().records.length, 0);
+  assert.equal(session.view().notice, null);
+  const fresh = setup();
+  fresh.state.rows = [];
+  await fresh.session.refresh();
+  assert.equal(fresh.session.view().records.length, 0);
 });

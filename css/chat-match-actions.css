@@ -236,7 +236,9 @@
 .planned-score-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 1rem; align-items: end; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
 .planned-score-format { grid-column: 1 / -1; color: var(--muted); font-size: 0.75rem; }
 .planned-score-sides { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
-.planned-score-sides label { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.planned-score-side { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.planned-score-value { font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.planned-score-row.is-recorded { background: var(--surface-2); }
 .planned-score-team { flex: 1; font-size: 0.85rem; font-weight: 600; overflow-wrap: anywhere; }
 .planned-score-sides .hint { margin: 0; }
 .planned-score-sides select { width: 100%; }
