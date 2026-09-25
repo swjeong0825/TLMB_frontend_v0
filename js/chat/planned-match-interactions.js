@@ -12,8 +12,16 @@
     return text;
   }
 
-  function renderPlannedScoreList(records, drafts) {
+  function renderPlannedScoreList(records, drafts, query) {
     if (!records.length) return '<p class="hint">' + esc(tr("plannedEmpty")) + '</p>';
+    var nickname = api.normalizeMatchNickname(query);
+    if (nickname) records = records.filter(function (record) {
+      var sides = plans.parseValue(record.value).sides;
+      return sides[0].concat(sides[1]).some(function (name) {
+        return api.normalizeMatchNickname(name).indexOf(nickname) !== -1;
+      });
+    });
+    if (!records.length) return '<p class="hint" role="status">' + esc(tr("plannedNoMatches")) + '</p>';
     return '<ul class="planned-score-list" role="list">' + records.map(function (record, index) {
       var parsed = plans.parseValue(record.value);
       var draft = drafts[record.id];
@@ -46,6 +54,9 @@
       '<div class="planned-results-heading"><h3>' + esc(tr("plannedTitle")) + '</h3>' +
       '<button type="button" class="btn-secondary" data-planned-refresh>' + esc(tr("plannedRefresh")) + '</button></div>' +
       '<p class="hint">' + esc(tr("plannedRecordHint")) + '</p>' +
+      '<label class="planned-player-filter"><span>' + esc(tr("plannedSearchLabel")) + '</span>' +
+      '<input type="search" data-planned-search placeholder="' + api.escapeAttr(tr("plannedSearchPlaceholder")) +
+      '" autocomplete="off"></label>' +
       '<p class="hint" data-planned-notice role="status" hidden></p>' +
       '<p class="hint" data-planned-status role="status"></p><div data-planned-list></div></section>';
     var section = container.querySelector(".planned-results");
@@ -53,6 +64,11 @@
     var status = section.querySelector("[data-planned-status]");
     var list = section.querySelector("[data-planned-list]");
     var notice = section.querySelector("[data-planned-notice]");
+    var search = section.querySelector("[data-planned-search]");
+
+    function renderList(state) {
+      list.innerHTML = renderPlannedScoreList(state.records, state.drafts, search.value);
+    }
 
     session.subscribe(function (state) {
       // A pending request belongs to the page session, never to a detached form.
@@ -72,7 +88,7 @@
         notice.textContent = sides[0].join(" + ") + " " + item.scores[0] + " : " + item.scores[1] + " " +
           sides[1].join(" + ") + " — " + tr(item.key);
       }
-      list.innerHTML = renderPlannedScoreList(state.records, state.drafts);
+      renderList(state);
       if (focusedId) {
         var newForm = Array.from(list.querySelectorAll("[data-planned-id]")).find(function (form) {
           return form.getAttribute("data-planned-id") === focusedId;
@@ -83,6 +99,7 @@
       }
     });
 
+    search.addEventListener("input", function () { renderList(session.view()); });
     refresh.addEventListener("click", function () { session.refresh(); });
     list.addEventListener("submit", function (event) {
       var form = event.target.closest("[data-planned-id]");

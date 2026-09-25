@@ -232,6 +232,9 @@
 .planned-results-heading { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; }
 .planned-results-heading h3 { margin: 0; }
 .planned-results .btn-secondary { margin-top: 0; }
+.planned-player-filter { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.75rem 0; font-size: 0.85rem; }
+.planned-player-filter input { width: 100%; min-width: 0; padding: 0.6rem 0.7rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
+.planned-player-filter input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .planned-score-list { list-style: none; padding: 0; margin: 0.75rem 0 0; display: grid; gap: 0.65rem; }
 .planned-score-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 1rem; align-items: end; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
 .planned-score-format { grid-column: 1 / -1; color: var(--muted); font-size: 0.75rem; }

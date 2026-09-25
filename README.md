@@ -126,7 +126,10 @@ minimal batch upsert/read support and the backend acceptance tests.
 and **No** for manual entry.
 The planned path loads the shared list directly from Backend Main's
 `GET /leagues/{league_id}/planned-matches`. It shows fixed singles/doubles participants
-and two score selectors per plan, without editing controls. Refresh retains entered
+and two score selectors per plan, without editing controls. A nickname search filters
+the list as you type, matching partial names on either team without case sensitivity.
+Clearing the search restores all plans; searching preserves entered scores and the
+filter stays applied during refreshes. Refresh retains entered
 scores for unchanged plans; unreadable entries are skipped with a warning. Scores
 remain only in the league page session and are not persisted.
 

@@ -29,7 +29,7 @@ function setup(fetch, options = {}) {
       return String(this.textContent).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     } }; } },
   });
-  for (const file of ['js/nicknames.js', 'js/chat/core.js', 'js/plan/model.js', 'js/plan/api.js',
+  for (const file of ['js/nicknames.js', 'js/chat/core.js', 'js/chat/roster-model.js', 'js/plan/model.js', 'js/plan/api.js',
     'js/plan/record.js', 'js/chat/render-forms.js', 'js/chat/planned-match-interactions.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
   }
@@ -229,6 +229,38 @@ test('concise score list fixes both teams, escapes nicknames, and has no partici
   assert.match(html, /&lt;img> \+ &quot;Guest&quot;/); // Attribute escaping follows core.js.
   assert.doesNotMatch(html, /<img>|<input|contenteditable|data-plan-edit|data-plan-remove/);
   assert.match(html, /data-planned-id=/);
+});
+
+test('nickname search matches partial names on either team, ignores case/outer spaces, and clears to all plans', () => {
+  const { chat } = setup(() => assert.fail('Filtering must not fetch'));
+  for (const [query, expected] of [[' ALI ', matches], ['bO', [matches[0]]], ['민', [matches[1]]],
+    ['guest2', [matches[1]]], ['', matches], ['   ', matches]]) {
+    const html = chat.renderPlannedScoreList(matches, {}, query);
+    for (const record of matches) assert.equal(html.includes(record.id), expected.includes(record), query);
+  }
+  assert.match(chat.renderPlannedScoreList(matches, {}, 'nobody'), /plannedNoMatches/);
+  assert.match(chat.renderPlannedScoreList([], {}, 'Alice'), /plannedEmpty/);
+  assert.doesNotMatch(chat.renderPlannedScoreList(matches, {}, '<script>'), /<script>/);
+});
+
+test('filtering preserves scores and completed/pending state under the original planned match IDs', () => {
+  const { chat } = setup(() => assert.fail('Filtering must not fetch'));
+  const drafts = {
+    [matches[0].id]: { value: matches[0].value, scores: ['6', '0'], recorded: true },
+    [matches[1].id]: { value: matches[1].value, scores: ['4', '3'], pending: true, disabled: true },
+  };
+  const snapshot = plain(drafts);
+  const filtered = chat.renderPlannedScoreList(matches, drafts, 'guest');
+  assert.doesNotMatch(filtered, new RegExp(matches[0].id));
+  assert.match(filtered, new RegExp('data-planned-id="' + matches[1].id + '"'));
+  assert.match(filtered, /value="4" selected/);
+  assert.match(filtered, /value="3" selected/);
+  assert.match(filtered, /<select disabled/);
+  const cleared = chat.renderPlannedScoreList(matches, drafts, '');
+  assert.match(cleared, /plannedRecordedButton/);
+  assert.match(cleared, /class="planned-score-value">6<\/span>/);
+  assert.match(cleared, /value="4" selected/);
+  assert.deepEqual(drafts, snapshot);
 });
 
 test('score rendering restores only drafts for the same id and exact matchup value', () => {
